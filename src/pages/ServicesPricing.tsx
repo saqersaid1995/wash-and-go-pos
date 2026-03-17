@@ -388,7 +388,7 @@ function PricingRulesTab() {
         price,
         is_active: formActive,
       }).eq("id", editing.id);
-      if (error) { toast.error(error.code === "23505" ? "This item + service combination already exists" : error.message); setSaving(false); return; }
+      if (error) { toast.error(error.code === "23505" ? "This item already has a pricing rule for the selected service." : error.message); setSaving(false); return; }
       toast.success("Pricing rule updated");
     } else {
       const { error } = await supabase.from("service_pricing").insert({
@@ -399,7 +399,7 @@ function PricingRulesTab() {
         price,
         is_active: formActive,
       });
-      if (error) { toast.error(error.code === "23505" ? "This item + service combination already exists" : error.message); setSaving(false); return; }
+      if (error) { toast.error(error.code === "23505" ? "This item already has a pricing rule for the selected service." : error.message); setSaving(false); return; }
       toast.success("Pricing rule created");
     }
     setSaving(false); setModalOpen(false); load();
@@ -435,42 +435,62 @@ function PricingRulesTab() {
           <p className="text-lg font-medium">{search ? "No matching rules" : "No pricing rules yet"}</p>
           <p className="text-sm mt-1">{search ? "Try a different search term" : "Add your first item + service pricing rule."}</p>
         </div>
-      ) : (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((rule) => (
-                <TableRow key={rule.id} className={rule.is_active ? "" : "opacity-50"}>
-                  <TableCell className="font-medium">{getItemName(rule)}</TableCell>
-                  <TableCell>{getServiceName(rule)}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatOMR(rule.price)}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.6rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
-                      {rule.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(rule)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggle(rule)}><Switch checked={rule.is_active} className="scale-75" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(rule)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      ) : (() => {
+        // Group rules by item name
+        const grouped: Record<string, PricingRule[]> = {};
+        filtered.forEach((rule) => {
+          const name = getItemName(rule);
+          if (!grouped[name]) grouped[name] = [];
+          grouped[name].push(rule);
+        });
+        const sortedItems = Object.keys(grouped).sort();
+
+        return (
+          <div className="space-y-4">
+            {sortedItems.map((itemName) => (
+              <div key={itemName} className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2.5 border-b border-border">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    {itemName}
+                    <Badge variant="secondary" className="text-[0.6rem] ml-1">{grouped[itemName].length} {grouped[itemName].length === 1 ? "service" : "services"}</Badge>
+                  </h3>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Service</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grouped[itemName].map((rule) => (
+                      <TableRow key={rule.id} className={rule.is_active ? "" : "opacity-50"}>
+                        <TableCell className="font-medium">{getServiceName(rule)}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatOMR(rule.price)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.6rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
+                            {rule.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(rule)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggle(rule)}><Switch checked={rule.is_active} className="scale-75" /></Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(rule)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
