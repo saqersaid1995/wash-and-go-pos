@@ -317,6 +317,45 @@ export type Database = {
           },
         ]
       }
+      service_pricing: {
+        Row: {
+          created_at: string
+          currency: string
+          display_order: number
+          id: string
+          is_active: boolean
+          item_type: string
+          notes: string | null
+          price: number
+          service_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          item_type: string
+          notes?: string | null
+          price?: number
+          service_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          item_type?: string
+          notes?: string | null
+          price?: number
+          service_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

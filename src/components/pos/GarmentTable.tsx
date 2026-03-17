@@ -1,8 +1,18 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle } from "lucide-react";
 import type { OrderItem } from "@/types/pos";
-import { SERVICES, ITEM_TYPES, GARMENT_CONDITIONS } from "@/types/pos";
+import { ITEM_TYPES, GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { formatOMR } from "@/lib/currency";
+
+interface PricingRule {
+  id: string;
+  item_type: string;
+  service_type: string;
+  price: number;
+  is_active: boolean;
+}
 
 interface Props {
   items: OrderItem[];
@@ -38,8 +48,25 @@ function ConditionTags({ itemId, conditions, onUpdate }: { itemId: string; condi
   );
 }
 
-function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Props["onUpdate"]; onRemove: Props["onRemove"] }) {
+function ItemRow({ item, onUpdate, onRemove, pricingRules, serviceTypes }: { 
+  item: OrderItem; 
+  onUpdate: Props["onUpdate"]; 
+  onRemove: Props["onRemove"];
+  pricingRules: PricingRule[];
+  serviceTypes: string[];
+}) {
   const [expanded, setExpanded] = useState(false);
+
+  // Check if current combination has a valid price
+  const matchingRule = pricingRules.find(
+    (r) => r.item_type === item.itemType && r.service_type === item.serviceId && r.is_active
+  );
+  const hasWarning = item.itemType && item.serviceId && !matchingRule;
+
+  // Get available services for current item type
+  const availableServices = item.itemType
+    ? [...new Set(pricingRules.filter((r) => r.item_type === item.itemType && r.is_active).map((r) => r.service_type))]
+    : serviceTypes;
 
   return (
     <motion.div
@@ -48,13 +75,22 @@ function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Prop
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -8 }}
       transition={{ duration: 0.15 }}
-      className="border border-border rounded-md p-3 bg-background"
+      className={`border rounded-md p-3 bg-background ${hasWarning ? "border-destructive/50" : "border-border"}`}
     >
       <div className="grid grid-cols-[1fr_140px_80px_80px_80px_36px] gap-2 items-center">
         {/* Item Type */}
         <select
           value={item.itemType}
-          onChange={(e) => onUpdate(item.id, { itemType: e.target.value })}
+          onChange={(e) => {
+            const newItemType = e.target.value;
+            // Auto-select price from pricing rules
+            const rule = pricingRules.find((r) => r.item_type === newItemType && r.service_type === item.serviceId && r.is_active);
+            const updates: Partial<OrderItem> = { itemType: newItemType };
+            if (rule) {
+              updates.unitPrice = rule.price;
+            }
+            onUpdate(item.id, updates);
+          }}
           className="pos-input w-full text-sm"
         >
           <option value="">Item type...</option>
@@ -64,10 +100,21 @@ function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Prop
         {/* Service */}
         <select
           value={item.serviceId}
-          onChange={(e) => onUpdate(item.id, { serviceId: e.target.value })}
+          onChange={(e) => {
+            const newService = e.target.value;
+            const rule = pricingRules.find((r) => r.item_type === item.itemType && r.service_type === newService && r.is_active);
+            const updates: Partial<OrderItem> = { serviceId: newService };
+            if (rule) {
+              updates.unitPrice = rule.price;
+            }
+            onUpdate(item.id, updates);
+          }}
           className="pos-input w-full text-sm"
         >
-          {SERVICES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <option value="">Service...</option>
+          {(availableServices.length > 0 ? availableServices : serviceTypes).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
         </select>
 
         {/* Quantity */}
@@ -88,10 +135,10 @@ function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Prop
         </div>
 
         {/* Unit Price */}
-        <span className="text-sm text-muted-foreground text-right">${item.unitPrice.toFixed(2)}</span>
+        <span className="text-sm text-muted-foreground text-right">{formatOMR(item.unitPrice)}</span>
 
         {/* Total */}
-        <span className="text-sm font-semibold text-right">${(item.unitPrice * item.quantity).toFixed(2)}</span>
+        <span className="text-sm font-semibold text-right">{formatOMR(item.unitPrice * item.quantity)}</span>
 
         {/* Remove */}
         <button
@@ -101,6 +148,14 @@ function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Prop
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Price warning */}
+      {hasWarning && (
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5" />
+          No pricing rule found for this combination. Please set up pricing in Services & Pricing.
+        </div>
+      )}
 
       {/* Expand for details */}
       <button
@@ -148,6 +203,25 @@ function ItemRow({ item, onUpdate, onRemove }: { item: OrderItem; onUpdate: Prop
 }
 
 export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props) {
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from("service_pricing")
+        .select("id, item_type, service_type, price, is_active")
+        .eq("is_active", true)
+        .order("item_type")
+        .order("service_type");
+      if (data) {
+        setPricingRules(data as PricingRule[]);
+        setServiceTypes([...new Set((data as PricingRule[]).map((r) => r.service_type))]);
+      }
+    }
+    load();
+  }, []);
+
   return (
     <div className="pos-section space-y-3">
       <div className="flex items-center justify-between">
@@ -181,7 +255,14 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
       <div className="space-y-2">
         <AnimatePresence mode="popLayout">
           {items.map((item) => (
-            <ItemRow key={item.id} item={item} onUpdate={onUpdate} onRemove={onRemove} />
+            <ItemRow 
+              key={item.id} 
+              item={item} 
+              onUpdate={onUpdate} 
+              onRemove={onRemove}
+              pricingRules={pricingRules}
+              serviceTypes={serviceTypes}
+            />
           ))}
         </AnimatePresence>
       </div>

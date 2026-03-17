@@ -7,6 +7,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Truck, AlertTriangle, Users, TrendingUp, Package, Loader2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { formatOMR } from "@/lib/currency";
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "today", label: "Today" },
@@ -33,13 +34,13 @@ const Reports = () => {
   }
 
   const kpiCards = [
-    { label: "Total Revenue", value: `$${data.kpis.totalRevenue.toFixed(2)}`, icon: DollarSign, accent: "text-primary" },
+    { label: "Total Revenue", value: formatOMR(data.kpis.totalRevenue), icon: DollarSign, accent: "text-primary" },
     { label: "Total Orders", value: data.kpis.totalOrders, icon: ShoppingCart, accent: "text-primary" },
     { label: "Active Orders", value: data.kpis.activeOrders, icon: Clock, accent: "text-warning" },
     { label: "Ready for Pickup", value: data.kpis.readyForPickup, icon: Package, accent: "text-primary" },
     { label: "Delivered", value: data.kpis.deliveredOrders, icon: Truck, accent: "text-success" },
     { label: "Overdue", value: data.kpis.overdueOrders, icon: AlertTriangle, accent: "text-destructive" },
-    { label: "Outstanding", value: `$${data.kpis.outstanding.toFixed(2)}`, icon: DollarSign, accent: "text-destructive" },
+    { label: "Outstanding", value: formatOMR(data.kpis.outstanding), icon: DollarSign, accent: "text-destructive" },
     { label: "Customers", value: data.kpis.totalCustomers, icon: Users, accent: "text-primary" },
     { label: "New Today", value: data.kpis.newCustomersToday, icon: TrendingUp, accent: "text-success" },
   ];
@@ -92,7 +93,6 @@ const Reports = () => {
           </div>
         ) : (
           <>
-            {/* Revenue Trend + Workflow Pipeline */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
@@ -126,7 +126,6 @@ const Reports = () => {
               </Card>
             </div>
 
-            {/* Payment + Services */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
@@ -142,11 +141,11 @@ const Reports = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Total Paid</span>
-                      <span className="font-semibold">${data.kpis.totalPaid.toFixed(2)}</span>
+                      <span className="font-semibold">{formatOMR(data.kpis.totalPaid)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Outstanding</span>
-                      <span className="font-semibold text-destructive">${data.kpis.outstanding.toFixed(2)}</span>
+                      <span className="font-semibold text-destructive">{formatOMR(data.kpis.outstanding)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -172,7 +171,6 @@ const Reports = () => {
               </Card>
             </div>
 
-            {/* Items + Customers */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-base">Popular Item Types</CardTitle></CardHeader>
@@ -211,12 +209,12 @@ const Reports = () => {
                           <TableRow key={c.name}>
                             <TableCell className="font-medium">{c.name}</TableCell>
                             <TableCell className="text-right">{c.orders}</TableCell>
-                            <TableCell className="text-right">${c.spent.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{formatOMR(c.spent)}</TableCell>
                             <TableCell className="text-right">
                               {c.balance > 0 ? (
-                                <span className="text-destructive">${c.balance.toFixed(2)}</span>
+                                <span className="text-destructive">{formatOMR(c.balance)}</span>
                               ) : (
-                                <span className="text-muted-foreground">$0.00</span>
+                                <span className="text-muted-foreground">{formatOMR(0)}</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -230,7 +228,6 @@ const Reports = () => {
               </Card>
             </div>
 
-            {/* Recent Activity */}
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Recent Activity</CardTitle></CardHeader>
               <CardContent>

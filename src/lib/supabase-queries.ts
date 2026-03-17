@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowOrder, WorkflowStatus, StatusChange, InternalNote } from "@/types/workflow";
 import type { CustomerRecord, CustomerNote } from "@/types/customer";
-import { SERVICES } from "@/types/pos";
+
 
 // ─── Order with all relations ───
 
@@ -376,11 +376,10 @@ export async function createOrder(params: {
   // Create order items
   if (params.items.length > 0) {
     const itemRows = params.items.map((item) => {
-      const svc = SERVICES.find((s) => s.id === item.serviceId);
       return {
         order_id: orderId,
         item_type: item.itemType,
-        service_type: svc?.name || item.serviceId,
+        service_type: item.serviceId,
         quantity: item.quantity,
         unit_price: item.unitPrice,
         total_price: item.unitPrice * item.quantity,

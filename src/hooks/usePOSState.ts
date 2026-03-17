@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
-import { SERVICES } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
 
@@ -67,9 +66,9 @@ export function usePOSState() {
       {
         id: generateId(),
         itemType: "",
-        serviceId: "wash-iron",
+        serviceId: "",
         quantity: 1,
-        unitPrice: SERVICES.find((s) => s.id === "wash-iron")!.price,
+        unitPrice: 0,
         conditions: [],
       },
     ]);
@@ -79,12 +78,7 @@ export function usePOSState() {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const updated = { ...item, ...updates };
-        if (updates.serviceId) {
-          const svc = SERVICES.find((s) => s.id === updates.serviceId);
-          if (svc) updated.unitPrice = svc.price;
-        }
-        return updated;
+        return { ...item, ...updates };
       })
     );
   }, []);

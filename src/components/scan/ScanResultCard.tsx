@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { WorkflowOrder } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
+import { formatOMR } from "@/lib/currency";
 import PaymentModal from "@/components/payment/PaymentModal";
 
 interface ScanResultCardProps {
@@ -33,7 +34,6 @@ export default function ScanResultCard({ order, onMoveNext, onMarkDelivered, onP
   return (
     <>
       <div className="pos-section space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold">{order.orderNumber}</h3>
@@ -50,24 +50,22 @@ export default function ScanResultCard({ order, onMoveNext, onMarkDelivered, onP
 
         <Separator />
 
-        {/* Info Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <InfoCell label="Status" value={WORKFLOW_STAGES[stageIdx]?.label || order.currentStatus} />
           <InfoCell label="Delivery" value={order.deliveryDate} />
           <InfoCell label="Items" value={String(order.itemCount)} />
-          <InfoCell label="Total" value={`$${order.totalAmount.toFixed(2)}`} />
+          <InfoCell label="Total" value={formatOMR(order.totalAmount)} />
         </div>
 
         {hasBalance && (
           <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm font-medium">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            Outstanding Balance: ${order.remainingBalance.toFixed(2)}
+            Outstanding Balance: {formatOMR(order.remainingBalance)}
           </div>
         )}
 
         <Separator />
 
-        {/* Quick Actions */}
         <div className="flex flex-wrap gap-2">
           <Link to={`/order/${order.id}`} className="flex-1 min-w-[120px]">
             <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5 w-full">
@@ -78,7 +76,6 @@ export default function ScanResultCard({ order, onMoveNext, onMarkDelivered, onP
             <Printer className="h-3.5 w-3.5" /> Print Invoice
           </Button>
 
-          {/* Collect Payment — only when balance > 0 */}
           {hasBalance && (
             <Button
               size="sm"
@@ -107,14 +104,12 @@ export default function ScanResultCard({ order, onMoveNext, onMarkDelivered, onP
           )}
         </div>
 
-        {/* Delivery blocked notice */}
         {isReady && hasBalance && (
           <p className="text-xs text-destructive text-center">
             ⚠ Outstanding balance must be paid before delivery.
           </p>
         )}
 
-        {/* Progress */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1">
           {WORKFLOW_STAGES.map((stage, i) => {
             const isActive = i === stageIdx;

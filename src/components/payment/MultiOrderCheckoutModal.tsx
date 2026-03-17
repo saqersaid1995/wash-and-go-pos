@@ -9,6 +9,7 @@ import { CreditCard, Banknote, Building, Shuffle, Loader2, Printer } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { updateOrderStatus } from "@/lib/supabase-queries";
 import { toast } from "sonner";
+import { formatOMR } from "@/lib/currency";
 import type { WorkflowOrder } from "@/types/workflow";
 
 const PAYMENT_METHODS = [
@@ -35,7 +36,7 @@ export default function MultiOrderCheckoutModal({
   const combinedTotal = orders.reduce((s, o) => s + o.totalAmount, 0);
   const combinedPaid = orders.reduce((s, o) => s + o.paidAmount, 0);
 
-  const [amount, setAmount] = useState(combinedRemaining.toFixed(2));
+  const [amount, setAmount] = useState(combinedRemaining.toFixed(3));
   const [method, setMethod] = useState<string>("cash");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string; delivered: boolean } | null>(null);
@@ -52,7 +53,6 @@ export default function MultiOrderCheckoutModal({
 
     let remaining = numericAmount;
 
-    // 1. Process payments for each order
     for (const order of orders) {
       if (remaining <= 0) break;
       const payForThis = Math.min(remaining, order.remainingBalance);
@@ -92,7 +92,6 @@ export default function MultiOrderCheckoutModal({
       remaining -= payForThis;
     }
 
-    // 2. Auto-deliver if full payment on pickup flow
     let delivered = false;
     if (willAutoDeliver) {
       for (const order of orders) {
@@ -117,14 +116,14 @@ export default function MultiOrderCheckoutModal({
 
   const handleClose = () => {
     setReceipt(null);
-    setAmount(combinedRemaining.toFixed(2));
+    setAmount(combinedRemaining.toFixed(3));
     setMethod("cash");
     onOpenChange(false);
   };
 
   const handleOpenChange = (v: boolean) => {
     if (v) {
-      setAmount(combinedRemaining.toFixed(2));
+      setAmount(combinedRemaining.toFixed(3));
       setMethod("cash");
       setReceipt(null);
     }
@@ -153,7 +152,7 @@ export default function MultiOrderCheckoutModal({
               <InfoRow label="Customer" value={customerName} />
               <InfoRow label="Phone" value={customerPhone} />
               <InfoRow label="Orders" value={orders.map(o => o.orderNumber).join(", ")} />
-              <InfoRow label="Amount Paid" value={`$${receipt.amount.toFixed(2)}`} />
+              <InfoRow label="Amount Paid" value={formatOMR(receipt.amount)} />
               <InfoRow label="Method" value={receipt.method} />
               <InfoRow label="Date" value={receipt.date} />
               {receipt.delivered && <InfoRow label="Status" value="✅ Delivered" />}
@@ -169,7 +168,6 @@ export default function MultiOrderCheckoutModal({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Customer & orders summary */}
             <div className="bg-secondary/50 rounded-lg p-3 space-y-2 text-sm">
               <InfoRow label="Customer" value={customerName} />
               <InfoRow label="Phone" value={customerPhone} />
@@ -177,19 +175,18 @@ export default function MultiOrderCheckoutModal({
               {orders.map(o => (
                 <div key={o.id} className="flex items-center justify-between text-xs py-1 border-b border-border/50 last:border-0">
                   <span className="font-medium">{o.orderNumber}</span>
-                  <span className="text-destructive font-semibold">${o.remainingBalance.toFixed(2)}</span>
+                  <span className="text-destructive font-semibold">{formatOMR(o.remainingBalance)}</span>
                 </div>
               ))}
               <Separator className="my-2" />
-              <InfoRow label="Combined Total" value={`$${combinedTotal.toFixed(2)}`} />
-              <InfoRow label="Combined Paid" value={`$${combinedPaid.toFixed(2)}`} />
+              <InfoRow label="Combined Total" value={formatOMR(combinedTotal)} />
+              <InfoRow label="Combined Paid" value={formatOMR(combinedPaid)} />
               <div className="flex justify-between font-semibold text-destructive">
                 <span>Combined Remaining</span>
-                <span>${combinedRemaining.toFixed(2)}</span>
+                <span>{formatOMR(combinedRemaining)}</span>
               </div>
             </div>
 
-            {/* Payment method */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Method</label>
               <div className="grid grid-cols-2 gap-2">
@@ -215,19 +212,18 @@ export default function MultiOrderCheckoutModal({
               </div>
             </div>
 
-            {/* Amount */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Amount</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
                 <Input
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="0.001"
+                  min="0.001"
                   max={combinedRemaining}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-7 text-lg font-semibold"
+                  className="pl-12 text-lg font-semibold"
                 />
               </div>
               {numericAmount > combinedRemaining && (
@@ -245,8 +241,8 @@ export default function MultiOrderCheckoutModal({
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
               {willAutoDeliver
-                ? `Pay & Deliver — $${numericAmount.toFixed(2)}`
-                : `Confirm Payment — $${numericAmount.toFixed(2)}`}
+                ? `Pay & Deliver — ${formatOMR(numericAmount)}`
+                : `Confirm Payment — ${formatOMR(numericAmount)}`}
             </Button>
           </div>
         )}
