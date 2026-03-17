@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
-import { SERVICES } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
 
