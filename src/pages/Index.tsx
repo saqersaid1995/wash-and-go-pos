@@ -36,15 +36,18 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-6 h-14">
+        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold tracking-tight">New Order</h1>
             <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
               {pos.orderNumber}
             </span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {pos.items.length} Items • ${pos.total.toFixed(2)}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              {pos.items.length} Items • ${pos.total.toFixed(2)}
+            </span>
+            <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
           </div>
         </div>
       </header>
