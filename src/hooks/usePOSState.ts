@@ -78,12 +78,7 @@ export function usePOSState() {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const updated = { ...item, ...updates };
-        if (updates.serviceId) {
-          const svc = SERVICES.find((s) => s.id === updates.serviceId);
-          if (svc) updated.unitPrice = svc.price;
-        }
-        return updated;
+        return { ...item, ...updates };
       })
     );
   }, []);
