@@ -93,6 +93,9 @@ export default function OrderDetails() {
             <StatusBadge status={order.currentStatus} />
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/scan">
+              <Button variant="outline" size="sm" className="h-8 text-xs">Scan</Button>
+            </Link>
             <Link to="/workflow">
               <Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button>
             </Link>
