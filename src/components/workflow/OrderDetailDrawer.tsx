@@ -157,7 +157,7 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
           </div>
 
           {/* Quick actions */}
-          <div className="py-3">
+          <div className="py-3 flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -167,6 +167,11 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
               <AlertTriangle className="h-3 w-3" />
               {order.orderType === "urgent" ? "Remove Urgent" : "Mark Urgent"}
             </Button>
+            <Link to={`/order/${order.id}`} onClick={onClose}>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+                <ExternalLink className="h-3 w-3" /> Full Details
+              </Button>
+            </Link>
           </div>
         </ScrollArea>
       </SheetContent>
