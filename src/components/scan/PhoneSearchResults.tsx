@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
-  CreditCard, Truck, FileText, ShoppingBag, AlertTriangle, CheckCircle2,
+  CreditCard, Truck, FileText, AlertTriangle,
 } from "lucide-react";
 import type { WorkflowOrder } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
@@ -33,9 +33,7 @@ export default function PhoneSearchResults({
 
   const filteredOrders = useMemo(() => {
     if (showAll) return orders;
-    return orders.filter(
-      (o) => o.currentStatus !== "delivered"
-    );
+    return orders.filter((o) => o.currentStatus !== "delivered");
   }, [orders, showAll]);
 
   const selectedOrders = useMemo(
@@ -50,15 +48,32 @@ export default function PhoneSearchResults({
     remaining: selectedOrders.reduce((s, o) => s + o.remainingBalance, 0),
   }), [selectedOrders]);
 
-  const allReadyForPickup = selectedOrders.every((o) => o.currentStatus === "ready-for-pickup");
-  const canDeliver = summary.count > 0 && summary.remaining <= 0 && allReadyForPickup;
+  const allReadyForPickup = selectedOrders.length > 0 && selectedOrders.every((o) => o.currentStatus === "ready-for-pickup");
+  const canDeliverDirectly = summary.count > 0 && summary.remaining <= 0 && allReadyForPickup;
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === filteredOrders.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  // Deliver already-paid orders directly (no payment needed)
   const handleDeliverOnly = async () => {
-    if (!canDeliver) {
+    if (!canDeliverDirectly) {
       if (!allReadyForPickup) {
         toast.error("Only Ready for Pickup orders can be delivered.");
       } else {
-        toast.error("Selected orders cannot be marked delivered until the remaining balance is fully paid.");
+        toast.error("Selected orders still have outstanding balance.");
       }
       return;
     }
@@ -72,6 +87,7 @@ export default function PhoneSearchResults({
     onRefresh();
   };
 
+  // Called after checkout modal completes (payment + auto-delivery handled inside modal)
   const handlePaymentComplete = () => {
     setSelectedIds(new Set());
     onRefresh();
@@ -169,7 +185,7 @@ export default function PhoneSearchResults({
         })}
       </div>
 
-      {/* Selection summary */}
+      {/* Selection summary & actions */}
       {summary.count > 0 && (
         <div className="pos-section space-y-3 sticky bottom-0 bg-card border-t border-border shadow-lg">
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -180,30 +196,33 @@ export default function PhoneSearchResults({
           </div>
 
           <div className="flex gap-2">
-            {summary.remaining > 0 && (
+            {summary.remaining > 0 ? (
               <Button
                 size="sm"
-                className="flex-1 h-10 text-xs gap-1.5 bg-warning hover:bg-warning/90 text-warning-foreground"
+                className="flex-1 h-10 text-xs gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => setCheckoutOpen(true)}
+                disabled={!allReadyForPickup}
+                title={!allReadyForPickup ? "Only Ready for Pickup orders can be processed" : ""}
               >
-                <CreditCard className="h-3.5 w-3.5" /> Collect Payment
+                <CreditCard className="h-3.5 w-3.5" /> Collect Payment & Deliver
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="flex-1 h-10 text-xs gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+                onClick={handleDeliverOnly}
+                disabled={!canDeliverDirectly || delivering}
+                title={!allReadyForPickup ? "Only Ready for Pickup orders can be delivered" : ""}
+              >
+                <Truck className="h-3.5 w-3.5" />
+                {delivering ? "Delivering..." : "Deliver Selected Orders"}
               </Button>
             )}
-            <Button
-              size="sm"
-              className="flex-1 h-10 text-xs gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
-              onClick={handleMarkDelivered}
-              disabled={!canDeliver || delivering}
-              title={!canDeliver ? "Pay remaining balance first" : "Mark all selected as delivered"}
-            >
-              <Truck className="h-3.5 w-3.5" />
-              {delivering ? "Delivering..." : "Mark Delivered"}
-            </Button>
           </div>
 
-          {summary.remaining > 0 && (
+          {summary.remaining > 0 && !allReadyForPickup && (
             <p className="text-[0.65rem] text-destructive text-center">
-              ⚠ Selected orders cannot be delivered until the remaining balance is fully paid.
+              ⚠ Only Ready for Pickup orders can be processed for delivery.
             </p>
           )}
         </div>
@@ -215,7 +234,8 @@ export default function PhoneSearchResults({
         orders={selectedOrders}
         customerName={customerName}
         customerPhone={customerPhone}
-        onPaymentComplete={onRefresh}
+        onPaymentComplete={handlePaymentComplete}
+        autoDeliver
       />
     </div>
   );
