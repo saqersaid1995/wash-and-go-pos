@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History } from "lucide-react";
+import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface Props {
   order: WorkflowOrder | null;
