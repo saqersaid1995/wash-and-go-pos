@@ -66,9 +66,9 @@ export function usePOSState() {
       {
         id: generateId(),
         itemType: "",
-        serviceId: "wash-iron",
+        serviceId: "",
         quantity: 1,
-        unitPrice: SERVICES.find((s) => s.id === "wash-iron")!.price,
+        unitPrice: 0,
         conditions: [],
       },
     ]);
