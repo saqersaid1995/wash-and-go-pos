@@ -1,3 +1,4 @@
+// Laundry POS - Phase 1
 import { usePOSState } from "@/hooks/usePOSState";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
