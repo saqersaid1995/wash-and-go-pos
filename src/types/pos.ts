@@ -57,21 +57,8 @@ export interface Order {
   paymentStatus: PaymentStatus;
 }
 
-export const SERVICES: Service[] = [
-  { id: "wash", name: "Wash Only", price: 1.0 },
-  { id: "iron", name: "Iron Only", price: 0.75 },
-  { id: "wash-iron", name: "Wash + Iron", price: 1.5 },
-  { id: "dry-clean", name: "Dry Clean", price: 3.0 },
-  { id: "special", name: "Special Cleaning", price: 5.0 },
-  { id: "carpet", name: "Carpet Cleaning", price: 8.0 },
-  { id: "blanket", name: "Blanket Cleaning", price: 6.0 },
-];
-
-export const ITEM_TYPES = [
-  "Thobe", "Shirt", "Pants", "Jacket", "Suit", "Dress", "Skirt",
-  "Coat", "Blanket", "Carpet", "Curtain", "Abaya", "Scarf", "Tie",
-  "Jeans", "T-Shirt", "Sweater", "Underwear", "Socks", "Other",
-];
+// SERVICES and ITEM_TYPES are now loaded dynamically from the database.
+// See the `items` and `services` tables.
 
 export const GARMENT_CONDITIONS: GarmentCondition[] = [
   { id: "stain", label: "Stain Present" },
