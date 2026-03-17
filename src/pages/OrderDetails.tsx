@@ -1,7 +1,9 @@
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useWorkflowState } from "@/hooks/useWorkflowState";
 import { WORKFLOW_STAGES } from "@/types/workflow";
-import { SERVICES, GARMENT_CONDITIONS, EMPLOYEES } from "@/types/pos";
+import { GARMENT_CONDITIONS } from "@/types/pos";
+import type { WorkflowOrder } from "@/types/workflow";
+import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -13,20 +15,37 @@ import {
 import {
   ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
-  CheckCircle2, Circle, ArrowRight,
+  CheckCircle2, Circle, ArrowRight, Loader2,
 } from "lucide-react";
-import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 export default function OrderDetails() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const wf = useWorkflowState();
+  const [order, setOrder] = useState<WorkflowOrder | null>(null);
+  const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
-  const invoiceRef = useRef<HTMLDivElement>(null);
 
-  const order = wf.orders.find((o) => o.id === orderId);
+  const loadOrder = useCallback(async () => {
+    if (!orderId) return;
+    setLoading(true);
+    const data = await fetchOrderById(orderId);
+    setOrder(data);
+    setLoading(false);
+  }, [orderId]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -50,39 +69,46 @@ export default function OrderDetails() {
 
   const invoiceNumber = `INV-${order.orderNumber.replace("ORD-", "")}`;
 
-  // Compute pricing breakdown from items
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const urgentFee = order.orderType === "urgent" ? subtotal * 0.5 : 0;
   const discount = 0;
   const taxableAmount = subtotal + urgentFee - discount;
   const tax = Math.max(0, taxableAmount * 0.05);
 
-  const handleMoveNext = () => {
-    wf.moveToNext(order.id);
-    toast.success("Order moved to next stage");
-  };
-  const handleMovePrev = () => {
-    wf.moveToPrev(order.id);
-    toast.info("Order moved back");
-  };
-  const handleAddNote = () => {
-    if (!noteText.trim()) return;
-    wf.addNote(order.id, noteText.trim());
-    setNoteText("");
-    toast.success("Note added");
-  };
-  const handleToggleUrgent = () => {
-    wf.toggleUrgent(order.id);
-    toast.success(order.orderType === "urgent" ? "Urgent flag removed" : "Marked as urgent");
+  const handleMoveNext = async () => {
+    if (canNext) {
+      await updateOrderStatus(order.id, order.currentStatus, WORKFLOW_STAGES[stageIdx + 1].id);
+      toast.success("Order moved to next stage");
+      loadOrder();
+    }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleMovePrev = async () => {
+    if (canPrev) {
+      await updateOrderStatus(order.id, order.currentStatus, WORKFLOW_STAGES[stageIdx - 1].id);
+      toast.info("Order moved back");
+      loadOrder();
+    }
   };
+
+  const handleAddNote = async () => {
+    if (!noteText.trim()) return;
+    await addInternalNote(order.id, noteText.trim());
+    setNoteText("");
+    toast.success("Note added");
+    loadOrder();
+  };
+
+  const handleToggleUrgent = async () => {
+    await toggleOrderUrgent(order.id, order.orderType);
+    toast.success(order.orderType === "urgent" ? "Urgent flag removed" : "Marked as urgent");
+    loadOrder();
+  };
+
+  const handlePrint = () => window.print();
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
         <div className="flex items-center justify-between px-4 sm:px-6 h-14">
           <div className="flex items-center gap-3">
@@ -93,22 +119,14 @@ export default function OrderDetails() {
             <StatusBadge status={order.currentStatus} />
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/scan">
-              <Button variant="outline" size="sm" className="h-8 text-xs">Scan</Button>
-            </Link>
-            <Link to="/workflow">
-              <Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button>
-            </Link>
-            <Link to="/">
-              <Button variant="outline" size="sm" className="h-8 text-xs">New Order</Button>
-            </Link>
+            <Link to="/scan"><Button variant="outline" size="sm" className="h-8 text-xs">Scan</Button></Link>
+            <Link to="/workflow"><Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button></Link>
+            <Link to="/"><Button variant="outline" size="sm" className="h-8 text-xs">New Order</Button></Link>
           </div>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto p-4 space-y-5">
-
-        {/* 1. Order Header Summary */}
         <section className="pos-section">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
@@ -127,7 +145,7 @@ export default function OrderDetails() {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm">
-            <InfoCell label="Delivery Date" value={order.deliveryDate} />
+            <InfoCell label="Delivery Date" value={order.deliveryDate || "—"} />
             <InfoCell label="Order Type" value={order.orderType} />
             <InfoCell label="Payment" value={`$${order.totalAmount.toFixed(2)}`} />
             <InfoCell label="Status" value={WORKFLOW_STAGES[stageIdx]?.label || order.currentStatus} />
@@ -135,7 +153,6 @@ export default function OrderDetails() {
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* 2. Customer Info */}
           <section className="pos-section space-y-3">
             <SectionHeader icon={User} title="Customer Information" />
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -146,21 +163,19 @@ export default function OrderDetails() {
             </div>
           </section>
 
-          {/* 3. Order Information */}
           <section className="pos-section space-y-3">
             <SectionHeader icon={Package} title="Order Information" />
             <div className="grid grid-cols-2 gap-3 text-sm">
               <InfoCell label="Order Number" value={order.orderNumber} />
               <InfoCell label="Invoice" value={invoiceNumber} />
               <InfoCell label="Order Date" value={order.orderDate} />
-              <InfoCell label="Delivery Date" value={order.deliveryDate} />
+              <InfoCell label="Delivery Date" value={order.deliveryDate || "—"} />
               <InfoCell label="Order Type" value={order.orderType} />
               <InfoCell label="Pickup" value={order.pickupMethod} />
             </div>
           </section>
         </div>
 
-        {/* 4. Items Table */}
         <section className="pos-section space-y-3">
           <SectionHeader icon={Package} title={`Items (${order.itemCount})`} />
           <div className="overflow-x-auto">
@@ -202,13 +217,11 @@ export default function OrderDetails() {
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* 5. Pricing & Payment Summary */}
           <section className="pos-section space-y-3">
             <SectionHeader icon={CreditCard} title="Pricing & Payment" />
             <div className="space-y-2 text-sm">
               <PricingRow label="Subtotal" value={subtotal} />
               {urgentFee > 0 && <PricingRow label="Urgent Fee (50%)" value={urgentFee} />}
-              {discount > 0 && <PricingRow label="Discount" value={-discount} />}
               <PricingRow label="Tax (5%)" value={tax} />
               <Separator />
               <div className="flex justify-between font-bold text-base">
@@ -224,17 +237,14 @@ export default function OrderDetails() {
                 </div>
               )}
               <div className="flex items-center gap-2 pt-1">
-                <span className="text-muted-foreground">Method:</span>
-                <span className="capitalize font-medium">{order.paymentMethod}</span>
+                <span className="text-muted-foreground">Payment:</span>
                 <PaymentBadge status={order.paymentStatus} />
               </div>
             </div>
           </section>
 
-          {/* 7. Workflow Status */}
           <section className="pos-section space-y-3">
             <SectionHeader icon={CheckCircle2} title="Workflow Status" />
-            {/* Progress Stepper */}
             <div className="flex items-center gap-1 overflow-x-auto pb-2">
               {WORKFLOW_STAGES.map((stage, i) => {
                 const isActive = i === stageIdx;
@@ -265,7 +275,7 @@ export default function OrderDetails() {
           </section>
         </div>
 
-        {/* 6. Invoice View */}
+        {/* Invoice View */}
         <section className="pos-section space-y-3">
           <div className="flex items-center justify-between">
             <SectionHeader icon={FileText} title="Invoice" />
@@ -273,7 +283,7 @@ export default function OrderDetails() {
               <Printer className="h-3 w-3" /> Print
             </Button>
           </div>
-          <div ref={invoiceRef} className="invoice-print border border-border rounded-lg p-6 bg-card space-y-4 text-sm">
+          <div className="invoice-print border border-border rounded-lg p-6 bg-card space-y-4 text-sm">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-bold">Wash & Go Laundry</h3>
@@ -288,7 +298,7 @@ export default function OrderDetails() {
               <div><span className="text-muted-foreground">Customer:</span> <strong>{order.customerName}</strong></div>
               <div><span className="text-muted-foreground">Phone:</span> <strong>{order.customerPhone}</strong></div>
               <div><span className="text-muted-foreground">Order Date:</span> <strong>{order.orderDate}</strong></div>
-              <div><span className="text-muted-foreground">Delivery:</span> <strong>{order.deliveryDate}</strong></div>
+              <div><span className="text-muted-foreground">Delivery:</span> <strong>{order.deliveryDate || "—"}</strong></div>
             </div>
             <Separator />
             <table className="w-full text-xs">
@@ -329,34 +339,38 @@ export default function OrderDetails() {
           </div>
         </section>
 
-        {/* 8. Status History Timeline */}
+        {/* Status History */}
         <section className="pos-section space-y-3">
           <SectionHeader icon={History} title="Status History" />
-          <div className="space-y-0">
-            {order.statusHistory.map((change, i) => (
-              <div key={change.id} className="flex gap-3 pb-4 last:pb-0">
-                <div className="flex flex-col items-center">
-                  <div className={`w-3 h-3 rounded-full shrink-0 ${i === order.statusHistory.length - 1 ? "bg-primary" : "bg-border"}`} />
-                  {i < order.statusHistory.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+          {order.statusHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No status changes yet.</p>
+          ) : (
+            <div className="space-y-0">
+              {order.statusHistory.map((change, i) => (
+                <div key={change.id} className="flex gap-3 pb-4 last:pb-0">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full shrink-0 ${i === order.statusHistory.length - 1 ? "bg-primary" : "bg-border"}`} />
+                    {i < order.statusHistory.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                  </div>
+                  <div className="text-sm space-y-0.5 -mt-0.5">
+                    <p className="font-medium">
+                      {change.fromStatus
+                        ? <><span className="capitalize">{change.fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{change.toStatus.replace("-", " ")}</span></>
+                        : <span>Created as <span className="capitalize font-semibold">{change.toStatus.replace("-", " ")}</span></span>
+                      }
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(change.changedAt).toLocaleString()}
+                      {change.changedBy && <> • {change.changedBy}</>}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-sm space-y-0.5 -mt-0.5">
-                  <p className="font-medium">
-                    {change.fromStatus
-                      ? <><span className="capitalize">{change.fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{change.toStatus.replace("-", " ")}</span></>
-                      : <span>Created as <span className="capitalize font-semibold">{change.toStatus.replace("-", " ")}</span></span>
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(change.changedAt).toLocaleString()}
-                    {change.changedBy && <> • {change.changedBy}</>}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* 9. Internal Notes */}
+        {/* Internal Notes */}
         <section className="pos-section space-y-3">
           <SectionHeader icon={StickyNote} title="Internal Notes" />
           {order.internalNotes.length === 0 && <p className="text-sm text-muted-foreground">No internal notes yet.</p>}
@@ -383,7 +397,7 @@ export default function OrderDetails() {
           </Button>
         </section>
 
-        {/* 10. Action Buttons */}
+        {/* Action Buttons */}
         <section className="pos-section flex flex-wrap gap-2 print:hidden">
           <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handlePrint}>
             <Printer className="h-3.5 w-3.5" /> Print Invoice
@@ -408,8 +422,6 @@ export default function OrderDetails() {
     </div>
   );
 }
-
-/* ─── Reusable Sub-Components ─── */
 
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (

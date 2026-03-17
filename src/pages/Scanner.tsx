@@ -1,33 +1,37 @@
 import { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useWorkflowState } from "@/hooks/useWorkflowState";
-import { WORKFLOW_STAGES } from "@/types/workflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ScanLine, Search, ArrowLeft, Keyboard, X, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
+import { WORKFLOW_STAGES } from "@/types/workflow";
+import { searchOrderByCode, updateOrderStatus } from "@/lib/supabase-queries";
+import type { WorkflowOrder } from "@/types/workflow";
 import QrScanner from "@/components/scan/QrScanner";
 import ScanResultCard from "@/components/scan/ScanResultCard";
 import OrderLabel from "@/components/scan/OrderLabel";
 
 export default function Scanner() {
   const navigate = useNavigate();
-  const wf = useWorkflowState();
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
-  const [foundOrder, setFoundOrder] = useState<string | null>(null);
+  const [foundOrder, setFoundOrder] = useState<WorkflowOrder | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [showLabel, setShowLabel] = useState(false);
+  const [searching, setSearching] = useState(false);
 
-  const lookupOrder = useCallback((code: string) => {
+  const lookupOrder = useCallback(async (code: string) => {
     const clean = code.trim().replace(/^ORDER:/, "");
-    const order = wf.orders.find(
-      (o) => o.orderNumber === clean || o.id === clean || o.orderNumber.includes(clean)
-    );
+    if (!clean) return;
+
+    setSearching(true);
+    const order = await searchOrderByCode(clean);
+    setSearching(false);
+
     if (order) {
-      setFoundOrder(order.id);
+      setFoundOrder(order);
       setNotFound(false);
       toast.success(`Order found: ${order.orderNumber}`);
     } else {
@@ -35,7 +39,7 @@ export default function Scanner() {
       setNotFound(true);
       toast.error("No matching order found");
     }
-  }, [wf.orders]);
+  }, []);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,30 +48,35 @@ export default function Scanner() {
   };
 
   const handleKeyboardScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Barcode scanners typically send Enter after the code
     if (e.key === "Enter") {
       e.preventDefault();
       lookupOrder(manualCode);
     }
   };
 
-  const order = wf.orders.find((o) => o.id === foundOrder);
-
-  const handleMoveNext = () => {
-    if (!order) return;
-    wf.moveToNext(order.id);
-    toast.success("Order moved to next stage");
+  const handleMoveNext = async () => {
+    if (!foundOrder) return;
+    const idx = WORKFLOW_STAGES.findIndex((s) => s.id === foundOrder.currentStatus);
+    if (idx < WORKFLOW_STAGES.length - 1) {
+      await updateOrderStatus(foundOrder.id, foundOrder.currentStatus, WORKFLOW_STAGES[idx + 1].id);
+      toast.success("Order moved to next stage");
+      // Reload
+      const updated = await searchOrderByCode(foundOrder.orderNumber);
+      if (updated) setFoundOrder(updated);
+    }
   };
 
-  const handleMarkDelivered = () => {
-    if (!order) return;
-    wf.moveOrder(order.id, "delivered");
+  const handleMarkDelivered = async () => {
+    if (!foundOrder) return;
+    await updateOrderStatus(foundOrder.id, foundOrder.currentStatus, "delivered");
     toast.success("Order marked as delivered");
+    const updated = await searchOrderByCode(foundOrder.orderNumber);
+    if (updated) setFoundOrder(updated);
   };
 
   const handlePrintInvoice = () => {
-    if (!order) return;
-    navigate(`/order/${order.id}`);
+    if (!foundOrder) return;
+    navigate(`/order/${foundOrder.id}`);
   };
 
   const handlePrintLabel = () => {
@@ -84,7 +93,6 @@ export default function Scanner() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
         <div className="flex items-center justify-between px-4 sm:px-6 h-14">
           <div className="flex items-center gap-3">
@@ -95,30 +103,20 @@ export default function Scanner() {
             <h1 className="text-lg font-bold tracking-tight">Scan Order</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/workflow">
-              <Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button>
-            </Link>
-            <Link to="/">
-              <Button variant="outline" size="sm" className="h-8 text-xs">New Order</Button>
-            </Link>
+            <Link to="/workflow"><Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button></Link>
+            <Link to="/"><Button variant="outline" size="sm" className="h-8 text-xs">New Order</Button></Link>
           </div>
         </div>
       </header>
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
-        {/* Camera Scanner */}
         <section className="pos-section space-y-3 print:hidden">
           <h2 className="pos-label flex items-center gap-1.5">
             <ScanLine className="h-3.5 w-3.5" /> Camera Scan
           </h2>
-          <QrScanner
-            onScan={lookupOrder}
-            scanning={scanning}
-            onToggle={() => setScanning(!scanning)}
-          />
+          <QrScanner onScan={lookupOrder} scanning={scanning} onToggle={() => setScanning(!scanning)} />
         </section>
 
-        {/* Manual Entry */}
         <section className="pos-section space-y-3 print:hidden">
           <h2 className="pos-label flex items-center gap-1.5">
             <Keyboard className="h-3.5 w-3.5" /> Manual Entry / Barcode Scanner
@@ -132,7 +130,7 @@ export default function Scanner() {
               className="flex-1 text-sm"
               autoFocus
             />
-            <Button type="submit" size="sm" className="h-10 px-4 text-xs gap-1.5">
+            <Button type="submit" size="sm" className="h-10 px-4 text-xs gap-1.5" disabled={searching}>
               <Search className="h-3.5 w-3.5" /> Lookup
             </Button>
           </form>
@@ -141,7 +139,6 @@ export default function Scanner() {
           </p>
         </section>
 
-        {/* Not Found */}
         {notFound && (
           <div className="pos-section text-center space-y-3 print:hidden">
             <div className="text-destructive space-y-1">
@@ -158,8 +155,7 @@ export default function Scanner() {
           </div>
         )}
 
-        {/* Scan Result */}
-        {order && (
+        {foundOrder && (
           <>
             <div className="flex items-center justify-between print:hidden">
               <h2 className="pos-label">Scan Result</h2>
@@ -175,24 +171,22 @@ export default function Scanner() {
 
             <div className="print:hidden">
               <ScanResultCard
-                order={order}
+                order={foundOrder}
                 onMoveNext={handleMoveNext}
                 onMarkDelivered={handleMarkDelivered}
                 onPrint={handlePrintInvoice}
               />
             </div>
 
-            {/* Printable Label */}
             {showLabel && (
               <div className="label-print">
-                <OrderLabel order={order} />
+                <OrderLabel order={foundOrder} />
               </div>
             )}
           </>
         )}
 
-        {/* Empty state */}
-        {!order && !notFound && (
+        {!foundOrder && !notFound && (
           <div className="text-center py-8 text-muted-foreground print:hidden">
             <ScanLine className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">Scan a QR code or enter an order number to get started</p>

@@ -5,7 +5,7 @@ import WorkflowBoard from "@/components/workflow/WorkflowBoard";
 import OrderDetailDrawer from "@/components/workflow/OrderDetailDrawer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Workflow() {
@@ -23,7 +23,6 @@ export default function Workflow() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 sm:px-6 h-14">
           <div className="flex items-center gap-3">
@@ -41,14 +40,30 @@ export default function Workflow() {
       </header>
 
       <div className="p-4 space-y-4 max-w-[1800px] mx-auto">
-        <SummaryCards counts={wf.statusCounts} />
-        <FilterBar filters={wf.filters} onFilterChange={wf.updateFilter} onReset={wf.resetFilters} />
-        <WorkflowBoard
-          ordersByStatus={wf.ordersByStatus}
-          onSelectOrder={wf.setSelectedOrderId}
-          onMoveNext={handleMoveNext}
-          onMovePrev={handleMovePrev}
-        />
+        {wf.loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : wf.orders.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <p className="text-lg font-medium">No orders yet</p>
+            <p className="text-sm mt-1">Create your first order from the POS page</p>
+            <Link to="/">
+              <Button className="mt-4" size="sm">Create Order</Button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            <SummaryCards counts={wf.statusCounts} />
+            <FilterBar filters={wf.filters} onFilterChange={wf.updateFilter} onReset={wf.resetFilters} />
+            <WorkflowBoard
+              ordersByStatus={wf.ordersByStatus}
+              onSelectOrder={wf.setSelectedOrderId}
+              onMoveNext={handleMoveNext}
+              onMovePrev={handleMovePrev}
+            />
+          </>
+        )}
       </div>
 
       <OrderDetailDrawer

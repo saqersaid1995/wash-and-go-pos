@@ -1,10 +1,7 @@
-import { useState, useCallback, useMemo } from "react";
-import type { WorkflowOrder, WorkflowStatus, StatusChange, InternalNote } from "@/types/workflow";
-import { MOCK_WORKFLOW_ORDERS, WORKFLOW_STAGES } from "@/types/workflow";
-
-function randomId() {
-  return Math.random().toString(36).substring(2, 10);
-}
+import { useState, useCallback, useMemo, useEffect } from "react";
+import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
+import { WORKFLOW_STAGES } from "@/types/workflow";
+import { fetchAllOrders, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
 
 export interface WorkflowFilters {
   search: string;
@@ -23,11 +20,24 @@ const initialFilters: WorkflowFilters = {
 };
 
 export function useWorkflowState() {
-  const [orders, setOrders] = useState<WorkflowOrder[]>(MOCK_WORKFLOW_ORDERS);
+  const [orders, setOrders] = useState<WorkflowOrder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<WorkflowFilters>(initialFilters);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
+
+  // Load orders from Supabase
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    const data = await fetchAllOrders();
+    setOrders(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const updateFilter = useCallback(<K extends keyof WorkflowFilters>(key: K, value: WorkflowFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -35,72 +45,93 @@ export function useWorkflowState() {
 
   const resetFilters = useCallback(() => setFilters(initialFilters), []);
 
-  const moveOrder = useCallback((orderId: string, toStatus: WorkflowStatus, changedBy?: string) => {
+  const moveOrder = useCallback(async (orderId: string, toStatus: WorkflowStatus, changedBy?: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // Optimistic update
     setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== orderId) return order;
-        const change: StatusChange = {
-          id: randomId(),
-          orderId,
-          fromStatus: order.currentStatus,
-          toStatus,
-          changedAt: new Date().toISOString(),
-          changedBy,
-        };
+      prev.map((o) => {
+        if (o.id !== orderId) return o;
         return {
-          ...order,
+          ...o,
           currentStatus: toStatus,
           statusUpdatedAt: new Date().toISOString(),
-          statusHistory: [...order.statusHistory, change],
+          statusHistory: [
+            ...o.statusHistory,
+            {
+              id: Math.random().toString(36).substring(2, 10),
+              orderId,
+              fromStatus: o.currentStatus,
+              toStatus,
+              changedAt: new Date().toISOString(),
+              changedBy,
+            },
+          ],
         };
       })
     );
-  }, []);
 
-  const moveToNext = useCallback((orderId: string, changedBy?: string) => {
+    await updateOrderStatus(orderId, order.currentStatus, toStatus, changedBy);
+  }, [orders]);
+
+  const moveToNext = useCallback(async (orderId: string, changedBy?: string) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
     const idx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
     if (idx < WORKFLOW_STAGES.length - 1) {
-      moveOrder(orderId, WORKFLOW_STAGES[idx + 1].id, changedBy);
+      await moveOrder(orderId, WORKFLOW_STAGES[idx + 1].id, changedBy);
     }
   }, [orders, moveOrder]);
 
-  const moveToPrev = useCallback((orderId: string, changedBy?: string) => {
+  const moveToPrev = useCallback(async (orderId: string, changedBy?: string) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
     const idx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
     if (idx > 0) {
-      moveOrder(orderId, WORKFLOW_STAGES[idx - 1].id, changedBy);
+      await moveOrder(orderId, WORKFLOW_STAGES[idx - 1].id, changedBy);
     }
   }, [orders, moveOrder]);
 
-  const addNote = useCallback((orderId: string, text: string, createdBy?: string) => {
-    const note: InternalNote = {
-      id: randomId(),
-      orderId,
-      text,
-      createdAt: new Date().toISOString(),
-      createdBy,
-    };
+  const addNote = useCallback(async (orderId: string, text: string, createdBy?: string) => {
+    // Optimistic update
     setOrders((prev) =>
       prev.map((order) =>
         order.id === orderId
-          ? { ...order, internalNotes: [...order.internalNotes, note] }
+          ? {
+              ...order,
+              internalNotes: [
+                ...order.internalNotes,
+                {
+                  id: Math.random().toString(36).substring(2, 10),
+                  orderId,
+                  text,
+                  createdAt: new Date().toISOString(),
+                  createdBy,
+                },
+              ],
+            }
           : order
       )
     );
+
+    await addInternalNote(orderId, text, createdBy);
   }, []);
 
-  const toggleUrgent = useCallback((orderId: string) => {
+  const toggleUrgent = useCallback(async (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
     setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId
-          ? { ...order, orderType: order.orderType === "urgent" ? "regular" : "urgent" }
-          : order
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, orderType: o.orderType === "urgent" ? "regular" : "urgent" }
+          : o
       )
     );
-  }, []);
+
+    await toggleOrderUrgent(orderId, order.orderType);
+  }, [orders]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -125,14 +156,12 @@ export function useWorkflowState() {
     const counts: Record<string, number> = { total: 0, urgent: 0 };
     WORKFLOW_STAGES.forEach((s) => (counts[s.id] = 0));
     orders.forEach((o) => {
-      if (o.orderDate === today || o.currentStatus !== "delivered") {
-        counts.total++;
-      }
+      if (o.currentStatus !== "delivered") counts.total++;
       counts[o.currentStatus] = (counts[o.currentStatus] || 0) + 1;
       if (o.orderType === "urgent" && o.currentStatus !== "delivered") counts.urgent++;
     });
     return counts;
-  }, [orders, today]);
+  }, [orders]);
 
   const ordersByStatus = useMemo(() => {
     const map: Record<WorkflowStatus, WorkflowOrder[]> = {
@@ -141,7 +170,6 @@ export function useWorkflowState() {
     filteredOrders.forEach((o) => {
       map[o.currentStatus].push(o);
     });
-    // Sort urgent first in each column
     Object.keys(map).forEach((key) => {
       map[key as WorkflowStatus].sort((a, b) => {
         if (a.orderType === "urgent" && b.orderType !== "urgent") return -1;
@@ -159,6 +187,7 @@ export function useWorkflowState() {
 
   return {
     orders,
+    loading,
     filters,
     updateFilter,
     resetFilters,
@@ -173,5 +202,6 @@ export function useWorkflowState() {
     selectedOrder,
     selectedOrderId,
     setSelectedOrderId,
+    refetch: loadOrders,
   };
 }

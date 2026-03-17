@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
-import { MOCK_WORKFLOW_ORDERS, type WorkflowOrder, type WorkflowStatus, WORKFLOW_STAGES } from "@/types/workflow";
-import { MOCK_CUSTOMERS_DB } from "@/types/customer";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
+import { WORKFLOW_STAGES } from "@/types/workflow";
+import type { CustomerRecord } from "@/types/customer";
+import { fetchAllOrders, fetchAllCustomers } from "@/lib/supabase-queries";
 
 export type DateRange = "today" | "yesterday" | "this-week" | "this-month" | "all";
 
-const today = new Date().toISOString().split("T")[0];
-const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+const todayStr = () => new Date().toISOString().split("T")[0];
+const yesterdayStr = () => new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
 function startOfWeek() {
   const d = new Date();
@@ -21,6 +23,8 @@ function startOfMonth() {
 
 function filterByRange(orders: WorkflowOrder[], range: DateRange) {
   if (range === "all") return orders;
+  const today = todayStr();
+  const yesterday = yesterdayStr();
   if (range === "today") return orders.filter((o) => o.orderDate === today);
   if (range === "yesterday") return orders.filter((o) => o.orderDate === yesterday);
   if (range === "this-week") return orders.filter((o) => o.orderDate >= startOfWeek());
@@ -30,10 +34,24 @@ function filterByRange(orders: WorkflowOrder[], range: DateRange) {
 
 export function useReportsData() {
   const [dateRange, setDateRange] = useState<DateRange>("all");
-  const allOrders = MOCK_WORKFLOW_ORDERS;
-  const allCustomers = MOCK_CUSTOMERS_DB;
+  const [allOrders, setAllOrders] = useState<WorkflowOrder[]>([]);
+  const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [ords, custs] = await Promise.all([fetchAllOrders(), fetchAllCustomers()]);
+    setAllOrders(ords);
+    setAllCustomers(custs);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const orders = useMemo(() => filterByRange(allOrders, dateRange), [allOrders, dateRange]);
+  const today = todayStr();
 
   const kpis = useMemo(() => {
     const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
@@ -45,7 +63,7 @@ export function useReportsData() {
     const overdue = orders.filter((o) => o.deliveryDate < today && o.currentStatus !== "delivered");
     const urgent = orders.filter((o) => o.orderType === "urgent" && o.currentStatus !== "delivered");
     const todayOrders = allOrders.filter((o) => o.orderDate === today);
-    const newCustomersToday = allCustomers.filter((c) => c.createdAt === today);
+    const newCustomersToday = allCustomers.filter((c) => c.createdAt?.startsWith(today));
 
     return {
       totalRevenue,
@@ -61,7 +79,7 @@ export function useReportsData() {
       totalCustomers: allCustomers.length,
       newCustomersToday: newCustomersToday.length,
     };
-  }, [orders, allOrders, allCustomers]);
+  }, [orders, allOrders, allCustomers, today]);
 
   const statusDistribution = useMemo(() => {
     return WORKFLOW_STAGES.map((stage) => ({
@@ -147,7 +165,7 @@ export function useReportsData() {
     return activities.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 10);
   }, [allOrders]);
 
-  return { dateRange, setDateRange, orders, kpis, statusDistribution, paymentDistribution, serviceStats, itemTypeStats, topCustomers, revenueByDay, recentActivity };
+  return { dateRange, setDateRange, orders, loading, kpis, statusDistribution, paymentDistribution, serviceStats, itemTypeStats, topCustomers, revenueByDay, recentActivity };
 }
 
 function capitalize(s: string) {

@@ -1,18 +1,11 @@
 import { useState, useCallback } from "react";
-import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus, Customer } from "@/types/pos";
-import { SERVICES, MOCK_CUSTOMERS } from "@/types/pos";
+import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
+import { SERVICES } from "@/types/pos";
+import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
+import type { CustomerRecord } from "@/types/customer";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
-}
-
-function generateOrderNumber() {
-  const now = new Date();
-  const y = now.getFullYear().toString().slice(-2);
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const rand = Math.floor(Math.random() * 9000 + 1000);
-  return `ORD-${y}${m}${d}-${rand}`;
 }
 
 const URGENT_MULTIPLIER = 1.5;
@@ -20,13 +13,14 @@ const TAX_RATE = 0.05;
 
 export function usePOSState() {
   // Customer
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPhone, setCustomerPhoneRaw] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
-  const [matchedCustomer, setMatchedCustomer] = useState<Customer | null>(null);
+  const [matchedCustomer, setMatchedCustomer] = useState<CustomerRecord | null>(null);
+  const [matchedCustomerId, setMatchedCustomerId] = useState<string | null>(null);
 
   // Order details
-  const [orderNumber] = useState(generateOrderNumber);
+  const [orderNumber, setOrderNumber] = useState(generateOrderNumber);
   const [orderDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [orderType, setOrderType] = useState<OrderType>("regular");
@@ -42,19 +36,27 @@ export function usePOSState() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [paidAmount, setPaidAmount] = useState(0);
 
-  // Invoice
+  // Invoice & saving
   const [showInvoice, setShowInvoice] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Customer search
-  const searchCustomer = useCallback((phone: string) => {
-    setCustomerPhone(phone);
-    const found = MOCK_CUSTOMERS.find((c) => c.phone === phone);
-    if (found) {
-      setMatchedCustomer(found);
-      setCustomerName(found.name);
-      setCustomerNotes(found.notes || "");
+  // Customer search - async
+  const searchCustomer = useCallback(async (phone: string) => {
+    setCustomerPhoneRaw(phone);
+    if (phone.length >= 4) {
+      const found = await fetchCustomerByPhone(phone);
+      if (found) {
+        setMatchedCustomer(found);
+        setMatchedCustomerId(found.id);
+        setCustomerName(found.name);
+        setCustomerNotes(found.notes?.[0]?.text || "");
+      } else {
+        setMatchedCustomer(null);
+        setMatchedCustomerId(null);
+      }
     } else {
       setMatchedCustomer(null);
+      setMatchedCustomerId(null);
     }
   }, []);
 
@@ -78,7 +80,6 @@ export function usePOSState() {
       prev.map((item) => {
         if (item.id !== id) return item;
         const updated = { ...item, ...updates };
-        // If service changed, update price
         if (updates.serviceId) {
           const svc = SERVICES.find((s) => s.id === updates.serviceId);
           if (svc) updated.unitPrice = svc.price;
@@ -103,11 +104,63 @@ export function usePOSState() {
   const paymentStatus: PaymentStatus =
     paidAmount >= total && total > 0 ? "paid" : paidAmount > 0 ? "partially-paid" : "unpaid";
 
+  // Save to Supabase
+  const saveOrder = useCallback(async () => {
+    if (items.length === 0) return { success: false, error: "No items" };
+    if (!customerName.trim() && !customerPhone.trim()) {
+      return { success: false, error: "Customer name or phone required" };
+    }
+
+    setSaving(true);
+    try {
+      const result = await createOrder({
+        customerId: matchedCustomerId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        orderNumber,
+        orderDate,
+        deliveryDate,
+        orderType,
+        pickupMethod,
+        employeeId,
+        orderNotes,
+        items: items.map((item) => ({
+          itemType: item.itemType,
+          serviceId: item.serviceId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          color: item.color,
+          brand: item.brand,
+          notes: item.notes,
+          conditions: item.conditions,
+        })),
+        subtotal,
+        urgentFee,
+        discount,
+        tax,
+        total,
+        paidAmount,
+        remainingBalance,
+        paymentMethod,
+        paymentStatus,
+      });
+      return result;
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    items, customerName, customerPhone, matchedCustomerId,
+    orderNumber, orderDate, deliveryDate, orderType, pickupMethod,
+    employeeId, orderNotes, subtotal, urgentFee, discount, tax,
+    total, paidAmount, remainingBalance, paymentMethod, paymentStatus,
+  ]);
+
   const clearForm = useCallback(() => {
-    setCustomerPhone("");
+    setCustomerPhoneRaw("");
     setCustomerName("");
     setCustomerNotes("");
     setMatchedCustomer(null);
+    setMatchedCustomerId(null);
     setDeliveryDate("");
     setOrderType("regular");
     setPickupMethod("walk-in");
@@ -118,6 +171,7 @@ export function usePOSState() {
     setPaymentMethod("cash");
     setPaidAmount(0);
     setShowInvoice(false);
+    setOrderNumber(generateOrderNumber());
   }, []);
 
   return {
@@ -138,6 +192,6 @@ export function usePOSState() {
     // Invoice
     showInvoice, setShowInvoice,
     // Actions
-    clearForm,
+    saveOrder, saving, clearForm,
   };
 }
