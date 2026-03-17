@@ -185,6 +185,7 @@ export default function Scanner() {
                 onMoveNext={handleMoveNext}
                 onMarkDelivered={handleMarkDelivered}
                 onPrint={handlePrintInvoice}
+                onRefresh={handleRefresh}
               />
             </div>
 
