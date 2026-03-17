@@ -83,12 +83,6 @@ export const GARMENT_CONDITIONS: GarmentCondition[] = [
   { id: "broken-zipper", label: "Broken Zipper" },
 ];
 
-export const MOCK_CUSTOMERS: Customer[] = [
-  { id: "1", phone: "5550123", name: "John Doe", notes: "VIP customer" },
-  { id: "2", phone: "5550456", name: "Sarah Ahmed" },
-  { id: "3", phone: "5550789", name: "Ali Hassan", notes: "Prefers delivery" },
-];
-
 export const EMPLOYEES = [
   { id: "1", name: "Ahmad" },
   { id: "2", name: "Fatima" },
