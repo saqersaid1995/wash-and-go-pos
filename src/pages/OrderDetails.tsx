@@ -408,6 +408,11 @@ export default function OrderDetails() {
             <AlertTriangle className="h-3.5 w-3.5" />
             {order.orderType === "urgent" ? "Remove Urgent" : "Mark Urgent"}
           </Button>
+          {order.remainingBalance > 0 && (
+            <Button size="sm" className="h-9 text-xs gap-1.5 bg-warning hover:bg-warning/90 text-warning-foreground" onClick={() => setPaymentOpen(true)}>
+              <CreditCard className="h-3.5 w-3.5" /> Collect Payment
+            </Button>
+          )}
           {canNext && (
             <Button size="sm" className="h-9 text-xs gap-1.5" onClick={handleMoveNext}>
               Move to {WORKFLOW_STAGES[stageIdx + 1]?.label} <ChevronRight className="h-3.5 w-3.5" />
@@ -420,6 +425,13 @@ export default function OrderDetails() {
             </Button>
           </Link>
         </section>
+
+        <PaymentModal
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          order={order}
+          onPaymentComplete={loadOrder}
+        />
       </div>
     </div>
   );
