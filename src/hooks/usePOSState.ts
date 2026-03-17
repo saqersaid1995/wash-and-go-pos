@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { v4 } from "crypto";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus, Customer } from "@/types/pos";
 import { SERVICES, MOCK_CUSTOMERS } from "@/types/pos";
 
