@@ -27,6 +27,7 @@ export default function OrderDetails() {
   const [order, setOrder] = useState<WorkflowOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
