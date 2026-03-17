@@ -6,6 +6,7 @@ import GarmentTable from "@/components/pos/GarmentTable";
 import PricingSummary from "@/components/pos/PricingSummary";
 import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
+import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -74,12 +75,13 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground hidden sm:inline">
-              {pos.items.length} Items • ${pos.total.toFixed(2)}
+              {pos.items.length} Items • {formatOMR(pos.total)}
             </span>
             <a href="/scan" className="text-xs font-medium text-primary hover:underline">Scan →</a>
             <a href="/customers" className="text-xs font-medium text-primary hover:underline">Customers →</a>
             <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
             <a href="/reports" className="text-xs font-medium text-primary hover:underline">Reports →</a>
+            <a href="/services" className="text-xs font-medium text-primary hover:underline">Pricing →</a>
           </div>
         </div>
       </header>

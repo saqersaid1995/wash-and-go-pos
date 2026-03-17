@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { formatOMR } from "@/lib/currency";
 
 interface Props {
   order: WorkflowOrder | null;
@@ -50,7 +51,6 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
         </SheetHeader>
 
         <ScrollArea className="flex-1 px-4">
-          {/* Status controls */}
           <div className="flex items-center gap-2 py-3">
             <Button variant="outline" size="sm" disabled={!canPrev} onClick={() => onMovePrev(order.id)} className="h-8 text-xs">
               <ChevronLeft className="h-3 w-3 mr-1" />
@@ -67,7 +67,6 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
 
           <Separator />
 
-          {/* Order Info */}
           <div className="grid grid-cols-2 gap-3 py-3 text-sm">
             <InfoRow label="Order Date" value={order.orderDate} />
             <InfoRow label="Delivery Date" value={order.deliveryDate} />
@@ -75,14 +74,13 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
             <InfoRow label="Pickup" value={order.pickupMethod} />
             <InfoRow label="Payment" value={order.paymentMethod} />
             <InfoRow label="Payment Status" value={order.paymentStatus} />
-            <InfoRow label="Total" value={`$${order.totalAmount.toFixed(2)}`} />
-            <InfoRow label="Paid" value={`$${order.paidAmount.toFixed(2)}`} />
-            {order.remainingBalance > 0 && <InfoRow label="Remaining" value={`$${order.remainingBalance.toFixed(2)}`} />}
+            <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
+            <InfoRow label="Paid" value={formatOMR(order.paidAmount)} />
+            {order.remainingBalance > 0 && <InfoRow label="Remaining" value={formatOMR(order.remainingBalance)} />}
           </div>
 
           <Separator />
 
-          {/* Items */}
           <div className="py-3">
             <h4 className="pos-label mb-2">Items ({order.itemCount})</h4>
             <div className="space-y-1.5">
@@ -93,7 +91,7 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
                     <span className="text-muted-foreground ml-1.5">× {item.quantity}</span>
                     <span className="text-muted-foreground ml-1.5 text-xs">({item.service})</span>
                   </div>
-                  <span className="text-xs font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                  <span className="text-xs font-medium">{formatOMR(item.unitPrice * item.quantity)}</span>
                 </div>
               ))}
             </div>
@@ -111,7 +109,6 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
 
           <Separator />
 
-          {/* Internal Notes */}
           <div className="py-3">
             <h4 className="pos-label mb-2 flex items-center gap-1"><StickyNote className="h-3 w-3" /> Internal Notes</h4>
             <div className="space-y-1.5 mb-3">
@@ -140,7 +137,6 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
 
           <Separator />
 
-          {/* Status History */}
           <div className="py-3">
             <h4 className="pos-label mb-2 flex items-center gap-1"><History className="h-3 w-3" /> Status History</h4>
             <div className="space-y-1">
@@ -156,7 +152,6 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
             </div>
           </div>
 
-          {/* Quick actions */}
           <div className="py-3 flex flex-wrap gap-2">
             <Button
               variant="outline"
