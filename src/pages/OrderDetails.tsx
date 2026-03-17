@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import { formatOMR } from "@/lib/currency";
 
 export default function OrderDetails() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -149,7 +150,7 @@ export default function OrderDetails() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm">
             <InfoCell label="Delivery Date" value={order.deliveryDate || "—"} />
             <InfoCell label="Order Type" value={order.orderType} />
-            <InfoCell label="Payment" value={`$${order.totalAmount.toFixed(2)}`} />
+            <InfoCell label="Payment" value={formatOMR(order.totalAmount)} />
             <InfoCell label="Status" value={WORKFLOW_STAGES[stageIdx]?.label || order.currentStatus} />
           </div>
         </section>
@@ -199,8 +200,8 @@ export default function OrderDetails() {
                     <TableCell className="font-medium">{item.itemType}</TableCell>
                     <TableCell>{item.service}</TableCell>
                     <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatOMR(item.unitPrice)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatOMR(item.unitPrice * item.quantity)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {item.conditions.map((c) => {
@@ -228,14 +229,14 @@ export default function OrderDetails() {
               <Separator />
               <div className="flex justify-between font-bold text-base">
                 <span>Total</span>
-                <span>${order.totalAmount.toFixed(2)}</span>
+                <span>{formatOMR(order.totalAmount)}</span>
               </div>
               <Separator />
               <PricingRow label="Paid" value={order.paidAmount} />
               {order.remainingBalance > 0 && (
                 <div className="flex justify-between font-semibold text-destructive">
                   <span>Remaining</span>
-                  <span>${order.remainingBalance.toFixed(2)}</span>
+                  <span>{formatOMR(order.remainingBalance)}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 pt-1">
@@ -319,22 +320,22 @@ export default function OrderDetails() {
                     <td className="py-1">{item.itemType}</td>
                     <td className="py-1">{item.service}</td>
                     <td className="text-center py-1">{item.quantity}</td>
-                    <td className="text-right py-1">${item.unitPrice.toFixed(2)}</td>
-                    <td className="text-right py-1">${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                    <td className="text-right py-1">{formatOMR(item.unitPrice)}</td>
+                    <td className="text-right py-1">{formatOMR(item.unitPrice * item.quantity)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <Separator />
             <div className="flex flex-col items-end space-y-1 text-xs">
-              <div className="flex gap-8"><span className="text-muted-foreground">Subtotal:</span> <span>${subtotal.toFixed(2)}</span></div>
-              {urgentFee > 0 && <div className="flex gap-8"><span className="text-muted-foreground">Urgent Fee:</span> <span>${urgentFee.toFixed(2)}</span></div>}
-              <div className="flex gap-8"><span className="text-muted-foreground">Tax (5%):</span> <span>${tax.toFixed(2)}</span></div>
+              <div className="flex gap-8"><span className="text-muted-foreground">Subtotal:</span> <span>{formatOMR(subtotal)}</span></div>
+              {urgentFee > 0 && <div className="flex gap-8"><span className="text-muted-foreground">Urgent Fee:</span> <span>{formatOMR(urgentFee)}</span></div>}
+              <div className="flex gap-8"><span className="text-muted-foreground">Tax (5%):</span> <span>{formatOMR(tax)}</span></div>
               <Separator className="w-32" />
-              <div className="flex gap-8 font-bold text-sm"><span>Total:</span> <span>${order.totalAmount.toFixed(2)}</span></div>
-              <div className="flex gap-8"><span className="text-muted-foreground">Paid:</span> <span>${order.paidAmount.toFixed(2)}</span></div>
+              <div className="flex gap-8 font-bold text-sm"><span>Total:</span> <span>{formatOMR(order.totalAmount)}</span></div>
+              <div className="flex gap-8"><span className="text-muted-foreground">Paid:</span> <span>{formatOMR(order.paidAmount)}</span></div>
               {order.remainingBalance > 0 && (
-                <div className="flex gap-8 font-semibold text-destructive"><span>Balance:</span> <span>${order.remainingBalance.toFixed(2)}</span></div>
+                <div className="flex gap-8 font-semibold text-destructive"><span>Balance:</span> <span>{formatOMR(order.remainingBalance)}</span></div>
               )}
             </div>
             <p className="text-center text-[0.6rem] text-muted-foreground mt-4">Thank you for your business!</p>
@@ -458,7 +459,7 @@ function PricingRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
-      <span className={value < 0 ? "text-success" : ""}>${Math.abs(value).toFixed(2)}</span>
+      <span>{formatOMR(value)}</span>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { fetchCustomerById, fetchOrdersByCustomerId, addCustomerNote, updateCustomerRecord } from "@/lib/supabase-queries";
 import type { CustomerRecord, CustomerWithStats } from "@/types/customer";
 import type { WorkflowOrder } from "@/types/workflow";
+import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -178,8 +179,8 @@ export default function CustomerProfile() {
           <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
             <MiniCard icon={<ShoppingBag className="w-4 h-4" />} label="Total Orders" value={customer.totalOrders} />
             <MiniCard icon={<Package className="w-4 h-4" />} label="Active" value={customer.activeOrders} accent={customer.activeOrders > 0} />
-            <MiniCard icon={<DollarSign className="w-4 h-4" />} label="Total Spent" value={`$${customer.totalSpent.toFixed(2)}`} />
-            <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={`$${customer.outstandingBalance.toFixed(2)}`} warning={customer.outstandingBalance > 0} />
+            <MiniCard icon={<DollarSign className="w-4 h-4" />} label="Total Spent" value={formatOMR(customer.totalSpent)} />
+            <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={formatOMR(customer.outstandingBalance)} warning={customer.outstandingBalance > 0} />
             <MiniCard icon={<FileText className="w-4 h-4" />} label="Unpaid Orders" value={customer.unpaidOrderCount} warning={customer.unpaidOrderCount > 0} />
             <MiniCard icon={<Clock className="w-4 h-4" />} label="Last Order" value={customer.lastOrderDate ?? "—"} />
           </div>
@@ -188,9 +189,9 @@ export default function CustomerProfile() {
         <div className="pos-section">
           <h2 className="pos-label mb-3">Financial Summary</h2>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
-            <div><span className="text-muted-foreground block text-xs">Lifetime Spending</span><span className="font-bold text-lg">${customer.totalSpent.toFixed(2)}</span></div>
-            <div><span className="text-muted-foreground block text-xs">Total Paid</span><span className="font-bold text-lg">${customer.totalPaid.toFixed(2)}</span></div>
-            <div><span className="text-muted-foreground block text-xs">Outstanding</span><span className={`font-bold text-lg ${customer.outstandingBalance > 0 ? "text-destructive" : ""}`}>${customer.outstandingBalance.toFixed(2)}</span></div>
+            <div><span className="text-muted-foreground block text-xs">Lifetime Spending</span><span className="font-bold text-lg">{formatOMR(customer.totalSpent)}</span></div>
+            <div><span className="text-muted-foreground block text-xs">Total Paid</span><span className="font-bold text-lg">{formatOMR(customer.totalPaid)}</span></div>
+            <div><span className="text-muted-foreground block text-xs">Outstanding</span><span className={`font-bold text-lg ${customer.outstandingBalance > 0 ? "text-destructive" : ""}`}>{formatOMR(customer.outstandingBalance)}</span></div>
             <div><span className="text-muted-foreground block text-xs">Unpaid Orders</span><span className="font-bold text-lg">{customer.unpaidOrderCount}</span></div>
             <div><span className="text-muted-foreground block text-xs">Partially Paid</span><span className="font-bold text-lg">{customer.partiallyPaidOrderCount}</span></div>
           </div>
@@ -309,9 +310,9 @@ function OrderRow({ order: o, onView }: { order: WorkflowOrder; onView: () => vo
           {o.paymentStatus.replace(/-/g, " ")}
         </span>
       </td>
-      <td className="p-3 text-right font-medium">${o.totalAmount.toFixed(2)}</td>
+      <td className="p-3 text-right font-medium">{formatOMR(o.totalAmount)}</td>
       <td className="p-3 text-right hidden sm:table-cell">
-        {o.remainingBalance > 0 ? <span className="text-destructive">${o.remainingBalance.toFixed(2)}</span> : <span className="text-muted-foreground">—</span>}
+        {o.remainingBalance > 0 ? <span className="text-destructive">{formatOMR(o.remainingBalance)}</span> : <span className="text-muted-foreground">—</span>}
       </td>
       <td className="p-3">
         <button onClick={onView} className="text-primary hover:underline text-xs flex items-center gap-0.5">
