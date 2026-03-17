@@ -1,0 +1,450 @@
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useWorkflowState } from "@/hooks/useWorkflowState";
+import { WORKFLOW_STAGES } from "@/types/workflow";
+import { SERVICES, GARMENT_CONDITIONS, EMPLOYEES } from "@/types/pos";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
+  Clock, StickyNote, History, User, Package, CreditCard, FileText,
+  CheckCircle2, Circle, ArrowRight,
+} from "lucide-react";
+import { useState, useRef } from "react";
+import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
+
+export default function OrderDetails() {
+  const { orderId } = useParams<{ orderId: string }>();
+  const navigate = useNavigate();
+  const wf = useWorkflowState();
+  const [noteText, setNoteText] = useState("");
+  const invoiceRef = useRef<HTMLDivElement>(null);
+
+  const order = wf.orders.find((o) => o.id === orderId);
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold">Order not found</h2>
+          <Link to="/workflow">
+            <Button variant="outline">Back to Workflow</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const isOverdue = order.deliveryDate < today && order.currentStatus !== "delivered";
+  const isDueToday = order.deliveryDate === today && order.currentStatus !== "delivered";
+  const stageIdx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
+  const canNext = stageIdx < WORKFLOW_STAGES.length - 1;
+  const canPrev = stageIdx > 0;
+
+  const invoiceNumber = `INV-${order.orderNumber.replace("ORD-", "")}`;
+
+  // Compute pricing breakdown from items
+  const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const urgentFee = order.orderType === "urgent" ? subtotal * 0.5 : 0;
+  const discount = 0;
+  const taxableAmount = subtotal + urgentFee - discount;
+  const tax = Math.max(0, taxableAmount * 0.05);
+
+  const handleMoveNext = () => {
+    wf.moveToNext(order.id);
+    toast.success("Order moved to next stage");
+  };
+  const handleMovePrev = () => {
+    wf.moveToPrev(order.id);
+    toast.info("Order moved back");
+  };
+  const handleAddNote = () => {
+    if (!noteText.trim()) return;
+    wf.addNote(order.id, noteText.trim());
+    setNoteText("");
+    toast.success("Note added");
+  };
+  const handleToggleUrgent = () => {
+    wf.toggleUrgent(order.id);
+    toast.success(order.orderType === "urgent" ? "Urgent flag removed" : "Marked as urgent");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
+        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold tracking-tight">{order.orderNumber}</h1>
+            <StatusBadge status={order.currentStatus} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/workflow">
+              <Button variant="outline" size="sm" className="h-8 text-xs">Workflow</Button>
+            </Link>
+            <Link to="/">
+              <Button variant="outline" size="sm" className="h-8 text-xs">New Order</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-5xl mx-auto p-4 space-y-5">
+
+        {/* 1. Order Header Summary */}
+        <section className="pos-section">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold">{order.orderNumber}</h2>
+                <span className="text-sm text-muted-foreground font-mono">{invoiceNumber}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{order.customerName} • {order.customerPhone}</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {order.orderType === "urgent" && <Badge className="bg-accent text-accent-foreground">Urgent</Badge>}
+              <PaymentBadge status={order.paymentStatus} />
+              {isOverdue && <Badge variant="destructive">Overdue</Badge>}
+              {isDueToday && !isOverdue && <Badge className="bg-warning text-warning-foreground">Due Today</Badge>}
+              {order.currentStatus === "ready-for-pickup" && <Badge className="bg-success text-success-foreground">Ready for Pickup</Badge>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm">
+            <InfoCell label="Delivery Date" value={order.deliveryDate} />
+            <InfoCell label="Order Type" value={order.orderType} />
+            <InfoCell label="Payment" value={`$${order.totalAmount.toFixed(2)}`} />
+            <InfoCell label="Status" value={WORKFLOW_STAGES[stageIdx]?.label || order.currentStatus} />
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* 2. Customer Info */}
+          <section className="pos-section space-y-3">
+            <SectionHeader icon={User} title="Customer Information" />
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoCell label="Name" value={order.customerName} />
+              <InfoCell label="Phone" value={order.customerPhone} />
+              <InfoCell label="Pickup Method" value={order.pickupMethod} />
+              <InfoCell label="Notes" value={order.orderNotes || "—"} />
+            </div>
+          </section>
+
+          {/* 3. Order Information */}
+          <section className="pos-section space-y-3">
+            <SectionHeader icon={Package} title="Order Information" />
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoCell label="Order Number" value={order.orderNumber} />
+              <InfoCell label="Invoice" value={invoiceNumber} />
+              <InfoCell label="Order Date" value={order.orderDate} />
+              <InfoCell label="Delivery Date" value={order.deliveryDate} />
+              <InfoCell label="Order Type" value={order.orderType} />
+              <InfoCell label="Pickup" value={order.pickupMethod} />
+            </div>
+          </section>
+        </div>
+
+        {/* 4. Items Table */}
+        <section className="pos-section space-y-3">
+          <SectionHeader icon={Package} title={`Items (${order.itemCount})`} />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Conditions</TableHead>
+                  <TableHead>Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {order.items.map((item, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{item.itemType}</TableCell>
+                    <TableCell>{item.service}</TableCell>
+                    <TableCell className="text-center">{item.quantity}</TableCell>
+                    <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {item.conditions.map((c) => {
+                          const cond = GARMENT_CONDITIONS.find((gc) => gc.id === c);
+                          return <Badge key={c} variant="outline" className="text-[0.6rem] px-1.5">{cond?.label || c}</Badge>;
+                        })}
+                        {item.conditions.length === 0 && <span className="text-muted-foreground text-xs">—</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{item.notes || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* 5. Pricing & Payment Summary */}
+          <section className="pos-section space-y-3">
+            <SectionHeader icon={CreditCard} title="Pricing & Payment" />
+            <div className="space-y-2 text-sm">
+              <PricingRow label="Subtotal" value={subtotal} />
+              {urgentFee > 0 && <PricingRow label="Urgent Fee (50%)" value={urgentFee} />}
+              {discount > 0 && <PricingRow label="Discount" value={-discount} />}
+              <PricingRow label="Tax (5%)" value={tax} />
+              <Separator />
+              <div className="flex justify-between font-bold text-base">
+                <span>Total</span>
+                <span>${order.totalAmount.toFixed(2)}</span>
+              </div>
+              <Separator />
+              <PricingRow label="Paid" value={order.paidAmount} />
+              {order.remainingBalance > 0 && (
+                <div className="flex justify-between font-semibold text-destructive">
+                  <span>Remaining</span>
+                  <span>${order.remainingBalance.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-muted-foreground">Method:</span>
+                <span className="capitalize font-medium">{order.paymentMethod}</span>
+                <PaymentBadge status={order.paymentStatus} />
+              </div>
+            </div>
+          </section>
+
+          {/* 7. Workflow Status */}
+          <section className="pos-section space-y-3">
+            <SectionHeader icon={CheckCircle2} title="Workflow Status" />
+            {/* Progress Stepper */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-2">
+              {WORKFLOW_STAGES.map((stage, i) => {
+                const isActive = i === stageIdx;
+                const isDone = i < stageIdx;
+                return (
+                  <div key={stage.id} className="flex items-center gap-1 shrink-0">
+                    {i > 0 && <div className={`w-4 h-0.5 ${isDone ? "bg-success" : "bg-border"}`} />}
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                      isActive ? "bg-primary text-primary-foreground" : isDone ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"
+                    }`}>
+                      {isDone ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+                      <span className="hidden sm:inline">{stage.label}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={!canPrev} onClick={handleMovePrev} className="h-8 text-xs flex-1">
+                <ChevronLeft className="h-3 w-3 mr-1" />
+                {canPrev ? WORKFLOW_STAGES[stageIdx - 1]?.label : "Back"}
+              </Button>
+              <Button size="sm" disabled={!canNext} onClick={handleMoveNext} className="h-8 text-xs flex-1">
+                {canNext ? WORKFLOW_STAGES[stageIdx + 1]?.label : "Done"}
+                <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </section>
+        </div>
+
+        {/* 6. Invoice View */}
+        <section className="pos-section space-y-3">
+          <div className="flex items-center justify-between">
+            <SectionHeader icon={FileText} title="Invoice" />
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1 print:hidden" onClick={handlePrint}>
+              <Printer className="h-3 w-3" /> Print
+            </Button>
+          </div>
+          <div ref={invoiceRef} className="invoice-print border border-border rounded-lg p-6 bg-card space-y-4 text-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-bold">Wash & Go Laundry</h3>
+                <p className="text-xs text-muted-foreground">Professional Laundry Services</p>
+              </div>
+              <QRCodeSVG value={`ORDER:${order.orderNumber}`} size={64} />
+            </div>
+            <Separator />
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><span className="text-muted-foreground">Invoice:</span> <strong>{invoiceNumber}</strong></div>
+              <div><span className="text-muted-foreground">Order:</span> <strong>{order.orderNumber}</strong></div>
+              <div><span className="text-muted-foreground">Customer:</span> <strong>{order.customerName}</strong></div>
+              <div><span className="text-muted-foreground">Phone:</span> <strong>{order.customerPhone}</strong></div>
+              <div><span className="text-muted-foreground">Order Date:</span> <strong>{order.orderDate}</strong></div>
+              <div><span className="text-muted-foreground">Delivery:</span> <strong>{order.deliveryDate}</strong></div>
+            </div>
+            <Separator />
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-1 font-semibold">Item</th>
+                  <th className="text-left py-1 font-semibold">Service</th>
+                  <th className="text-center py-1 font-semibold">Qty</th>
+                  <th className="text-right py-1 font-semibold">Price</th>
+                  <th className="text-right py-1 font-semibold">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="py-1">{item.itemType}</td>
+                    <td className="py-1">{item.service}</td>
+                    <td className="text-center py-1">{item.quantity}</td>
+                    <td className="text-right py-1">${item.unitPrice.toFixed(2)}</td>
+                    <td className="text-right py-1">${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Separator />
+            <div className="flex flex-col items-end space-y-1 text-xs">
+              <div className="flex gap-8"><span className="text-muted-foreground">Subtotal:</span> <span>${subtotal.toFixed(2)}</span></div>
+              {urgentFee > 0 && <div className="flex gap-8"><span className="text-muted-foreground">Urgent Fee:</span> <span>${urgentFee.toFixed(2)}</span></div>}
+              <div className="flex gap-8"><span className="text-muted-foreground">Tax (5%):</span> <span>${tax.toFixed(2)}</span></div>
+              <Separator className="w-32" />
+              <div className="flex gap-8 font-bold text-sm"><span>Total:</span> <span>${order.totalAmount.toFixed(2)}</span></div>
+              <div className="flex gap-8"><span className="text-muted-foreground">Paid:</span> <span>${order.paidAmount.toFixed(2)}</span></div>
+              {order.remainingBalance > 0 && (
+                <div className="flex gap-8 font-semibold text-destructive"><span>Balance:</span> <span>${order.remainingBalance.toFixed(2)}</span></div>
+              )}
+            </div>
+            <p className="text-center text-[0.6rem] text-muted-foreground mt-4">Thank you for your business!</p>
+          </div>
+        </section>
+
+        {/* 8. Status History Timeline */}
+        <section className="pos-section space-y-3">
+          <SectionHeader icon={History} title="Status History" />
+          <div className="space-y-0">
+            {order.statusHistory.map((change, i) => (
+              <div key={change.id} className="flex gap-3 pb-4 last:pb-0">
+                <div className="flex flex-col items-center">
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${i === order.statusHistory.length - 1 ? "bg-primary" : "bg-border"}`} />
+                  {i < order.statusHistory.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                </div>
+                <div className="text-sm space-y-0.5 -mt-0.5">
+                  <p className="font-medium">
+                    {change.fromStatus
+                      ? <><span className="capitalize">{change.fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{change.toStatus.replace("-", " ")}</span></>
+                      : <span>Created as <span className="capitalize font-semibold">{change.toStatus.replace("-", " ")}</span></span>
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(change.changedAt).toLocaleString()}
+                    {change.changedBy && <> • {change.changedBy}</>}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 9. Internal Notes */}
+        <section className="pos-section space-y-3">
+          <SectionHeader icon={StickyNote} title="Internal Notes" />
+          {order.internalNotes.length === 0 && <p className="text-sm text-muted-foreground">No internal notes yet.</p>}
+          <div className="space-y-2">
+            {order.internalNotes.map((note) => (
+              <div key={note.id} className="bg-secondary/50 rounded-md px-3 py-2">
+                <p className="text-sm">{note.text}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {note.createdBy && `${note.createdBy} • `}{new Date(note.createdAt).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 print:hidden">
+            <Textarea
+              placeholder="Add an internal note..."
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              className="min-h-[60px] text-sm"
+            />
+          </div>
+          <Button size="sm" className="h-8 text-xs print:hidden" onClick={handleAddNote} disabled={!noteText.trim()}>
+            Add Note
+          </Button>
+        </section>
+
+        {/* 10. Action Buttons */}
+        <section className="pos-section flex flex-wrap gap-2 print:hidden">
+          <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handlePrint}>
+            <Printer className="h-3.5 w-3.5" /> Print Invoice
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleToggleUrgent}>
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {order.orderType === "urgent" ? "Remove Urgent" : "Mark Urgent"}
+          </Button>
+          {canNext && (
+            <Button size="sm" className="h-9 text-xs gap-1.5" onClick={handleMoveNext}>
+              Move to {WORKFLOW_STAGES[stageIdx + 1]?.label} <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <div className="flex-1" />
+          <Link to="/workflow">
+            <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Workflow
+            </Button>
+          </Link>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Reusable Sub-Components ─── */
+
+function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
+  return (
+    <h3 className="pos-label flex items-center gap-1.5">
+      <Icon className="h-3.5 w-3.5" /> {title}
+    </h3>
+  );
+}
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="font-medium capitalize">{value}</p>
+    </div>
+  );
+}
+
+function PricingRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={value < 0 ? "text-success" : ""}>${Math.abs(value).toFixed(2)}</span>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const stage = WORKFLOW_STAGES.find((s) => s.id === status);
+  return <Badge variant="secondary" className="text-xs">{stage?.label || status}</Badge>;
+}
+
+function PaymentBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    paid: { label: "Paid", className: "bg-success/15 text-success border-success/20" },
+    "partially-paid": { label: "Partial", className: "bg-warning/15 text-warning border-warning/20" },
+    unpaid: { label: "Unpaid", className: "bg-destructive/15 text-destructive border-destructive/20" },
+  };
+  const info = map[status] || map.unpaid;
+  return <span className={`text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${info.className}`}>{info.label}</span>;
+}
