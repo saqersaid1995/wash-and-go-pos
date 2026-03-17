@@ -50,27 +50,16 @@ export default function PhoneSearchResults({
     remaining: selectedOrders.reduce((s, o) => s + o.remainingBalance, 0),
   }), [selectedOrders]);
 
-  const canDeliver = summary.count > 0 && selectedOrders.every((o) => o.remainingBalance <= 0);
+  const allReadyForPickup = selectedOrders.every((o) => o.currentStatus === "ready-for-pickup");
+  const canDeliver = summary.count > 0 && summary.remaining <= 0 && allReadyForPickup;
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const selectAll = () => {
-    if (selectedIds.size === filteredOrders.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredOrders.map((o) => o.id)));
-    }
-  };
-
-  const handleMarkDelivered = async () => {
+  const handleDeliverOnly = async () => {
     if (!canDeliver) {
-      toast.error("Selected orders cannot be marked delivered until the remaining balance is fully paid.");
+      if (!allReadyForPickup) {
+        toast.error("Only Ready for Pickup orders can be delivered.");
+      } else {
+        toast.error("Selected orders cannot be marked delivered until the remaining balance is fully paid.");
+      }
       return;
     }
     setDelivering(true);
@@ -79,6 +68,11 @@ export default function PhoneSearchResults({
     }
     setDelivering(false);
     toast.success(`${selectedOrders.length} order(s) successfully delivered.`);
+    setSelectedIds(new Set());
+    onRefresh();
+  };
+
+  const handlePaymentComplete = () => {
     setSelectedIds(new Set());
     onRefresh();
   };
