@@ -4,6 +4,7 @@ import { WORKFLOW_STAGES } from "@/types/workflow";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import type { WorkflowOrder } from "@/types/workflow";
 import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import PaymentModal from "@/components/payment/PaymentModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -26,6 +27,7 @@ export default function OrderDetails() {
   const [order, setOrder] = useState<WorkflowOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
@@ -406,6 +408,11 @@ export default function OrderDetails() {
             <AlertTriangle className="h-3.5 w-3.5" />
             {order.orderType === "urgent" ? "Remove Urgent" : "Mark Urgent"}
           </Button>
+          {order.remainingBalance > 0 && (
+            <Button size="sm" className="h-9 text-xs gap-1.5 bg-warning hover:bg-warning/90 text-warning-foreground" onClick={() => setPaymentOpen(true)}>
+              <CreditCard className="h-3.5 w-3.5" /> Collect Payment
+            </Button>
+          )}
           {canNext && (
             <Button size="sm" className="h-9 text-xs gap-1.5" onClick={handleMoveNext}>
               Move to {WORKFLOW_STAGES[stageIdx + 1]?.label} <ChevronRight className="h-3.5 w-3.5" />
@@ -418,6 +425,13 @@ export default function OrderDetails() {
             </Button>
           </Link>
         </section>
+
+        <PaymentModal
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          order={order}
+          onPaymentComplete={loadOrder}
+        />
       </div>
     </div>
   );
