@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Truck, AlertTriangle, Users, TrendingUp, Package } from "lucide-react";
-import NavLink from "@/components/NavLink";
+import { NavLink } from "@/components/NavLink";
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "today", label: "Today" },
