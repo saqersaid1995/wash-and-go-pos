@@ -108,6 +108,30 @@ export type Database = {
           },
         ]
       }
+      items: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          item_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           brand: string | null
@@ -324,9 +348,11 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          item_id: string | null
           item_type: string
           notes: string | null
           price: number
+          service_id: string | null
           service_type: string
           updated_at: string
         }
@@ -336,9 +362,11 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          item_id?: string | null
           item_type: string
           notes?: string | null
           price?: number
+          service_id?: string | null
           service_type: string
           updated_at?: string
         }
@@ -348,10 +376,51 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          item_id?: string | null
           item_type?: string
           notes?: string | null
           price?: number
+          service_id?: string | null
           service_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_pricing_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_pricing_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          service_name?: string
           updated_at?: string
         }
         Relationships: []
