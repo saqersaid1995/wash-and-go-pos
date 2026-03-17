@@ -306,29 +306,37 @@ function ServicesTab() {
 }
 
 // ─── Pricing Rules Tab ───
+interface ServicePriceRow {
+  serviceId: string;
+  serviceName: string;
+  enabled: boolean;
+  price: string;
+  existingRuleId?: string;
+}
+
 function PricingRulesTab() {
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [items, setItems] = useState<ItemRecord[]>([]);
+  const [allItems, setAllItems] = useState<ItemRecord[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<PricingRule | null>(null);
   const [formItemId, setFormItemId] = useState("");
-  const [formServiceId, setFormServiceId] = useState("");
-  const [formPrice, setFormPrice] = useState("");
-  const [formActive, setFormActive] = useState(true);
+  const [serviceRows, setServiceRows] = useState<ServicePriceRow[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [rulesRes, itemsRes, servicesRes] = await Promise.all([
+    const [rulesRes, itemsRes, allItemsRes, servicesRes] = await Promise.all([
       supabase.from("service_pricing").select("*").order("item_type").order("service_type"),
       supabase.from("items").select("*").eq("is_active", true).order("item_name"),
+      supabase.from("items").select("*").order("item_name"),
       supabase.from("services").select("*").eq("is_active", true).order("service_name"),
     ]);
     setRules((rulesRes.data as PricingRule[]) || []);
     setItems((itemsRes.data as ItemRecord[]) || []);
+    setAllItems((allItemsRes.data as ItemRecord[]) || []);
     setServices((servicesRes.data as ServiceRecord[]) || []);
     setLoading(false);
   }, []);
@@ -337,7 +345,7 @@ function PricingRulesTab() {
 
   const getItemName = (rule: PricingRule) => {
     if (rule.item_id) {
-      const item = items.find((i) => i.id === rule.item_id);
+      const item = allItems.find((i) => i.id === rule.item_id);
       return item?.item_name || rule.item_type;
     }
     return rule.item_type;
@@ -357,64 +365,102 @@ function PricingRulesTab() {
     return getItemName(r).toLowerCase().includes(q) || getServiceName(r).toLowerCase().includes(q);
   });
 
-  const openCreate = () => {
-    setEditing(null); setFormItemId(""); setFormServiceId(""); setFormPrice(""); setFormActive(true); setModalOpen(true);
-  };
-
-  const openEdit = (rule: PricingRule) => {
-    setEditing(rule);
-    setFormItemId(rule.item_id || "");
-    setFormServiceId(rule.service_id || "");
-    setFormPrice(String(rule.price));
-    setFormActive(rule.is_active);
+  const openConfigForItem = (itemId: string) => {
+    setFormItemId(itemId);
+    const itemRules = rules.filter((r) => r.item_id === itemId);
+    const rows: ServicePriceRow[] = services.map((svc) => {
+      const existing = itemRules.find((r) => r.service_id === svc.id);
+      return {
+        serviceId: svc.id,
+        serviceName: svc.service_name,
+        enabled: !!existing && existing.is_active,
+        price: existing ? String(existing.price) : "",
+        existingRuleId: existing?.id,
+      };
+    });
+    setServiceRows(rows);
     setModalOpen(true);
   };
 
+  const openCreate = () => {
+    setFormItemId("");
+    setServiceRows([]);
+    setModalOpen(true);
+  };
+
+  const onItemSelect = (itemId: string) => {
+    setFormItemId(itemId);
+    const itemRules = rules.filter((r) => r.item_id === itemId);
+    const rows: ServicePriceRow[] = services.map((svc) => {
+      const existing = itemRules.find((r) => r.service_id === svc.id);
+      return {
+        serviceId: svc.id,
+        serviceName: svc.service_name,
+        enabled: !!existing && existing.is_active,
+        price: existing ? String(existing.price) : "",
+        existingRuleId: existing?.id,
+      };
+    });
+    setServiceRows(rows);
+  };
+
+  const updateRow = (serviceId: string, updates: Partial<ServicePriceRow>) => {
+    setServiceRows((prev) => prev.map((r) => r.serviceId === serviceId ? { ...r, ...updates } : r));
+  };
+
   const handleSave = async () => {
-    if (!formItemId || !formServiceId) { toast.error("Item and service are required"); return; }
-    const price = parseFloat(formPrice);
-    if (!price || price <= 0) { toast.error("Price must be greater than zero"); return; }
+    if (!formItemId) { toast.error("Please select an item"); return; }
+    const enabledRows = serviceRows.filter((r) => r.enabled);
+    for (const row of enabledRows) {
+      const price = parseFloat(row.price);
+      if (!price || price <= 0) {
+        toast.error(`Price for "${row.serviceName}" must be greater than zero`);
+        return;
+      }
+    }
 
     const selectedItem = items.find((i) => i.id === formItemId);
-    const selectedService = services.find((s) => s.id === formServiceId);
+    if (!selectedItem) return;
 
     setSaving(true);
-    if (editing) {
-      const { error } = await supabase.from("service_pricing").update({
-        item_id: formItemId,
-        service_id: formServiceId,
-        item_type: selectedItem?.item_name || "",
-        service_type: selectedService?.service_name || "",
-        price,
-        is_active: formActive,
-      }).eq("id", editing.id);
-      if (error) { toast.error(error.code === "23505" ? "This item already has a pricing rule for the selected service." : error.message); setSaving(false); return; }
-      toast.success("Pricing rule updated");
-    } else {
-      const { error } = await supabase.from("service_pricing").insert({
-        item_id: formItemId,
-        service_id: formServiceId,
-        item_type: selectedItem?.item_name || "",
-        service_type: selectedService?.service_name || "",
-        price,
-        is_active: formActive,
-      });
-      if (error) { toast.error(error.code === "23505" ? "This item already has a pricing rule for the selected service." : error.message); setSaving(false); return; }
-      toast.success("Pricing rule created");
+
+    // Upsert enabled rows, disable unchecked existing rows
+    for (const row of serviceRows) {
+      const price = parseFloat(row.price) || 0;
+      if (row.enabled) {
+        if (row.existingRuleId) {
+          await supabase.from("service_pricing").update({
+            price,
+            is_active: true,
+            item_type: selectedItem.item_name,
+            service_type: row.serviceName,
+          }).eq("id", row.existingRuleId);
+        } else {
+          await supabase.from("service_pricing").insert({
+            item_id: formItemId,
+            service_id: row.serviceId,
+            item_type: selectedItem.item_name,
+            service_type: row.serviceName,
+            price,
+            is_active: true,
+          });
+        }
+      } else if (row.existingRuleId) {
+        await supabase.from("service_pricing").update({ is_active: false }).eq("id", row.existingRuleId);
+      }
     }
-    setSaving(false); setModalOpen(false); load();
+
+    setSaving(false);
+    setModalOpen(false);
+    toast.success("Pricing saved for " + selectedItem.item_name);
+    load();
   };
 
-  const handleDelete = async (rule: PricingRule) => {
-    if (!confirm(`Delete pricing for ${getItemName(rule)} — ${getServiceName(rule)}?`)) return;
-    const { error } = await supabase.from("service_pricing").delete().eq("id", rule.id);
-    if (error) { toast.error("Failed to delete"); return; }
-    toast.success("Pricing rule deleted"); load();
-  };
-
-  const handleToggle = async (rule: PricingRule) => {
-    await supabase.from("service_pricing").update({ is_active: !rule.is_active }).eq("id", rule.id);
-    toast.success(rule.is_active ? "Rule disabled" : "Rule enabled"); load();
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    if (!confirm(`Remove all pricing rules for "${itemName}"?`)) return;
+    await supabase.from("service_pricing").delete().eq("item_id", itemId);
+    toast.success("Pricing removed for " + itemName);
+    load();
   };
 
   return (
@@ -424,7 +470,7 @@ function PricingRulesTab() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search pricing rules..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Add Pricing Rule</Button>
+        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Configure Item Pricing</Button>
       </div>
 
       {loading ? (
@@ -433,15 +479,14 @@ function PricingRulesTab() {
         <div className="text-center py-16 text-muted-foreground">
           <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p className="text-lg font-medium">{search ? "No matching rules" : "No pricing rules yet"}</p>
-          <p className="text-sm mt-1">{search ? "Try a different search term" : "Add your first item + service pricing rule."}</p>
+          <p className="text-sm mt-1">{search ? "Try a different search term" : "Click \"Configure Item Pricing\" to set up prices."}</p>
         </div>
       ) : (() => {
-        // Group rules by item name
-        const grouped: Record<string, PricingRule[]> = {};
+        const grouped: Record<string, { itemId: string; rules: PricingRule[] }> = {};
         filtered.forEach((rule) => {
           const name = getItemName(rule);
-          if (!grouped[name]) grouped[name] = [];
-          grouped[name].push(rule);
+          if (!grouped[name]) grouped[name] = { itemId: rule.item_id || "", rules: [] };
+          grouped[name].rules.push(rule);
         });
         const sortedItems = Object.keys(grouped).sort();
 
@@ -449,43 +494,34 @@ function PricingRulesTab() {
           <div className="space-y-4">
             {sortedItems.map((itemName) => (
               <div key={itemName} className="border border-border rounded-lg overflow-hidden">
-                <div className="bg-muted/50 px-4 py-2.5 border-b border-border">
+                <div className="bg-muted/50 px-4 py-2.5 border-b border-border flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />
                     {itemName}
-                    <Badge variant="secondary" className="text-[0.6rem] ml-1">{grouped[itemName].length} {grouped[itemName].length === 1 ? "service" : "services"}</Badge>
+                    <Badge variant="secondary" className="text-[0.6rem] ml-1">{grouped[itemName].rules.filter(r => r.is_active).length} active</Badge>
                   </h3>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => openConfigForItem(grouped[itemName].itemId)}>
+                      <Pencil className="h-3 w-3" /> Edit Pricing
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(grouped[itemName].itemId, itemName)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Service</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grouped[itemName].map((rule) => (
-                      <TableRow key={rule.id} className={rule.is_active ? "" : "opacity-50"}>
-                        <TableCell className="font-medium">{getServiceName(rule)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatOMR(rule.price)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.6rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
-                            {rule.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(rule)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggle(rule)}><Switch checked={rule.is_active} className="scale-75" /></Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(rule)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="divide-y divide-border">
+                  {grouped[itemName].rules.map((rule) => (
+                    <div key={rule.id} className={`flex items-center justify-between px-4 py-2.5 text-sm ${rule.is_active ? "" : "opacity-40"}`}>
+                      <span className="font-medium">{getServiceName(rule)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold">{formatOMR(rule.price)}</span>
+                        <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.55rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
+                          {rule.is_active ? "Active" : "Off"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -493,40 +529,67 @@ function PricingRulesTab() {
       })()}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Pricing Rule" : "Add Pricing Rule"}</DialogTitle>
-            <DialogDescription>{editing ? "Update the pricing." : "Create a new item + service pricing combination."}</DialogDescription>
+            <DialogTitle>Item Pricing Configuration</DialogTitle>
+            <DialogDescription>Select an item and configure prices for each service.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 overflow-y-auto">
             <div className="space-y-2">
               <Label>Item</Label>
-              <select value={formItemId} onChange={(e) => setFormItemId(e.target.value)} className="pos-input w-full">
+              <select value={formItemId} onChange={(e) => onItemSelect(e.target.value)} className="pos-input w-full">
                 <option value="">Select item...</option>
                 {items.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label>Service</Label>
-              <select value={formServiceId} onChange={(e) => setFormServiceId(e.target.value)} className="pos-input w-full">
-                <option value="">Select service...</option>
-                {services.map((s) => <option key={s.id} value={s.id}>{s.service_name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Price (OMR)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
-                <Input type="number" step="0.001" min="0.001" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} className="pl-12" placeholder="0.000" />
+
+            {formItemId && serviceRows.length > 0 && (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-[1fr_60px_140px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span>Service</span>
+                  <span className="text-center">Enabled</span>
+                  <span className="text-right">Price (OMR)</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {serviceRows.map((row) => (
+                    <div key={row.serviceId} className={`grid grid-cols-[1fr_60px_140px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
+                      <span className="text-sm font-medium">{row.serviceName}</span>
+                      <div className="flex justify-center">
+                        <Checkbox
+                          checked={row.enabled}
+                          onCheckedChange={(checked) => updateRow(row.serviceId, { enabled: !!checked })}
+                        />
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">OMR</span>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          value={row.price}
+                          onChange={(e) => updateRow(row.serviceId, { price: e.target.value })}
+                          disabled={!row.enabled}
+                          className="pl-10 h-8 text-sm"
+                          placeholder="0.000"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={formActive} onCheckedChange={setFormActive} />
-              <Label>Active</Label>
-            </div>
-            <Button className="w-full" onClick={handleSave} disabled={saving}>
+            )}
+
+            {formItemId && serviceRows.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground text-sm">
+                No active services found. Add services in the Services tab first.
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 pt-2 border-t border-border">
+            <Button variant="outline" className="flex-1" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button className="flex-1" onClick={handleSave} disabled={saving || !formItemId}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {editing ? "Update Rule" : "Create Rule"}
+              Save Pricing
             </Button>
           </div>
         </DialogContent>
