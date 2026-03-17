@@ -1,4 +1,4 @@
-// Laundry POS - Phase 1
+// Laundry POS - Real Data Mode
 import { usePOSState } from "@/hooks/usePOSState";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
@@ -11,25 +11,54 @@ import { toast } from "sonner";
 const Index = () => {
   const pos = usePOSState();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (pos.items.length === 0) {
       toast.error("Add at least one item to the order.");
       return;
     }
-    toast.success(`Order ${pos.orderNumber} saved!`);
+    if (!pos.customerName.trim() && !pos.customerPhone.trim()) {
+      toast.error("Customer name or phone is required.");
+      return;
+    }
+    const result = await pos.saveOrder();
+    if (result.success) {
+      toast.success(`Order ${pos.orderNumber} saved!`);
+      pos.clearForm();
+    } else {
+      toast.error(result.error || "Failed to save order");
+    }
   };
 
-  const handleSaveAndPrint = () => {
+  const handleSaveAndPrint = async () => {
     if (pos.items.length === 0) {
       toast.error("Add at least one item to the order.");
       return;
     }
-    pos.setShowInvoice(true);
+    if (!pos.customerName.trim() && !pos.customerPhone.trim()) {
+      toast.error("Customer name or phone is required.");
+      return;
+    }
+    const result = await pos.saveOrder();
+    if (result.success) {
+      toast.success(`Order ${pos.orderNumber} saved!`);
+      pos.setShowInvoice(true);
+    } else {
+      toast.error(result.error || "Failed to save order");
+    }
   };
 
-  const handleSaveAndProcess = () => {
-    handleSave();
-    toast.info("Order sent to processing queue.");
+  const handleSaveAndProcess = async () => {
+    if (pos.items.length === 0) {
+      toast.error("Add at least one item to the order.");
+      return;
+    }
+    const result = await pos.saveOrder();
+    if (result.success) {
+      toast.success(`Order ${pos.orderNumber} saved and sent to processing!`);
+      pos.clearForm();
+    } else {
+      toast.error(result.error || "Failed to save order");
+    }
   };
 
   return (
@@ -55,16 +84,15 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main Layout: Left 65% / Right 35% */}
+      {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-4 p-4 max-w-[1600px] mx-auto">
-        {/* Left Panel */}
         <div className="lg:w-[65%] space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CustomerSection
               phone={pos.customerPhone}
               name={pos.customerName}
               notes={pos.customerNotes}
-              matchedCustomer={pos.matchedCustomer}
+              matchedCustomer={pos.matchedCustomer ? { id: pos.matchedCustomer.id, phone: pos.matchedCustomer.phone, name: pos.matchedCustomer.name, notes: pos.matchedCustomer.notes?.[0]?.text } : null}
               onPhoneChange={pos.setCustomerPhone}
               onNameChange={pos.setCustomerName}
               onNotesChange={pos.setCustomerNotes}
@@ -92,7 +120,6 @@ const Index = () => {
           />
         </div>
 
-        {/* Right Panel - Sticky */}
         <div className="lg:w-[35%]">
           <div className="lg:sticky lg:top-20 space-y-4">
             <PricingSummary
@@ -115,7 +142,7 @@ const Index = () => {
               onSaveAndProcess={handleSaveAndProcess}
               onCancel={pos.clearForm}
               onClear={pos.clearForm}
-              disabled={pos.items.length === 0}
+              disabled={pos.items.length === 0 || pos.saving}
             />
           </div>
         </div>
@@ -133,7 +160,10 @@ const Index = () => {
           total={pos.total}
           paidAmount={pos.paidAmount}
           remainingBalance={pos.remainingBalance}
-          onClose={() => pos.setShowInvoice(false)}
+          onClose={() => {
+            pos.setShowInvoice(false);
+            pos.clearForm();
+          }}
         />
       )}
     </div>

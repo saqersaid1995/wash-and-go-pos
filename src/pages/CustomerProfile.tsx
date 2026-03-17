@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Crown, Phone, Calendar, ShoppingBag, DollarSign, Clock, AlertCircle,
-  FileText, Plus, Edit, Package, ExternalLink
+  FileText, Plus, Edit, Package, ExternalLink, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useCustomerState } from "@/hooks/useCustomerState";
+import { fetchCustomerById, fetchOrdersByCustomerId, addCustomerNote, updateCustomerRecord } from "@/lib/supabase-queries";
+import type { CustomerRecord, CustomerWithStats } from "@/types/customer";
 import type { WorkflowOrder } from "@/types/workflow";
 import { toast } from "sonner";
 
@@ -24,10 +25,32 @@ const PAYMENT_COLORS: Record<string, string> = {
   paid: "bg-success/15 text-foreground",
 };
 
+function buildStats(customer: CustomerRecord, orders: WorkflowOrder[]): CustomerWithStats {
+  const active = orders.filter((o) => o.currentStatus !== "delivered");
+  const completed = orders.filter((o) => o.currentStatus === "delivered");
+  const totalSpent = orders.reduce((s, o) => s + o.totalAmount, 0);
+  const totalPaid = orders.reduce((s, o) => s + o.paidAmount, 0);
+  const sorted = [...orders].sort((a, b) => b.orderDate.localeCompare(a.orderDate));
+  return {
+    ...customer,
+    totalOrders: orders.length,
+    activeOrders: active.length,
+    completedOrders: completed.length,
+    totalSpent,
+    totalPaid,
+    outstandingBalance: Math.max(0, totalSpent - totalPaid),
+    unpaidOrderCount: orders.filter((o) => o.paymentStatus === "unpaid").length,
+    partiallyPaidOrderCount: orders.filter((o) => o.paymentStatus === "partially-paid").length,
+    lastOrderDate: sorted[0]?.orderDate ?? null,
+    orders,
+  };
+}
+
 export default function CustomerProfile() {
   const { customerId } = useParams();
   const nav = useNavigate();
-  const { getCustomer, addNote, updateCustomer } = useCustomerState();
+  const [customer, setCustomer] = useState<CustomerWithStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -35,7 +58,30 @@ export default function CustomerProfile() {
   const [editType, setEditType] = useState<"regular" | "vip">("regular");
   const [tab, setTab] = useState<"active" | "completed" | "all">("all");
 
-  const customer = getCustomer(customerId || "");
+  const loadCustomer = useCallback(async () => {
+    if (!customerId) return;
+    setLoading(true);
+    const [cust, orders] = await Promise.all([
+      fetchCustomerById(customerId),
+      fetchOrdersByCustomerId(customerId),
+    ]);
+    if (cust) {
+      setCustomer(buildStats(cust, orders));
+    }
+    setLoading(false);
+  }, [customerId]);
+
+  useEffect(() => {
+    loadCustomer();
+  }, [loadCustomer]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!customer) {
     return (
@@ -52,11 +98,12 @@ export default function CustomerProfile() {
   const completedOrders = customer.orders.filter((o) => o.currentStatus === "delivered");
   const displayOrders = tab === "active" ? activeOrders : tab === "completed" ? completedOrders : customer.orders;
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    addNote(customer.id, noteText.trim(), "Staff");
+    await addCustomerNote(customer.id, noteText.trim(), "Staff");
     setNoteText("");
     toast.success("Note added");
+    loadCustomer();
   };
 
   const startEdit = () => {
@@ -66,15 +113,19 @@ export default function CustomerProfile() {
     setEditing(true);
   };
 
-  const saveEdit = () => {
-    updateCustomer(customer.id, { name: editName, phone: editPhone, customerType: editType });
+  const saveEdit = async () => {
+    await updateCustomerRecord(customer.id, {
+      full_name: editName,
+      phone_number: editPhone,
+      customer_type: editType === "vip" ? "VIP" : "Regular",
+    });
     setEditing(false);
     toast.success("Customer updated");
+    loadCustomer();
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 sm:px-6 h-14">
           <div className="flex items-center gap-3">
@@ -96,7 +147,6 @@ export default function CustomerProfile() {
       </header>
 
       <div className="p-4 max-w-[1400px] mx-auto space-y-4">
-        {/* Edit Panel */}
         {editing && (
           <div className="pos-section space-y-3">
             <h2 className="pos-label">Edit Customer</h2>
@@ -115,19 +165,16 @@ export default function CustomerProfile() {
           </div>
         )}
 
-        {/* Customer Info + Summary Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Info Card */}
           <div className="pos-section space-y-3">
             <h2 className="pos-label">Customer Information</h2>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /><span>{customer.phone}</span></div>
               <div className="flex items-center gap-2"><Crown className="w-4 h-4 text-muted-foreground" /><span className="capitalize">{customer.customerType}</span></div>
-              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /><span>Member since {customer.createdAt}</span></div>
+              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /><span>Member since {new Date(customer.createdAt).toLocaleDateString()}</span></div>
             </div>
           </div>
 
-          {/* Summary Cards */}
           <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
             <MiniCard icon={<ShoppingBag className="w-4 h-4" />} label="Total Orders" value={customer.totalOrders} />
             <MiniCard icon={<Package className="w-4 h-4" />} label="Active" value={customer.activeOrders} accent={customer.activeOrders > 0} />
@@ -138,7 +185,6 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Financial Summary */}
         <div className="pos-section">
           <h2 className="pos-label mb-3">Financial Summary</h2>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
@@ -150,7 +196,6 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Order History */}
         <div className="pos-section p-0">
           <div className="flex items-center justify-between p-3 border-b border-border">
             <h2 className="pos-label">Order History</h2>
@@ -192,7 +237,6 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Notes */}
         <div className="pos-section space-y-3">
           <h2 className="pos-label">Internal Notes</h2>
           {customer.notes.length > 0 ? (
@@ -200,7 +244,7 @@ export default function CustomerProfile() {
               {customer.notes.map((n) => (
                 <div key={n.id} className="bg-secondary/50 rounded-md p-3 text-sm">
                   <p>{n.text}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{n.createdAt}{n.createdBy ? ` · ${n.createdBy}` : ""}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString()}{n.createdBy ? ` · ${n.createdBy}` : ""}</p>
                 </div>
               ))}
             </div>
@@ -221,7 +265,6 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="flex flex-wrap gap-2">
           <button onClick={() => nav("/")} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">New Order</button>
           <button onClick={() => nav("/workflow")} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80">Workflow Board</button>

@@ -4,8 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from "recharts";
-import { DollarSign, ShoppingCart, Clock, Truck, AlertTriangle, Users, TrendingUp, Package } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { DollarSign, ShoppingCart, Clock, Truck, AlertTriangle, Users, TrendingUp, Package, Loader2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
@@ -24,6 +24,14 @@ const PIE_COLORS = [
 const Reports = () => {
   const data = useReportsData();
 
+  if (data.loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   const kpiCards = [
     { label: "Total Revenue", value: `$${data.kpis.totalRevenue.toFixed(2)}`, icon: DollarSign, accent: "text-primary" },
     { label: "Total Orders", value: data.kpis.totalOrders, icon: ShoppingCart, accent: "text-primary" },
@@ -35,6 +43,8 @@ const Reports = () => {
     { label: "Customers", value: data.kpis.totalCustomers, icon: Users, accent: "text-primary" },
     { label: "New Today", value: data.kpis.newCustomersToday, icon: TrendingUp, accent: "text-success" },
   ];
+
+  const hasOrders = data.orders.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +60,6 @@ const Reports = () => {
       </header>
 
       <div className="p-4 max-w-[1600px] mx-auto space-y-6">
-        {/* Date Range Filter */}
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-muted-foreground">Period:</span>
           <Select value={data.dateRange} onValueChange={(v) => data.setDateRange(v as DateRange)}>
@@ -61,7 +70,6 @@ const Reports = () => {
           </Select>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
           {kpiCards.map((kpi) => (
             <Card key={kpi.label} className="relative overflow-hidden">
@@ -76,160 +84,186 @@ const Reports = () => {
           ))}
         </div>
 
-        {/* Row: Revenue Trend + Workflow Status */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
-            <CardContent>
-              <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[260px] w-full">
-                <LineChart data={data.revenueByDay}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+        {!hasOrders ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-lg font-medium">No analytics data yet</p>
+            <p className="text-sm mt-1">Create orders to see reports and charts</p>
+          </div>
+        ) : (
+          <>
+            {/* Revenue Trend + Workflow Pipeline */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[260px] w-full">
+                    <LineChart data={data.revenueByDay}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Workflow Pipeline</CardTitle></CardHeader>
-            <CardContent>
-              <ChartContainer config={{ value: { label: "Orders" } }} className="h-[260px] w-full">
-                <PieChart>
-                  <Pie data={data.statusDistribution.filter((s) => s.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={45} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
-                    {data.statusDistribution.filter((s) => s.value > 0).map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Workflow Pipeline</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={{ value: { label: "Orders" } }} className="h-[260px] w-full">
+                    <PieChart>
+                      <Pie data={data.statusDistribution.filter((s) => s.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={45} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
+                        {data.statusDistribution.filter((s) => s.value > 0).map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Payment + Services */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {data.paymentDistribution.map((p) => (
+                      <div key={p.name} className="text-center p-3 rounded-lg bg-secondary">
+                        <p className="text-2xl font-bold">{p.value}</p>
+                        <p className="text-xs text-muted-foreground">{p.name}</p>
+                      </div>
                     ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </PieChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Row: Payment Status + Service Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {data.paymentDistribution.map((p) => (
-                  <div key={p.name} className="text-center p-3 rounded-lg bg-secondary">
-                    <p className="text-2xl font-bold">{p.value}</p>
-                    <p className="text-xs text-muted-foreground">{p.name}</p>
                   </div>
-                ))}
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Paid</span>
-                  <span className="font-semibold">${data.kpis.totalPaid.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Outstanding</span>
-                  <span className="font-semibold text-destructive">${data.kpis.outstanding.toFixed(2)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Paid</span>
+                      <span className="font-semibold">${data.kpis.totalPaid.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Outstanding</span>
+                      <span className="font-semibold text-destructive">${data.kpis.outstanding.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Top Services by Revenue</CardTitle></CardHeader>
-            <CardContent>
-              <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[220px] w-full">
-                <BarChart data={data.serviceStats} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={110} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Top Services by Revenue</CardTitle></CardHeader>
+                <CardContent>
+                  {data.serviceStats.length > 0 ? (
+                    <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[220px] w-full">
+                      <BarChart data={data.serviceStats} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis type="number" tick={{ fontSize: 11 }} />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={110} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No service data yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Row: Top Items + Top Customers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Popular Item Types</CardTitle></CardHeader>
-            <CardContent>
-              <ChartContainer config={{ count: { label: "Quantity", color: "hsl(var(--accent))" } }} className="h-[220px] w-full">
-                <BarChart data={data.itemTypeStats}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+            {/* Items + Customers */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Popular Item Types</CardTitle></CardHeader>
+                <CardContent>
+                  {data.itemTypeStats.length > 0 ? (
+                    <ChartContainer config={{ count: { label: "Quantity", color: "hsl(var(--accent))" } }} className="h-[220px] w-full">
+                      <BarChart data={data.itemTypeStats}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No item data yet</p>
+                  )}
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Top Customers by Spending</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="text-right">Orders</TableHead>
-                    <TableHead className="text-right">Spent</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.topCustomers.map((c) => (
-                    <TableRow key={c.name}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-right">{c.orders}</TableCell>
-                      <TableCell className="text-right">${c.spent.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                        {c.balance > 0 ? (
-                          <span className="text-destructive">${c.balance.toFixed(2)}</span>
-                        ) : (
-                          <span className="text-muted-foreground">$0.00</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Top Customers by Spending</CardTitle></CardHeader>
+                <CardContent>
+                  {data.topCustomers.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Customer</TableHead>
+                          <TableHead className="text-right">Orders</TableHead>
+                          <TableHead className="text-right">Spent</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.topCustomers.map((c) => (
+                          <TableRow key={c.name}>
+                            <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell className="text-right">{c.orders}</TableCell>
+                            <TableCell className="text-right">${c.spent.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">
+                              {c.balance > 0 ? (
+                                <span className="text-destructive">${c.balance.toFixed(2)}</span>
+                              ) : (
+                                <span className="text-muted-foreground">$0.00</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No customer data yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Recent Activity</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.recentActivity.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-mono text-xs">{a.orderNumber}</TableCell>
-                    <TableCell>{a.customer}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs font-normal">{a.action}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{a.time}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Recent Activity</CardTitle></CardHeader>
+              <CardContent>
+                {data.recentActivity.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.recentActivity.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="font-mono text-xs">{a.orderNumber}</TableCell>
+                          <TableCell>{a.customer}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs font-normal">{a.action}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{new Date(a.time).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No recent activity</p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
