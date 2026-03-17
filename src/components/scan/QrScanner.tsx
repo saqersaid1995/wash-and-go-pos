@@ -11,13 +11,30 @@ interface QrScannerProps {
 
 export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const stoppingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+
+  const safeStop = async (scanner: Html5Qrcode | null) => {
+    if (!scanner || stoppingRef.current) return;
+    stoppingRef.current = true;
+    try {
+      const state = scanner.getState();
+      // State 2 = SCANNING, 3 = PAUSED
+      if (state === 2 || state === 3) {
+        await scanner.stop();
+      }
+    } catch {
+      // already stopped
+    } finally {
+      stoppingRef.current = false;
+    }
+  };
 
   useEffect(() => {
     if (!scanning) {
-      scannerRef.current?.stop().catch(() => {});
-      scannerRef.current = null;
+      safeStop(scannerRef.current).then(() => {
+        scannerRef.current = null;
+      });
       return;
     }
 
@@ -31,18 +48,19 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           onScan(decodedText);
-          scanner.stop().catch(() => {});
-          onToggle();
+          safeStop(scanner).then(() => {
+            onToggle();
+          });
         },
         () => {}
       )
-      .catch((err) => {
+      .catch(() => {
         setError("Camera not available. Use manual entry below.");
         onToggle();
       });
 
     return () => {
-      scanner.stop().catch(() => {});
+      safeStop(scanner);
     };
   }, [scanning]);
 
