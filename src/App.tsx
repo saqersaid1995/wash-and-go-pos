@@ -8,6 +8,7 @@ import Workflow from "./pages/Workflow.tsx";
 import OrderDetails from "./pages/OrderDetails.tsx";
 import Customers from "./pages/Customers.tsx";
 import CustomerProfile from "./pages/CustomerProfile.tsx";
+import Reports from "./pages/Reports.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
