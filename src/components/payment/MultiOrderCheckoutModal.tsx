@@ -5,9 +5,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { CreditCard, Banknote, Building, Shuffle, Loader2, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateOrderStatus } from "@/lib/supabase-queries";
 import { toast } from "sonner";
 import type { WorkflowOrder } from "@/types/workflow";
 
@@ -25,10 +25,11 @@ interface MultiOrderCheckoutModalProps {
   customerName: string;
   customerPhone: string;
   onPaymentComplete: () => void;
+  autoDeliver?: boolean;
 }
 
 export default function MultiOrderCheckoutModal({
-  open, onOpenChange, orders, customerName, customerPhone, onPaymentComplete,
+  open, onOpenChange, orders, customerName, customerPhone, onPaymentComplete, autoDeliver = false,
 }: MultiOrderCheckoutModalProps) {
   const combinedRemaining = orders.reduce((s, o) => s + o.remainingBalance, 0);
   const combinedTotal = orders.reduce((s, o) => s + o.totalAmount, 0);
@@ -37,10 +38,13 @@ export default function MultiOrderCheckoutModal({
   const [amount, setAmount] = useState(combinedRemaining.toFixed(2));
   const [method, setMethod] = useState<string>("cash");
   const [submitting, setSubmitting] = useState(false);
-  const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string } | null>(null);
+  const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string; delivered: boolean } | null>(null);
 
   const numericAmount = parseFloat(amount) || 0;
   const isValid = numericAmount > 0 && numericAmount <= combinedRemaining;
+  const isFullPayment = Math.abs(numericAmount - combinedRemaining) < 0.01;
+  const allReadyForPickup = orders.every((o) => o.currentStatus === "ready-for-pickup");
+  const willAutoDeliver = autoDeliver && isFullPayment && allReadyForPickup;
 
   const handleConfirm = async () => {
     if (!isValid) return;
@@ -48,12 +52,12 @@ export default function MultiOrderCheckoutModal({
 
     let remaining = numericAmount;
 
+    // 1. Process payments for each order
     for (const order of orders) {
       if (remaining <= 0) break;
       const payForThis = Math.min(remaining, order.remainingBalance);
       if (payForThis <= 0) continue;
 
-      // Insert payment
       const { error: payError } = await supabase.from("payments").insert({
         order_id: order.id,
         payment_method: method,
@@ -66,7 +70,6 @@ export default function MultiOrderCheckoutModal({
         return;
       }
 
-      // Update order
       const newPaid = order.paidAmount + payForThis;
       const newRemaining = order.totalAmount - newPaid;
       const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
@@ -89,9 +92,26 @@ export default function MultiOrderCheckoutModal({
       remaining -= payForThis;
     }
 
+    // 2. Auto-deliver if full payment on pickup flow
+    let delivered = false;
+    if (willAutoDeliver) {
+      for (const order of orders) {
+        await updateOrderStatus(order.id, order.currentStatus, "delivered");
+      }
+      delivered = true;
+    }
+
     setSubmitting(false);
-    setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString() });
-    toast.success("Payment recorded for selected orders");
+    setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString(), delivered });
+
+    if (delivered) {
+      toast.success("Payment collected and selected orders delivered successfully.");
+    } else if (!isFullPayment) {
+      toast.success("Payment recorded. Orders remain Ready for Pickup until full balance is paid.");
+    } else {
+      toast.success("Payment recorded for selected orders.");
+    }
+
     onPaymentComplete();
   };
 
@@ -118,7 +138,11 @@ export default function MultiOrderCheckoutModal({
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" /> Pickup Checkout
           </DialogTitle>
-          <DialogDescription>Collect payment for {orders.length} selected order{orders.length !== 1 ? "s" : ""}.</DialogDescription>
+          <DialogDescription>
+            {autoDeliver
+              ? `Collect payment and deliver ${orders.length} selected order${orders.length !== 1 ? "s" : ""}.`
+              : `Collect payment for ${orders.length} selected order${orders.length !== 1 ? "s" : ""}.`}
+          </DialogDescription>
         </DialogHeader>
 
         {receipt ? (
@@ -132,6 +156,7 @@ export default function MultiOrderCheckoutModal({
               <InfoRow label="Amount Paid" value={`$${receipt.amount.toFixed(2)}`} />
               <InfoRow label="Method" value={receipt.method} />
               <InfoRow label="Date" value={receipt.date} />
+              {receipt.delivered && <InfoRow label="Status" value="✅ Delivered" />}
               <Separator />
               <p className="text-center text-xs text-muted-foreground">Thank you!</p>
             </div>
@@ -208,8 +233,8 @@ export default function MultiOrderCheckoutModal({
               {numericAmount > combinedRemaining && (
                 <p className="text-xs text-destructive">Amount exceeds combined remaining balance</p>
               )}
-              {numericAmount > 0 && numericAmount < combinedRemaining && (
-                <p className="text-xs text-warning">Partial payment — orders cannot be marked delivered until fully paid.</p>
+              {numericAmount > 0 && numericAmount < combinedRemaining && autoDeliver && (
+                <p className="text-xs text-warning">Partial payment — orders will remain Ready for Pickup until fully paid.</p>
               )}
             </div>
 
@@ -219,7 +244,9 @@ export default function MultiOrderCheckoutModal({
               onClick={handleConfirm}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              Confirm Payment — ${numericAmount.toFixed(2)}
+              {willAutoDeliver
+                ? `Pay & Deliver — $${numericAmount.toFixed(2)}`
+                : `Confirm Payment — $${numericAmount.toFixed(2)}`}
             </Button>
           </div>
         )}
