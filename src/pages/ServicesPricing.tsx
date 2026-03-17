@@ -388,7 +388,7 @@ function PricingRulesTab() {
         price,
         is_active: formActive,
       }).eq("id", editing.id);
-      if (error) { toast.error(error.code === "23505" ? "This item + service combination already exists" : error.message); setSaving(false); return; }
+      if (error) { toast.error(error.code === "23505" ? "This item already has a pricing rule for the selected service." : error.message); setSaving(false); return; }
       toast.success("Pricing rule updated");
     } else {
       const { error } = await supabase.from("service_pricing").insert({
