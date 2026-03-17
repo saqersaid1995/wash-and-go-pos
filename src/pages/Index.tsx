@@ -47,6 +47,7 @@ const Index = () => {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {pos.items.length} Items • ${pos.total.toFixed(2)}
             </span>
+            <a href="/customers" className="text-xs font-medium text-primary hover:underline">Customers →</a>
             <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
           </div>
         </div>
