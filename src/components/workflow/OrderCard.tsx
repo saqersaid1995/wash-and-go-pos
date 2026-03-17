@@ -2,7 +2,8 @@ import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, CreditCard } from "lucide-react";
+import { ChevronRight, ChevronLeft, AlertTriangle, Clock, CreditCard, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface OrderCardProps {
   order: WorkflowOrder;
