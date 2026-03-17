@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { CreditCard, Banknote, Building, Shuffle, Loader2, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatOMR } from "@/lib/currency";
 import type { WorkflowOrder } from "@/types/workflow";
 
 const PAYMENT_METHODS = [
@@ -25,7 +26,7 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ open, onOpenChange, order, onPaymentComplete }: PaymentModalProps) {
-  const [amount, setAmount] = useState(String(order.remainingBalance.toFixed(2)));
+  const [amount, setAmount] = useState(String(order.remainingBalance.toFixed(3)));
   const [method, setMethod] = useState<string>("cash");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string } | null>(null);
@@ -37,7 +38,6 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
     if (!isValid) return;
     setSubmitting(true);
 
-    // 1. Insert payment
     const { error: payError } = await supabase.from("payments").insert({
       order_id: order.id,
       payment_method: method,
@@ -50,7 +50,6 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       return;
     }
 
-    // 2. Update order financials
     const newPaid = order.paidAmount + numericAmount;
     const newRemaining = order.totalAmount - newPaid;
     const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
@@ -78,7 +77,7 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
 
   const handleClose = () => {
     setReceipt(null);
-    setAmount(String(order.remainingBalance.toFixed(2)));
+    setAmount(String(order.remainingBalance.toFixed(3)));
     setMethod("cash");
     onOpenChange(false);
   };
@@ -87,10 +86,9 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
     window.print();
   };
 
-  // Reset amount when order changes
   const handleOpenChange = (v: boolean) => {
     if (v) {
-      setAmount(String(order.remainingBalance.toFixed(2)));
+      setAmount(String(order.remainingBalance.toFixed(3)));
       setMethod("cash");
       setReceipt(null);
     }
@@ -108,14 +106,13 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
         </DialogHeader>
 
         {receipt ? (
-          /* ── Receipt view ── */
           <div className="space-y-4">
             <div className="border border-border rounded-lg p-4 space-y-3 text-sm receipt-print">
               <h4 className="font-bold text-center">Payment Receipt</h4>
               <Separator />
               <InfoRow label="Order" value={order.orderNumber} />
               <InfoRow label="Customer" value={order.customerName} />
-              <InfoRow label="Amount Paid" value={`$${receipt.amount.toFixed(2)}`} />
+              <InfoRow label="Amount Paid" value={formatOMR(receipt.amount)} />
               <InfoRow label="Method" value={receipt.method} />
               <InfoRow label="Date" value={receipt.date} />
               <Separator />
@@ -131,22 +128,19 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
             </div>
           </div>
         ) : (
-          /* ── Payment form ── */
           <div className="space-y-4">
-            {/* Order summary */}
             <div className="bg-secondary/50 rounded-lg p-3 space-y-1 text-sm">
               <InfoRow label="Order" value={order.orderNumber} />
               <InfoRow label="Customer" value={order.customerName} />
               <Separator className="my-2" />
-              <InfoRow label="Total" value={`$${order.totalAmount.toFixed(2)}`} />
-              <InfoRow label="Paid" value={`$${order.paidAmount.toFixed(2)}`} />
+              <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
+              <InfoRow label="Paid" value={formatOMR(order.paidAmount)} />
               <div className="flex justify-between font-semibold text-destructive">
                 <span>Remaining</span>
-                <span>${order.remainingBalance.toFixed(2)}</span>
+                <span>{formatOMR(order.remainingBalance)}</span>
               </div>
             </div>
 
-            {/* Payment method */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Method</label>
               <div className="grid grid-cols-2 gap-2">
@@ -172,19 +166,18 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
               </div>
             </div>
 
-            {/* Amount */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Amount</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
                 <Input
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="0.001"
+                  min="0.001"
                   max={order.remainingBalance}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-7 text-lg font-semibold"
+                  className="pl-12 text-lg font-semibold"
                 />
               </div>
               {numericAmount > order.remainingBalance && (
@@ -201,7 +194,7 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
               onClick={handleConfirm}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              Confirm Payment — ${numericAmount.toFixed(2)}
+              Confirm Payment — {formatOMR(numericAmount)}
             </Button>
           </div>
         )}

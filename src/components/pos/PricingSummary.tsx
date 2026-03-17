@@ -1,5 +1,6 @@
 import type { PaymentMethod, PaymentStatus } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatOMR } from "@/lib/currency";
 
 interface Props {
   subtotal: number;
@@ -62,12 +63,12 @@ export default function PricingSummary(props: Props) {
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>{formatOMR(subtotal)}</span>
         </div>
         {urgentFee > 0 && (
           <div className="flex justify-between text-accent">
             <span>Urgent Fee (50%)</span>
-            <span>+${urgentFee.toFixed(2)}</span>
+            <span>+{formatOMR(urgentFee)}</span>
           </div>
         )}
         <div className="flex justify-between items-center">
@@ -78,13 +79,13 @@ export default function PricingSummary(props: Props) {
             step={0.5}
             value={discount || ""}
             onChange={(e) => onDiscountChange(Number(e.target.value))}
-            placeholder="0.00"
-            className="pos-input w-20 text-right text-sm h-8"
+            placeholder="0.000"
+            className="pos-input w-24 text-right text-sm h-8"
           />
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Tax (5%)</span>
-          <span>${tax.toFixed(2)}</span>
+          <span>{formatOMR(tax)}</span>
         </div>
         <div className="h-px bg-border" />
         <div className="flex justify-between items-center">
@@ -95,7 +96,7 @@ export default function PricingSummary(props: Props) {
             animate={{ opacity: 1, y: 0 }}
             className="pos-total text-primary"
           >
-            ${total.toFixed(2)}
+            {formatOMR(total)}
           </motion.span>
         </div>
       </div>
@@ -117,13 +118,13 @@ export default function PricingSummary(props: Props) {
                 step={1}
                 value={paidAmount || ""}
                 onChange={(e) => onPaidAmountChange(Number(e.target.value))}
-                placeholder="0.00"
+                placeholder="0.000"
                 className="pos-input w-24 text-right text-sm h-8"
               />
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Remaining</span>
-              <span className="font-medium">${remainingBalance.toFixed(2)}</span>
+              <span className="font-medium">{formatOMR(remainingBalance)}</span>
             </div>
           </motion.div>
         )}

@@ -12,6 +12,7 @@ import type { WorkflowOrder } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { updateOrderStatus } from "@/lib/supabase-queries";
 import { toast } from "sonner";
+import { formatOMR } from "@/lib/currency";
 import MultiOrderCheckoutModal from "@/components/payment/MultiOrderCheckoutModal";
 
 interface PhoneSearchResultsProps {
@@ -67,7 +68,6 @@ export default function PhoneSearchResults({
     }
   };
 
-  // Deliver already-paid orders directly (no payment needed)
   const handleDeliverOnly = async () => {
     if (!canDeliverDirectly) {
       if (!allReadyForPickup) {
@@ -87,7 +87,6 @@ export default function PhoneSearchResults({
     onRefresh();
   };
 
-  // Called after checkout modal completes (payment + auto-delivery handled inside modal)
   const handlePaymentComplete = () => {
     setSelectedIds(new Set());
     onRefresh();
@@ -162,12 +161,12 @@ export default function PhoneSearchResults({
                   <div className="grid grid-cols-3 gap-x-3 mt-1.5 text-xs text-muted-foreground">
                     <span>Status: <strong className="text-foreground capitalize">{stageLabel}</strong></span>
                     <span>Items: <strong className="text-foreground">{order.itemCount}</strong></span>
-                    <span>Total: <strong className="text-foreground">${order.totalAmount.toFixed(2)}</strong></span>
+                    <span>Total: <strong className="text-foreground">{formatOMR(order.totalAmount)}</strong></span>
                   </div>
                   {order.remainingBalance > 0 && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-destructive font-medium">
                       <AlertTriangle className="h-3 w-3" />
-                      Balance: ${order.remainingBalance.toFixed(2)}
+                      Balance: {formatOMR(order.remainingBalance)}
                     </div>
                   )}
                 </div>
@@ -190,9 +189,9 @@ export default function PhoneSearchResults({
         <div className="pos-section space-y-3 sticky bottom-0 bg-card border-t border-border shadow-lg">
           <div className="grid grid-cols-2 gap-2 text-sm">
             <InfoCell label="Selected Orders" value={String(summary.count)} />
-            <InfoCell label="Selected Total" value={`$${summary.total.toFixed(2)}`} />
-            <InfoCell label="Selected Paid" value={`$${summary.paid.toFixed(2)}`} />
-            <InfoCell label="Selected Remaining" value={`$${summary.remaining.toFixed(2)}`} highlight={summary.remaining > 0} />
+            <InfoCell label="Selected Total" value={formatOMR(summary.total)} />
+            <InfoCell label="Selected Paid" value={formatOMR(summary.paid)} />
+            <InfoCell label="Selected Remaining" value={formatOMR(summary.remaining)} highlight={summary.remaining > 0} />
           </div>
 
           <div className="flex gap-2">

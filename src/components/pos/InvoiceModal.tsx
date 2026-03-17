@@ -1,6 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import type { OrderItem } from "@/types/pos";
-import { SERVICES } from "@/types/pos";
+import { formatOMR } from "@/lib/currency";
 
 interface Props {
   orderNumber: string;
@@ -29,7 +29,7 @@ export default function InvoiceModal(props: Props) {
         <div className="invoice-print p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-1">
-            <h1 className="text-xl font-bold">CleanPress Laundry</h1>
+            <h1 className="text-xl font-bold">Wash & Go Laundry</h1>
             <p className="text-sm text-muted-foreground">Invoice</p>
           </div>
 
@@ -75,9 +75,9 @@ export default function InvoiceModal(props: Props) {
               {items.map((item) => (
                 <tr key={item.id} className="border-t border-border">
                   <td className="py-2">{item.itemType || "—"}</td>
-                  <td className="py-2">{SERVICES.find((s) => s.id === item.serviceId)?.name}</td>
+                  <td className="py-2">{item.serviceId}</td>
                   <td className="py-2 text-center">{item.quantity}</td>
-                  <td className="py-2 text-right">${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                  <td className="py-2 text-right">{formatOMR(item.unitPrice * item.quantity)}</td>
                 </tr>
               ))}
             </tbody>
@@ -89,16 +89,16 @@ export default function InvoiceModal(props: Props) {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatOMR(total)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Paid</span>
-              <span>${paidAmount.toFixed(2)}</span>
+              <span>{formatOMR(paidAmount)}</span>
             </div>
             {remainingBalance > 0 && (
               <div className="flex justify-between text-destructive">
                 <span>Remaining</span>
-                <span>${remainingBalance.toFixed(2)}</span>
+                <span>{formatOMR(remainingBalance)}</span>
               </div>
             )}
           </div>

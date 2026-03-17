@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, AlertTriangle, Clock, CreditCard, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatOMR } from "@/lib/currency";
 
 interface OrderCardProps {
   order: WorkflowOrder;
@@ -27,7 +28,6 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev }: O
       } ${isOverdue ? "ring-1 ring-destructive/40" : ""}`}
       onClick={() => onSelect(order.id)}
     >
-      {/* Header */}
       <div className="flex items-center justify-between gap-1">
         <span className="text-xs font-mono font-semibold truncate">{order.orderNumber}</span>
         <div className="flex gap-1 shrink-0">
@@ -43,13 +43,11 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev }: O
         </div>
       </div>
 
-      {/* Customer */}
       <div className="space-y-0.5">
         <p className="text-sm font-medium truncate">{order.customerName}</p>
         <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
       </div>
 
-      {/* Info row */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
@@ -58,26 +56,22 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev }: O
         <span>{order.itemCount} items</span>
       </div>
 
-      {/* Payment */}
       <div className="flex items-center gap-1.5">
         <CreditCard className="h-3 w-3 text-muted-foreground" />
         <PaymentBadge status={order.paymentStatus} />
-        <span className="text-xs font-medium ml-auto">${order.totalAmount.toFixed(2)}</span>
+        <span className="text-xs font-medium ml-auto">{formatOMR(order.totalAmount)}</span>
       </div>
 
-      {/* Notes preview */}
       {order.orderNotes && (
         <p className="text-[0.65rem] text-muted-foreground truncate italic">{order.orderNotes}</p>
       )}
 
-      {/* View Details link */}
       <div onClick={(e) => e.stopPropagation()}>
         <Link to={`/order/${order.id}`} className="text-[0.65rem] text-primary hover:underline flex items-center gap-0.5">
           <ExternalLink className="h-2.5 w-2.5" /> View Details
         </Link>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
         <Button
           variant="outline"
