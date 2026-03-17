@@ -68,8 +68,18 @@ export default function Scanner() {
 
   const handleMarkDelivered = async () => {
     if (!foundOrder) return;
+    if (foundOrder.remainingBalance > 0) {
+      toast.error("Outstanding balance must be paid before delivery.");
+      return;
+    }
     await updateOrderStatus(foundOrder.id, foundOrder.currentStatus, "delivered");
-    toast.success("Order marked as delivered");
+    toast.success("Order successfully delivered");
+    const updated = await searchOrderByCode(foundOrder.orderNumber);
+    if (updated) setFoundOrder(updated);
+  };
+
+  const handleRefresh = async () => {
+    if (!foundOrder) return;
     const updated = await searchOrderByCode(foundOrder.orderNumber);
     if (updated) setFoundOrder(updated);
   };
