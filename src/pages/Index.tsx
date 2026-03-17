@@ -49,6 +49,7 @@ const Index = () => {
             </span>
             <a href="/customers" className="text-xs font-medium text-primary hover:underline">Customers →</a>
             <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
+            <a href="/reports" className="text-xs font-medium text-primary hover:underline">Reports →</a>
           </div>
         </div>
       </header>
