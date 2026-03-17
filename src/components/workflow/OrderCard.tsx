@@ -70,6 +70,13 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev }: O
         <p className="text-[0.65rem] text-muted-foreground truncate italic">{order.orderNotes}</p>
       )}
 
+      {/* View Details link */}
+      <div onClick={(e) => e.stopPropagation()}>
+        <Link to={`/order/${order.id}`} className="text-[0.65rem] text-primary hover:underline flex items-center gap-0.5">
+          <ExternalLink className="h-2.5 w-2.5" /> View Details
+        </Link>
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
         <Button
