@@ -10,8 +10,7 @@ interface Props {
   onDeliveryDateChange: (v: string) => void;
   onOrderTypeChange: (v: OrderType) => void;
   onPickupMethodChange: (v: PickupMethod) => void;
-  onEmployeeChange: (v: string) => void;
-  onNotesChange: (v: string) => void;
+  onEmployeeChange?: (v: string) => void;
 }
 
 export default function OrderDetailsSection(props: Props) {
