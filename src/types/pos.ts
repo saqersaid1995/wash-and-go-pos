@@ -22,6 +22,8 @@ export interface OrderItem {
   serviceId: string;
   quantity: number;
   unitPrice: number;
+  defaultPrice?: number;
+  isManualPriceOverride?: boolean;
   color?: string;
   brand?: string;
   notes?: string;
