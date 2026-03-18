@@ -129,7 +129,7 @@ export function usePOSState() {
         subtotal,
         urgentFee,
         discount,
-        tax,
+        tax: 0,
         total,
         paidAmount,
         remainingBalance,
