@@ -1,5 +1,4 @@
 import type { OrderType, PickupMethod } from "@/types/pos";
-import { EMPLOYEES } from "@/types/pos";
 
 interface Props {
   orderNumber: string;
