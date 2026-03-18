@@ -165,7 +165,7 @@ export function useWorkflowState() {
 
   const ordersByStatus = useMemo(() => {
     const map: Record<WorkflowStatus, WorkflowOrder[]> = {
-      received: [], washing: [], drying: [], ironing: [], "ready-for-pickup": [], delivered: [],
+      received: [], "ready-for-pickup": [], delivered: [],
     };
     filteredOrders.forEach((o) => {
       map[o.currentStatus].push(o);

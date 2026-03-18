@@ -69,6 +69,13 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       return;
     }
 
+    // Auto-deliver if fully paid and ready-for-pickup
+    const newRemainingFinal = Math.max(0, order.totalAmount - newPaid);
+    if (newRemainingFinal <= 0 && order.currentStatus === "ready-for-pickup") {
+      const { updateOrderStatus } = await import("@/lib/supabase-queries");
+      await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
+    }
+
     setSubmitting(false);
     setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString() });
     toast.success("Payment recorded successfully");

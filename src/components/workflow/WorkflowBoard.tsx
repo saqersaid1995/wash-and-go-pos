@@ -2,11 +2,10 @@ import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import OrderCard from "./OrderCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Inbox, Droplets, Wind, Flame, PackageCheck, Truck } from "lucide-react";
+import { Inbox, PackageCheck, Truck } from "lucide-react";
 
 const iconMap: Record<string, React.ElementType> = {
-  inbox: Inbox, droplets: Droplets, wind: Wind, flame: Flame,
-  "package-check": PackageCheck, truck: Truck,
+  inbox: Inbox, "package-check": PackageCheck, truck: Truck,
 };
 
 interface WorkflowBoardProps {
@@ -18,12 +17,12 @@ interface WorkflowBoardProps {
 
 export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNext, onMovePrev }: WorkflowBoardProps) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4 min-h-[400px]">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 min-h-[400px]">
       {WORKFLOW_STAGES.map((stage) => {
         const Icon = iconMap[stage.icon] || Inbox;
         const orders = ordersByStatus[stage.id];
         return (
-          <div key={stage.id} className="flex-shrink-0 w-[280px] flex flex-col">
+          <div key={stage.id} className="flex flex-col">
             {/* Column header */}
             <div className="flex items-center gap-2 mb-2 px-1">
               <Icon className="h-4 w-4 text-muted-foreground" />
