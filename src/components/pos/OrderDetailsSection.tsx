@@ -1,5 +1,4 @@
 import type { OrderType, PickupMethod } from "@/types/pos";
-import { EMPLOYEES } from "@/types/pos";
 
 interface Props {
   orderNumber: string;
@@ -7,21 +6,19 @@ interface Props {
   deliveryDate: string;
   orderType: OrderType;
   pickupMethod: PickupMethod;
-  employeeId: string;
   orderNotes: string;
   onDeliveryDateChange: (v: string) => void;
   onOrderTypeChange: (v: OrderType) => void;
   onPickupMethodChange: (v: PickupMethod) => void;
-  onEmployeeChange: (v: string) => void;
   onNotesChange: (v: string) => void;
 }
 
 export default function OrderDetailsSection(props: Props) {
   const {
     orderNumber, orderDate, deliveryDate, orderType, pickupMethod,
-    employeeId, orderNotes,
+    orderNotes,
     onDeliveryDateChange, onOrderTypeChange, onPickupMethodChange,
-    onEmployeeChange, onNotesChange,
+    onNotesChange,
   } = props;
 
   return (
@@ -89,20 +86,8 @@ export default function OrderDetailsSection(props: Props) {
         </div>
       </div>
 
-      {/* Employee */}
-      <div>
-        <label className="pos-label text-[0.65rem]">Employee</label>
-        <select
-          value={employeeId}
-          onChange={(e) => onEmployeeChange(e.target.value)}
-          className="pos-input w-full"
-        >
-          <option value="">Select...</option>
-          {EMPLOYEES.map((emp) => (
-            <option key={emp.id} value={emp.id}>{emp.name}</option>
-          ))}
-        </select>
-      </div>
+
+
 
       <div>
         <label className="pos-label text-[0.65rem]">Order Notes</label>
