@@ -6,7 +6,6 @@ interface Props {
   subtotal: number;
   urgentFee: number;
   discount: number;
-  tax: number;
   total: number;
   paidAmount: number;
   remainingBalance: number;
