@@ -90,9 +90,7 @@ export function usePOSState() {
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const urgentFee = orderType === "urgent" ? subtotal * (URGENT_MULTIPLIER - 1) : 0;
-  const taxableAmount = subtotal + urgentFee - discount;
-  const tax = Math.max(0, taxableAmount * TAX_RATE);
-  const total = Math.max(0, taxableAmount + tax);
+  const total = Math.max(0, subtotal + urgentFee - discount);
   const remainingBalance = Math.max(0, total - paidAmount);
 
   const paymentStatus: PaymentStatus =
