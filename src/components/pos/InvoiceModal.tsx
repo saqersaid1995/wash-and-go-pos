@@ -1,6 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import type { OrderItem } from "@/types/pos";
 import { formatOMR } from "@/lib/currency";
+import { BUSINESS } from "@/lib/business-config";
 
 interface Props {
   orderNumber: string;
