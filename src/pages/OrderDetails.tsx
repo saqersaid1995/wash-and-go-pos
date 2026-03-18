@@ -74,9 +74,6 @@ export default function OrderDetails() {
 
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const urgentFee = order.orderType === "urgent" ? subtotal * 0.5 : 0;
-  const discount = 0;
-  const taxableAmount = subtotal + urgentFee - discount;
-  const tax = Math.max(0, taxableAmount * 0.05);
 
   const handleMoveNext = async () => {
     if (canNext) {
