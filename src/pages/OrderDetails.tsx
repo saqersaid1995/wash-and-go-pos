@@ -222,7 +222,6 @@ export default function OrderDetails() {
             <div className="space-y-2 text-sm">
               <PricingRow label="Subtotal" value={subtotal} />
               {urgentFee > 0 && <PricingRow label="Urgent Fee (50%)" value={urgentFee} />}
-              <PricingRow label="Tax (5%)" value={tax} />
               <Separator />
               <div className="flex justify-between font-bold text-base">
                 <span>Total</span>
