@@ -143,7 +143,7 @@ export function usePOSState() {
   }, [
     items, customerName, customerPhone, matchedCustomerId,
     orderNumber, orderDate, deliveryDate, orderType, pickupMethod,
-    employeeId, orderNotes, subtotal, urgentFee, discount, tax,
+    employeeId, orderNotes, subtotal, urgentFee, discount,
     total, paidAmount, remainingBalance, paymentMethod, paymentStatus,
   ]);
 
