@@ -8,7 +8,7 @@ function generateId() {
 }
 
 const URGENT_MULTIPLIER = 1.5;
-const TAX_RATE = 0.05;
+
 
 export function usePOSState() {
   // Customer
