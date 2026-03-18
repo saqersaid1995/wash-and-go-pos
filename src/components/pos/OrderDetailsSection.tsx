@@ -6,19 +6,19 @@ interface Props {
   deliveryDate: string;
   orderType: OrderType;
   pickupMethod: PickupMethod;
-  employeeId?: string;
+  orderNotes: string;
   onDeliveryDateChange: (v: string) => void;
   onOrderTypeChange: (v: OrderType) => void;
   onPickupMethodChange: (v: PickupMethod) => void;
-  onEmployeeChange?: (v: string) => void;
+  onNotesChange: (v: string) => void;
 }
 
 export default function OrderDetailsSection(props: Props) {
   const {
     orderNumber, orderDate, deliveryDate, orderType, pickupMethod,
-    employeeId, orderNotes,
+    orderNotes,
     onDeliveryDateChange, onOrderTypeChange, onPickupMethodChange,
-    onEmployeeChange, onNotesChange,
+    onNotesChange,
   } = props;
 
   return (

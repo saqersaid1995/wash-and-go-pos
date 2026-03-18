@@ -105,12 +105,10 @@ const Index = () => {
               deliveryDate={pos.deliveryDate}
               orderType={pos.orderType}
               pickupMethod={pos.pickupMethod}
-              employeeId={pos.employeeId}
               orderNotes={pos.orderNotes}
               onDeliveryDateChange={pos.setDeliveryDate}
               onOrderTypeChange={pos.setOrderType}
               onPickupMethodChange={pos.setPickupMethod}
-              onEmployeeChange={pos.setEmployeeId}
               onNotesChange={pos.setOrderNotes}
             />
           </div>
