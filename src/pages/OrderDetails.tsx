@@ -284,9 +284,12 @@ export default function OrderDetails() {
           </div>
           <div className="invoice-print border border-border rounded-lg p-6 bg-card space-y-4 text-sm">
             <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-bold">Wash & Go Laundry</h3>
-                <p className="text-xs text-muted-foreground">Professional Laundry Services</p>
+              <div className="flex items-center gap-2">
+                <img src={BUSINESS.logo} alt={BUSINESS.name} className="h-10 w-10 object-contain" />
+                <div>
+                  <h3 className="text-lg font-bold">{BUSINESS.name}</h3>
+                  <p className="text-xs text-muted-foreground">{BUSINESS.tagline}</p>
+                </div>
               </div>
               <QRCodeSVG value={`ORDER:${order.orderNumber}`} size={64} />
             </div>

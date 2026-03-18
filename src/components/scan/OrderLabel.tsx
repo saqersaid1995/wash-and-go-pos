@@ -10,9 +10,12 @@ interface OrderLabelProps {
 export default function OrderLabel({ order }: OrderLabelProps) {
   return (
     <div className="label-print border-2 border-dashed border-border rounded-lg p-4 bg-card max-w-[320px] mx-auto space-y-3">
-      <div className="text-center">
-        <h4 className="text-sm font-bold">Wash & Go Laundry</h4>
-        <p className="text-[0.6rem] text-muted-foreground">Professional Laundry Services</p>
+      <div className="flex items-center justify-center gap-2">
+        <img src={BUSINESS.logo} alt={BUSINESS.name} className="h-8 w-8 object-contain" />
+        <div className="text-center">
+          <h4 className="text-sm font-bold">{BUSINESS.name}</h4>
+          <p className="text-[0.6rem] text-muted-foreground">{BUSINESS.tagline}</p>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">
