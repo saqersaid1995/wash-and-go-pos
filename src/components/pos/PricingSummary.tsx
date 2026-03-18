@@ -6,7 +6,6 @@ interface Props {
   subtotal: number;
   urgentFee: number;
   discount: number;
-  tax: number;
   total: number;
   paidAmount: number;
   remainingBalance: number;
@@ -33,7 +32,7 @@ const statusColors: Record<PaymentStatus, string> = {
 
 export default function PricingSummary(props: Props) {
   const {
-    subtotal, urgentFee, discount, tax, total, paidAmount, remainingBalance,
+    subtotal, urgentFee, discount, total, paidAmount, remainingBalance,
     paymentStatus, paymentMethod,
     onDiscountChange, onPaidAmountChange, onPaymentMethodChange,
   } = props;
@@ -82,10 +81,6 @@ export default function PricingSummary(props: Props) {
             placeholder="0.000"
             className="pos-input w-24 text-right text-sm h-8"
           />
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Tax (5%)</span>
-          <span>{formatOMR(tax)}</span>
         </div>
         <div className="h-px bg-border" />
         <div className="flex justify-between items-center">

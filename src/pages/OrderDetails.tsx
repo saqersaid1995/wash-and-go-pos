@@ -74,9 +74,6 @@ export default function OrderDetails() {
 
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const urgentFee = order.orderType === "urgent" ? subtotal * 0.5 : 0;
-  const discount = 0;
-  const taxableAmount = subtotal + urgentFee - discount;
-  const tax = Math.max(0, taxableAmount * 0.05);
 
   const handleMoveNext = async () => {
     if (canNext) {
@@ -225,7 +222,6 @@ export default function OrderDetails() {
             <div className="space-y-2 text-sm">
               <PricingRow label="Subtotal" value={subtotal} />
               {urgentFee > 0 && <PricingRow label="Urgent Fee (50%)" value={urgentFee} />}
-              <PricingRow label="Tax (5%)" value={tax} />
               <Separator />
               <div className="flex justify-between font-bold text-base">
                 <span>Total</span>
@@ -330,7 +326,6 @@ export default function OrderDetails() {
             <div className="flex flex-col items-end space-y-1 text-xs">
               <div className="flex gap-8"><span className="text-muted-foreground">Subtotal:</span> <span>{formatOMR(subtotal)}</span></div>
               {urgentFee > 0 && <div className="flex gap-8"><span className="text-muted-foreground">Urgent Fee:</span> <span>{formatOMR(urgentFee)}</span></div>}
-              <div className="flex gap-8"><span className="text-muted-foreground">Tax (5%):</span> <span>{formatOMR(tax)}</span></div>
               <Separator className="w-32" />
               <div className="flex gap-8 font-bold text-sm"><span>Total:</span> <span>{formatOMR(order.totalAmount)}</span></div>
               <div className="flex gap-8"><span className="text-muted-foreground">Paid:</span> <span>{formatOMR(order.paidAmount)}</span></div>

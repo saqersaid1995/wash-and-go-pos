@@ -8,7 +8,7 @@ function generateId() {
 }
 
 const URGENT_MULTIPLIER = 1.5;
-const TAX_RATE = 0.05;
+
 
 export function usePOSState() {
   // Customer
@@ -90,9 +90,7 @@ export function usePOSState() {
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const urgentFee = orderType === "urgent" ? subtotal * (URGENT_MULTIPLIER - 1) : 0;
-  const taxableAmount = subtotal + urgentFee - discount;
-  const tax = Math.max(0, taxableAmount * TAX_RATE);
-  const total = Math.max(0, taxableAmount + tax);
+  const total = Math.max(0, subtotal + urgentFee - discount);
   const remainingBalance = Math.max(0, total - paidAmount);
 
   const paymentStatus: PaymentStatus =
@@ -131,7 +129,7 @@ export function usePOSState() {
         subtotal,
         urgentFee,
         discount,
-        tax,
+        tax: 0,
         total,
         paidAmount,
         remainingBalance,
@@ -145,7 +143,7 @@ export function usePOSState() {
   }, [
     items, customerName, customerPhone, matchedCustomerId,
     orderNumber, orderDate, deliveryDate, orderType, pickupMethod,
-    employeeId, orderNotes, subtotal, urgentFee, discount, tax,
+    employeeId, orderNotes, subtotal, urgentFee, discount,
     total, paidAmount, remainingBalance, paymentMethod, paymentStatus,
   ]);
 
@@ -179,7 +177,7 @@ export function usePOSState() {
     // Items
     items, addItem, updateItem, removeItem,
     // Pricing
-    subtotal, urgentFee, discount, setDiscount, tax, total,
+    subtotal, urgentFee, discount, setDiscount, total,
     paidAmount, setPaidAmount, remainingBalance, paymentStatus,
     // Payment
     paymentMethod, setPaymentMethod,
