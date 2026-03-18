@@ -128,7 +128,6 @@ const Index = () => {
               subtotal={pos.subtotal}
               urgentFee={pos.urgentFee}
               discount={pos.discount}
-              tax={pos.tax}
               total={pos.total}
               paidAmount={pos.paidAmount}
               remainingBalance={pos.remainingBalance}

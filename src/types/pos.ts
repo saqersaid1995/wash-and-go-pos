@@ -49,7 +49,6 @@ export interface Order {
   subtotal: number;
   discount: number;
   urgentFee: number;
-  tax: number;
   total: number;
   paidAmount: number;
   remainingBalance: number;

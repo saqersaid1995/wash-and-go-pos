@@ -177,7 +177,7 @@ export function usePOSState() {
     // Items
     items, addItem, updateItem, removeItem,
     // Pricing
-    subtotal, urgentFee, discount, setDiscount, tax, total,
+    subtotal, urgentFee, discount, setDiscount, total,
     paidAmount, setPaidAmount, remainingBalance, paymentStatus,
     // Payment
     paymentMethod, setPaymentMethod,

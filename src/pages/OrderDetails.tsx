@@ -326,7 +326,6 @@ export default function OrderDetails() {
             <div className="flex flex-col items-end space-y-1 text-xs">
               <div className="flex gap-8"><span className="text-muted-foreground">Subtotal:</span> <span>{formatOMR(subtotal)}</span></div>
               {urgentFee > 0 && <div className="flex gap-8"><span className="text-muted-foreground">Urgent Fee:</span> <span>{formatOMR(urgentFee)}</span></div>}
-              <div className="flex gap-8"><span className="text-muted-foreground">Tax (5%):</span> <span>{formatOMR(tax)}</span></div>
               <Separator className="w-32" />
               <div className="flex gap-8 font-bold text-sm"><span>Total:</span> <span>{formatOMR(order.totalAmount)}</span></div>
               <div className="flex gap-8"><span className="text-muted-foreground">Paid:</span> <span>{formatOMR(order.paidAmount)}</span></div>
