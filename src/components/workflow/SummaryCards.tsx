@@ -1,9 +1,8 @@
 import { WORKFLOW_STAGES } from "@/types/workflow";
-import { Inbox, Droplets, Wind, Flame, PackageCheck, Truck, AlertTriangle, ClipboardList } from "lucide-react";
+import { Inbox, PackageCheck, Truck, AlertTriangle, ClipboardList } from "lucide-react";
 
 const iconMap: Record<string, React.ElementType> = {
-  inbox: Inbox, droplets: Droplets, wind: Wind, flame: Flame,
-  "package-check": PackageCheck, truck: Truck,
+  inbox: Inbox, "package-check": PackageCheck, truck: Truck,
 };
 
 interface SummaryCardsProps {
@@ -12,7 +11,7 @@ interface SummaryCardsProps {
 
 export default function SummaryCards({ counts }: SummaryCardsProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
       <SummaryCard label="Total Active" value={counts.total} icon={ClipboardList} variant="default" />
       {WORKFLOW_STAGES.map((stage) => {
         const Icon = iconMap[stage.icon] || Inbox;

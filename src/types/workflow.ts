@@ -1,16 +1,10 @@
 export type WorkflowStatus =
   | "received"
-  | "washing"
-  | "drying"
-  | "ironing"
   | "ready-for-pickup"
   | "delivered";
 
 export const WORKFLOW_STAGES: { id: WorkflowStatus; label: string; icon: string }[] = [
   { id: "received", label: "Received", icon: "inbox" },
-  { id: "washing", label: "Washing", icon: "droplets" },
-  { id: "drying", label: "Drying", icon: "wind" },
-  { id: "ironing", label: "Ironing", icon: "flame" },
   { id: "ready-for-pickup", label: "Ready for Pickup", icon: "package-check" },
   { id: "delivered", label: "Delivered", icon: "truck" },
 ];
