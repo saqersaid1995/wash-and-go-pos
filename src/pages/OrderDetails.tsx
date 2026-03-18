@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { BUSINESS } from "@/lib/business-config";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { GARMENT_CONDITIONS } from "@/types/pos";
