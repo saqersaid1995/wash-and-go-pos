@@ -1,6 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import type { OrderItem } from "@/types/pos";
 import { formatOMR } from "@/lib/currency";
+import { BUSINESS } from "@/lib/business-config";
 
 interface Props {
   orderNumber: string;
@@ -28,8 +29,14 @@ export default function InvoiceModal(props: Props) {
         {/* Print area */}
         <div className="invoice-print p-8 space-y-6">
           {/* Header */}
-          <div className="text-center space-y-1">
-            <h1 className="text-xl font-bold">Wash & Go Laundry</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={BUSINESS.logo} alt={BUSINESS.name} className="h-14 w-14 object-contain print:h-12 print:w-12" />
+              <div>
+                <h1 className="text-xl font-bold tracking-tight">{BUSINESS.name}</h1>
+                <p className="text-xs text-muted-foreground">{BUSINESS.tagline}</p>
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground">Invoice</p>
           </div>
 
