@@ -6,8 +6,7 @@ interface Props {
   deliveryDate: string;
   orderType: OrderType;
   pickupMethod: PickupMethod;
-  employeeId: string;
-  orderNotes: string;
+  employeeId?: string;
   onDeliveryDateChange: (v: string) => void;
   onOrderTypeChange: (v: OrderType) => void;
   onPickupMethodChange: (v: PickupMethod) => void;
