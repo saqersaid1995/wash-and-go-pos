@@ -86,20 +86,8 @@ export default function OrderDetailsSection(props: Props) {
         </div>
       </div>
 
-      {/* Employee */}
-      <div>
-        <label className="pos-label text-[0.65rem]">Employee</label>
-        <select
-          value={employeeId}
-          onChange={(e) => onEmployeeChange(e.target.value)}
-          className="pos-input w-full"
-        >
-          <option value="">Select...</option>
-          {EMPLOYEES.map((emp) => (
-            <option key={emp.id} value={emp.id}>{emp.name}</option>
-          ))}
-        </select>
-      </div>
+
+
 
       <div>
         <label className="pos-label text-[0.65rem]">Order Notes</label>
