@@ -1,6 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
 import type { WorkflowOrder } from "@/types/workflow";
+import { BUSINESS } from "@/lib/business-config";
 
 interface OrderLabelProps {
   order: WorkflowOrder;
