@@ -1,4 +1,4 @@
-import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, PencilLine } from "lucide-react";
 import type { OrderItem } from "@/types/pos";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,10 +73,46 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
   );
   const hasWarning = item.itemType && item.serviceId && !matchingRule;
 
-  // Filter available services based on selected item
   const availableServiceNames = item.itemType
     ? [...new Set(pricingRules.filter((r) => r.item_type === item.itemType && r.is_active).map((r) => r.service_type))]
     : dbServices.map((s) => s.service_name);
+
+  const handleQuantityInput = (val: string) => {
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num >= 1) {
+      onUpdate(item.id, { quantity: num });
+    } else if (val === "") {
+      // Allow empty temporarily while typing, but enforce min on blur
+    }
+  };
+
+  const handleQuantityBlur = (val: string) => {
+    const num = parseInt(val, 10);
+    if (isNaN(num) || num < 1) {
+      onUpdate(item.id, { quantity: 1 });
+    }
+  };
+
+  const handlePriceInput = (val: string) => {
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 0) {
+      const isOverride = matchingRule ? num !== matchingRule.price : true;
+      onUpdate(item.id, {
+        unitPrice: num,
+        isManualPriceOverride: isOverride,
+        defaultPrice: matchingRule?.price ?? item.defaultPrice,
+      });
+    } else if (val === "" || val === "0.") {
+      // Allow empty/partial typing
+    }
+  };
+
+  const handlePriceBlur = (val: string) => {
+    const num = parseFloat(val);
+    if (isNaN(num) || num < 0) {
+      onUpdate(item.id, { unitPrice: 0 });
+    }
+  };
 
   return (
     <motion.div
@@ -87,14 +123,20 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
       transition={{ duration: 0.15 }}
       className={`border rounded-md p-3 bg-background ${hasWarning ? "border-destructive/50" : "border-border"}`}
     >
-      <div className="grid grid-cols-[1fr_140px_80px_80px_80px_36px] gap-2 items-center">
+      <div className="grid grid-cols-[1fr_1fr_100px_90px_80px_36px] gap-2 items-center">
         <select
           value={item.itemType}
           onChange={(e) => {
             const newItemType = e.target.value;
             const rule = pricingRules.find((r) => r.item_type === newItemType && r.service_type === item.serviceId && r.is_active);
-            const updates: Partial<OrderItem> = { itemType: newItemType };
-            if (rule) updates.unitPrice = rule.price;
+            const updates: Partial<OrderItem> = {
+              itemType: newItemType,
+              isManualPriceOverride: false,
+            };
+            if (rule) {
+              updates.unitPrice = rule.price;
+              updates.defaultPrice = rule.price;
+            }
             onUpdate(item.id, updates);
           }}
           className="pos-input w-full text-sm"
@@ -108,8 +150,14 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
           onChange={(e) => {
             const newService = e.target.value;
             const rule = pricingRules.find((r) => r.item_type === item.itemType && r.service_type === newService && r.is_active);
-            const updates: Partial<OrderItem> = { serviceId: newService };
-            if (rule) updates.unitPrice = rule.price;
+            const updates: Partial<OrderItem> = {
+              serviceId: newService,
+              isManualPriceOverride: false,
+            };
+            if (rule) {
+              updates.unitPrice = rule.price;
+              updates.defaultPrice = rule.price;
+            }
             onUpdate(item.id, updates);
           }}
           className="pos-input w-full text-sm"
@@ -118,19 +166,57 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
           {availableServiceNames.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
 
-        <div className="flex items-center gap-1">
-          <button onClick={() => item.quantity > 1 && onUpdate(item.id, { quantity: item.quantity - 1 })} className="w-7 h-7 rounded border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors">−</button>
-          <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-          <button onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })} className="w-7 h-7 rounded border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors">+</button>
+        {/* Quantity: [-] [input] [+] */}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => item.quantity > 1 && onUpdate(item.id, { quantity: item.quantity - 1 })}
+            className="w-7 h-7 rounded border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors shrink-0"
+          >−</button>
+          <input
+            type="number"
+            min={1}
+            value={item.quantity}
+            onChange={(e) => handleQuantityInput(e.target.value)}
+            onBlur={(e) => handleQuantityBlur(e.target.value)}
+            className="pos-input w-10 text-center text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <button
+            onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })}
+            className="w-7 h-7 rounded border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors shrink-0"
+          >+</button>
         </div>
 
-        <span className="text-sm text-muted-foreground text-right">{formatOMR(item.unitPrice)}</span>
+        {/* Price: editable */}
+        <div className="relative">
+          <input
+            type="number"
+            min={0}
+            step={0.001}
+            value={item.unitPrice}
+            onChange={(e) => handlePriceInput(e.target.value)}
+            onBlur={(e) => handlePriceBlur(e.target.value)}
+            className="pos-input w-full text-sm text-right pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
+
+        {/* Total: read-only */}
         <span className="text-sm font-semibold text-right">{formatOMR(item.unitPrice * item.quantity)}</span>
 
         <button onClick={() => onRemove(item.id)} className="w-8 h-8 rounded flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Manual price override indicator */}
+      {item.isManualPriceOverride && (
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <PencilLine className="h-3 w-3" />
+          Manual price override
+          {item.defaultPrice !== undefined && (
+            <span className="text-muted-foreground ml-1">(default: {formatOMR(item.defaultPrice)})</span>
+          )}
+        </div>
+      )}
 
       {hasWarning && (
         <div className="flex items-center gap-1.5 mt-2 text-xs text-destructive">
@@ -192,7 +278,7 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
       )}
 
       {items.length > 0 && (
-        <div className="grid grid-cols-[1fr_140px_80px_80px_80px_36px] gap-2 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="grid grid-cols-[1fr_1fr_100px_90px_80px_36px] gap-2 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
           <span>Item</span><span>Service</span><span>Qty</span><span className="text-right">Price</span><span className="text-right">Total</span><span></span>
         </div>
       )}
