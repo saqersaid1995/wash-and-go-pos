@@ -9,6 +9,7 @@ import OrderDetails from "./pages/OrderDetails.tsx";
 import Customers from "./pages/Customers.tsx";
 import CustomerProfile from "./pages/CustomerProfile.tsx";
 import Reports from "./pages/Reports.tsx";
+import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
 import NotFound from "./pages/NotFound.tsx";
