@@ -9,6 +9,7 @@ import OrderDetails from "./pages/OrderDetails.tsx";
 import Customers from "./pages/Customers.tsx";
 import CustomerProfile from "./pages/CustomerProfile.tsx";
 import Reports from "./pages/Reports.tsx";
+import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/customers" element={<Customers />} />
           <Route path="/customer/:customerId" element={<CustomerProfile />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/expenses" element={<Expenses />} />
           <Route path="/scan" element={<Scanner />} />
           <Route path="/services" element={<ServicesPricing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
