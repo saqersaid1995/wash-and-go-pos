@@ -32,6 +32,8 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [notifLogs, setNotifLogs] = useState<any[]>([]);
+  const [resending, setResending] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
