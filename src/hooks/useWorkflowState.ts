@@ -106,11 +106,12 @@ export function useWorkflowState() {
 
   const moveToNext = useCallback(async (orderId: string, changedBy?: string) => {
     const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+    if (!order) return {};
     const idx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
     if (idx < WORKFLOW_STAGES.length - 1) {
-      await moveOrder(orderId, WORKFLOW_STAGES[idx + 1].id, changedBy);
+      return await moveOrder(orderId, WORKFLOW_STAGES[idx + 1].id, changedBy);
     }
+    return {};
   }, [orders, moveOrder]);
 
   const moveToPrev = useCallback(async (orderId: string, changedBy?: string) => {
