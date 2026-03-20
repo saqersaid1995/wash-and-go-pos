@@ -47,9 +47,11 @@ export function useWorkflowState() {
 
   const resetFilters = useCallback(() => setFilters(initialFilters), []);
 
-  const moveOrder = useCallback(async (orderId: string, toStatus: WorkflowStatus, changedBy?: string) => {
+  const moveOrder = useCallback(async (orderId: string, toStatus: WorkflowStatus, changedBy?: string): Promise<{ whatsappResult?: { success: boolean; status: string; error?: string } }> => {
     const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+    if (!order) return {};
+
+    const fromStatus = order.currentStatus;
 
     // Optimistic update
     setOrders((prev) =>
@@ -74,7 +76,32 @@ export function useWorkflowState() {
       })
     );
 
-    await updateOrderStatus(orderId, order.currentStatus, toStatus, changedBy);
+    await updateOrderStatus(orderId, fromStatus, toStatus, changedBy);
+
+    // Trigger WhatsApp when moving from received → ready-for-pickup
+    let whatsappResult: { success: boolean; status: string; error?: string } | undefined;
+    if (fromStatus === "received" && toStatus === "ready-for-pickup") {
+      // Check if already sent
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("ready_pickup_whatsapp_sent, customer_id")
+        .eq("id", orderId)
+        .maybeSingle();
+
+      if (orderData && !orderData.ready_pickup_whatsapp_sent) {
+        whatsappResult = await sendReadyForPickupWhatsApp({
+          orderId,
+          customerId: orderData.customer_id,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          remainingAmount: order.remainingBalance,
+        });
+      }
+    }
+
+    return { whatsappResult };
   }, [orders]);
 
   const moveToNext = useCallback(async (orderId: string, changedBy?: string) => {
