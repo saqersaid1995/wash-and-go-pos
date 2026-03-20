@@ -41,11 +41,44 @@ export default function OrderDetails() {
     const data = await fetchOrderById(orderId);
     setOrder(data);
     setLoading(false);
+    // Load notification logs
+    const logs = await fetchNotificationLogs(orderId);
+    setNotifLogs(logs);
   }, [orderId]);
 
   useEffect(() => {
     loadOrder();
   }, [loadOrder]);
+
+  const handleResendWhatsApp = async () => {
+    if (!order) return;
+    setResending(true);
+    // Get customer_id from DB
+    const { data: orderRow } = await supabase
+      .from("orders")
+      .select("customer_id")
+      .eq("id", order.id)
+      .maybeSingle();
+
+    const result = await sendReadyForPickupWhatsApp({
+      orderId: order.id,
+      customerId: orderRow?.customer_id,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      remainingAmount: order.remainingBalance,
+    });
+    setResending(false);
+    if (result.success) {
+      toast.success("WhatsApp notification resent successfully.");
+    } else {
+      toast.error(`WhatsApp resend failed: ${result.error || "Unknown error"}`);
+    }
+    // Reload logs
+    const logs = await fetchNotificationLogs(order.id);
+    setNotifLogs(logs);
+  };
 
   if (loading) {
     return (
