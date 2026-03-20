@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GRAPH_API_VERSION = "v21.0";
+const GRAPH_API_VERSION = "v22.0";
 
 function normalizePhone(phone: string, defaultCountryCode = "968"): string | null {
   // Strip all non-digits
@@ -101,18 +101,34 @@ Thank you.`;
     // Send via Meta WhatsApp Cloud API
     const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
+    // In test mode, Meta only delivers template messages (not free-form text).
+    // Use hello_world template to validate the flow, then switch to custom template later.
+    const TEST_MODE = Deno.env.get("WHATSAPP_TEST_MODE") !== "false"; // default true
+
+    const requestBody = TEST_MODE
+      ? {
+          messaging_product: "whatsapp",
+          to: normalizedPhone,
+          type: "template",
+          template: {
+            name: "hello_world",
+            language: { code: "en_US" },
+          },
+        }
+      : {
+          messaging_product: "whatsapp",
+          to: normalizedPhone,
+          type: "text",
+          text: { body: messageBody },
+        };
+
     const waResponse = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: normalizedPhone,
-        type: "text",
-        text: { body: messageBody },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const waData = await waResponse.json();
