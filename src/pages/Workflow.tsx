@@ -11,9 +11,17 @@ import { toast } from "sonner";
 export default function Workflow() {
   const wf = useWorkflowState();
 
-  const handleMoveNext = (id: string) => {
-    wf.moveToNext(id);
-    toast.success("Order moved to next stage");
+  const handleMoveNext = async (id: string) => {
+    const result = await wf.moveToNext(id);
+    if (result?.whatsappResult) {
+      if (result.whatsappResult.success) {
+        toast.success("Order marked Ready for Pickup and WhatsApp notification sent.");
+      } else {
+        toast.warning("Order marked Ready for Pickup, but WhatsApp notification failed.");
+      }
+    } else {
+      toast.success("Order moved to next stage");
+    }
   };
 
   const handleMovePrev = (id: string) => {
