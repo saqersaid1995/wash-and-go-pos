@@ -5,47 +5,57 @@ import type { CustomerRecord } from "@/types/customer";
 import { fetchAllOrders, fetchAllCustomers } from "@/lib/supabase-queries";
 import { fetchAllExpenses, type Expense } from "@/lib/expense-queries";
 
-export type DateRange = "today" | "yesterday" | "this-week" | "this-month" | "all";
+export type DateRange =
+  | "today" | "yesterday" | "this-week" | "this-month" | "last-month"
+  | "last-3-months" | "last-6-months" | "this-year" | "all" | "custom";
 
-const todayStr = () => new Date().toISOString().split("T")[0];
-const yesterdayStr = () => new Date(Date.now() - 86400000).toISOString().split("T")[0];
+const toDateStr = (d: Date) => d.toISOString().split("T")[0];
+const todayStr = () => toDateStr(new Date());
+const yesterdayStr = () => toDateStr(new Date(Date.now() - 86400000));
 
-function startOfWeek() {
-  const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().split("T")[0];
-}
+function startOfWeek() { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return toDateStr(d); }
+function startOfMonth() { const d = new Date(); d.setDate(1); return toDateStr(d); }
+function startOfLastMonth() { const d = new Date(); d.setMonth(d.getMonth() - 1, 1); return toDateStr(d); }
+function endOfLastMonth() { const d = new Date(); d.setDate(0); return toDateStr(d); }
+function monthsAgo(n: number) { const d = new Date(); d.setMonth(d.getMonth() - n); return toDateStr(d); }
+function startOfYear() { return `${new Date().getFullYear()}-01-01`; }
 
-function startOfMonth() {
-  const d = new Date();
-  d.setDate(1);
-  return d.toISOString().split("T")[0];
-}
-
-function filterByRange(orders: WorkflowOrder[], range: DateRange) {
-  if (range === "all") return orders;
+function getDateBounds(range: DateRange, customStart?: string, customEnd?: string): [string, string] | null {
+  if (range === "all") return null;
   const today = todayStr();
-  const yesterday = yesterdayStr();
-  if (range === "today") return orders.filter((o) => o.orderDate === today);
-  if (range === "yesterday") return orders.filter((o) => o.orderDate === yesterday);
-  if (range === "this-week") return orders.filter((o) => o.orderDate >= startOfWeek());
-  if (range === "this-month") return orders.filter((o) => o.orderDate >= startOfMonth());
-  return orders;
+  switch (range) {
+    case "today": return [today, today];
+    case "yesterday": { const y = yesterdayStr(); return [y, y]; }
+    case "this-week": return [startOfWeek(), today];
+    case "this-month": return [startOfMonth(), today];
+    case "last-month": return [startOfLastMonth(), endOfLastMonth()];
+    case "last-3-months": return [monthsAgo(3), today];
+    case "last-6-months": return [monthsAgo(6), today];
+    case "this-year": return [startOfYear(), today];
+    case "custom": return customStart && customEnd ? [customStart, customEnd] : null;
+    default: return null;
+  }
 }
 
-function filterExpensesByRange(expenses: Expense[], range: DateRange) {
-  if (range === "all") return expenses;
-  const today = todayStr();
-  const yesterday = yesterdayStr();
-  if (range === "today") return expenses.filter((e) => e.expense_date === today);
-  if (range === "yesterday") return expenses.filter((e) => e.expense_date === yesterday);
-  if (range === "this-week") return expenses.filter((e) => e.expense_date >= startOfWeek());
-  if (range === "this-month") return expenses.filter((e) => e.expense_date >= startOfMonth());
-  return expenses;
+function filterByBounds<T>(items: T[], getDate: (i: T) => string, bounds: [string, string] | null): T[] {
+  if (!bounds) return items;
+  return items.filter((i) => { const d = getDate(i); return d >= bounds[0] && d <= bounds[1]; });
+}
+
+function getPreviousBounds(bounds: [string, string] | null): [string, string] | null {
+  if (!bounds) return null;
+  const start = new Date(bounds[0]);
+  const end = new Date(bounds[1]);
+  const diff = end.getTime() - start.getTime() + 86400000;
+  const prevEnd = new Date(start.getTime() - 86400000);
+  const prevStart = new Date(prevEnd.getTime() - diff + 86400000);
+  return [toDateStr(prevStart), toDateStr(prevEnd)];
 }
 
 export function useReportsData() {
-  const [dateRange, setDateRange] = useState<DateRange>("all");
+  const [dateRange, setDateRange] = useState<DateRange>("this-month");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [allOrders, setAllOrders] = useState<WorkflowOrder[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
   const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
@@ -60,12 +70,16 @@ export function useReportsData() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const orders = useMemo(() => filterByRange(allOrders, dateRange), [allOrders, dateRange]);
-  const expenses = useMemo(() => filterExpensesByRange(allExpenses, dateRange), [allExpenses, dateRange]);
+  const bounds = useMemo(() => getDateBounds(dateRange, customStart, customEnd), [dateRange, customStart, customEnd]);
+  const prevBounds = useMemo(() => getPreviousBounds(bounds), [bounds]);
+
+  const orders = useMemo(() => filterByBounds(allOrders, (o) => o.orderDate, bounds), [allOrders, bounds]);
+  const expenses = useMemo(() => filterByBounds(allExpenses, (e) => e.expense_date, bounds), [allExpenses, bounds]);
+  const prevOrders = useMemo(() => filterByBounds(allOrders, (o) => o.orderDate, prevBounds), [allOrders, prevBounds]);
+  const prevExpenses = useMemo(() => filterByBounds(allExpenses, (e) => e.expense_date, prevBounds), [allExpenses, prevBounds]);
+
   const today = todayStr();
 
   const kpis = useMemo(() => {
@@ -78,166 +92,154 @@ export function useReportsData() {
     const active = orders.filter((o) => o.currentStatus !== "delivered");
     const delivered = orders.filter((o) => o.currentStatus === "delivered");
     const readyForPickup = orders.filter((o) => o.currentStatus === "ready-for-pickup");
-    const overdue = orders.filter((o) => o.deliveryDate < today && o.currentStatus !== "delivered");
-    const urgent = orders.filter((o) => o.orderType === "urgent" && o.currentStatus !== "delivered");
-    const todayOrders = allOrders.filter((o) => o.orderDate === today);
-    const newCustomersToday = allCustomers.filter((c) => c.createdAt?.startsWith(today));
+    const overdue = orders.filter((o) => o.deliveryDate && o.deliveryDate < today && o.currentStatus !== "delivered");
+    const urgent = orders.filter((o) => o.orderType === "urgent");
+    const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
     const costPerOrder = orders.length > 0 ? totalExpenses / orders.length : 0;
     const profitPerOrder = orders.length > 0 ? netProfit / orders.length : 0;
+    const avgGarmentsPerOrder = orders.length > 0 ? orders.reduce((s, o) => s + o.itemCount, 0) / orders.length : 0;
+
+    // Previous period
+    const prevRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
+    const prevTotalExpenses = prevExpenses.reduce((s, e) => s + e.amount, 0);
+    const prevNetProfit = prevRevenue - prevTotalExpenses;
+    const prevOrderCount = prevOrders.length;
 
     return {
-      totalRevenue,
-      totalPaid,
-      outstanding,
-      totalExpenses,
-      netProfit,
-      profitMargin,
-      totalOrders: orders.length,
-      activeOrders: active.length,
-      deliveredOrders: delivered.length,
-      readyForPickup: readyForPickup.length,
-      overdueOrders: overdue.length,
-      urgentOrders: urgent.length,
-      ordersToday: todayOrders.length,
-      totalCustomers: allCustomers.length,
-      newCustomersToday: newCustomersToday.length,
-      costPerOrder,
-      profitPerOrder,
+      totalRevenue, totalPaid, outstanding, totalExpenses, netProfit, profitMargin,
+      totalOrders: orders.length, activeOrders: active.length, deliveredOrders: delivered.length,
+      readyForPickup: readyForPickup.length, overdueOrders: overdue.length, urgentOrders: urgent.length,
+      totalCustomers: allCustomers.length, avgOrderValue, costPerOrder, profitPerOrder, avgGarmentsPerOrder,
+      // Previous period for comparison
+      prevRevenue, prevTotalExpenses, prevNetProfit, prevOrderCount,
     };
-  }, [orders, expenses, allOrders, allCustomers, today]);
+  }, [orders, expenses, prevOrders, prevExpenses, allCustomers, today]);
 
-  const statusDistribution = useMemo(() => {
-    return WORKFLOW_STAGES.map((stage) => ({
-      name: stage.label,
-      value: orders.filter((o) => o.currentStatus === stage.id).length,
-      id: stage.id,
-    }));
-  }, [orders]);
+  const statusDistribution = useMemo(() =>
+    WORKFLOW_STAGES.map((stage) => ({
+      name: stage.label, value: orders.filter((o) => o.currentStatus === stage.id).length, id: stage.id,
+    })), [orders]);
 
-  const paymentDistribution = useMemo(() => {
-    const paid = orders.filter((o) => o.paymentStatus === "paid").length;
-    const partial = orders.filter((o) => o.paymentStatus === "partially-paid").length;
-    const unpaid = orders.filter((o) => o.paymentStatus === "unpaid").length;
-    return [
-      { name: "Paid", value: paid, color: "hsl(var(--success))" },
-      { name: "Partial", value: partial, color: "hsl(var(--warning))" },
-      { name: "Unpaid", value: unpaid, color: "hsl(var(--destructive))" },
-    ];
-  }, [orders]);
+  const paymentDistribution = useMemo(() => [
+    { name: "Paid", value: orders.filter((o) => o.paymentStatus === "paid").length },
+    { name: "Partial", value: orders.filter((o) => o.paymentStatus === "partially-paid").length },
+    { name: "Unpaid", value: orders.filter((o) => o.paymentStatus === "unpaid").length },
+  ], [orders]);
 
   const serviceStats = useMemo(() => {
     const map: Record<string, { count: number; revenue: number }> = {};
-    orders.forEach((o) =>
-      o.items.forEach((item) => {
-        if (!map[item.service]) map[item.service] = { count: 0, revenue: 0 };
-        map[item.service].count += item.quantity;
-        map[item.service].revenue += item.unitPrice * item.quantity;
-      })
-    );
-    return Object.entries(map)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.revenue - a.revenue);
+    orders.forEach((o) => o.items.forEach((item) => {
+      if (!map[item.service]) map[item.service] = { count: 0, revenue: 0 };
+      map[item.service].count += item.quantity;
+      map[item.service].revenue += item.unitPrice * item.quantity;
+    }));
+    return Object.entries(map).map(([name, data]) => ({ name, ...data })).sort((a, b) => b.revenue - a.revenue);
   }, [orders]);
 
   const itemTypeStats = useMemo(() => {
     const map: Record<string, number> = {};
-    orders.forEach((o) =>
-      o.items.forEach((item) => {
-        map[item.itemType] = (map[item.itemType] || 0) + item.quantity;
-      })
-    );
-    return Object.entries(map)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+    orders.forEach((o) => o.items.forEach((item) => { map[item.itemType] = (map[item.itemType] || 0) + item.quantity; }));
+    return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10);
   }, [orders]);
 
   const topCustomers = useMemo(() => {
-    const map: Record<string, { name: string; spent: number; orders: number; balance: number }> = {};
+    const map: Record<string, { name: string; phone: string; spent: number; orders: number; balance: number; lastDate: string }> = {};
     orders.forEach((o) => {
-      if (!map[o.customerName]) map[o.customerName] = { name: o.customerName, spent: 0, orders: 0, balance: 0 };
-      map[o.customerName].spent += o.totalAmount;
-      map[o.customerName].orders += 1;
-      map[o.customerName].balance += o.remainingBalance;
+      const key = o.customerName;
+      if (!map[key]) map[key] = { name: key, phone: o.customerPhone, spent: 0, orders: 0, balance: 0, lastDate: "" };
+      map[key].spent += o.totalAmount;
+      map[key].orders += 1;
+      map[key].balance += o.remainingBalance;
+      if (o.orderDate > map[key].lastDate) map[key].lastDate = o.orderDate;
     });
-    return Object.values(map).sort((a, b) => b.spent - a.spent).slice(0, 5);
+    return Object.values(map).sort((a, b) => b.spent - a.spent);
   }, [orders]);
-
-  const revenueByDay = useMemo(() => {
-    const map: Record<string, number> = {};
-    allOrders.forEach((o) => {
-      map[o.orderDate] = (map[o.orderDate] || 0) + o.totalAmount;
-    });
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, revenue]) => ({ date, revenue }));
-  }, [allOrders]);
 
   const expensesByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    expenses.forEach((e) => {
-      map[e.category] = (map[e.category] || 0) + e.amount;
-    });
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    expenses.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [expenses]);
 
   const revenueVsExpenses = useMemo(() => {
     const dateSet = new Set<string>();
-    allOrders.forEach((o) => dateSet.add(o.orderDate));
-    allExpenses.forEach((e) => dateSet.add(e.expense_date));
-
+    orders.forEach((o) => dateSet.add(o.orderDate));
+    expenses.forEach((e) => dateSet.add(e.expense_date));
     const revMap: Record<string, number> = {};
     const expMap: Record<string, number> = {};
-    allOrders.forEach((o) => { revMap[o.orderDate] = (revMap[o.orderDate] || 0) + o.totalAmount; });
-    allExpenses.forEach((e) => { expMap[e.expense_date] = (expMap[e.expense_date] || 0) + e.amount; });
+    orders.forEach((o) => { revMap[o.orderDate] = (revMap[o.orderDate] || 0) + o.totalAmount; });
+    expenses.forEach((e) => { expMap[e.expense_date] = (expMap[e.expense_date] || 0) + e.amount; });
+    return Array.from(dateSet).sort().map((date) => ({
+      date, revenue: revMap[date] || 0, expenses: expMap[date] || 0, profit: (revMap[date] || 0) - (expMap[date] || 0),
+    }));
+  }, [orders, expenses]);
 
-    return Array.from(dateSet)
-      .sort()
-      .map((date) => ({
-        date,
-        revenue: revMap[date] || 0,
-        expenses: expMap[date] || 0,
-        profit: (revMap[date] || 0) - (expMap[date] || 0),
-      }));
-  }, [allOrders, allExpenses]);
+  const incomeStatement = useMemo(() => {
+    const laundrySales = orders.reduce((s, o) => s + o.totalAmount, 0);
+    const urgentFees = orders.filter((o) => o.orderType === "urgent").reduce((s, o) => s + o.totalAmount * 0, 0); // urgent fee would need separate field
+    const totalRevenue = laundrySales;
+    const catMap: Record<string, number> = {};
+    expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
+    const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
+    const netProfit = totalRevenue - totalExp;
+    const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
-  const mostProfitableService = useMemo(() => {
-    if (serviceStats.length === 0) return null;
-    return serviceStats[0];
-  }, [serviceStats]);
+    // Previous period
+    const prevRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
+    const prevCatMap: Record<string, number> = {};
+    prevExpenses.forEach((e) => { prevCatMap[e.category] = (prevCatMap[e.category] || 0) + e.amount; });
+    const prevTotalExp = prevExpenses.reduce((s, e) => s + e.amount, 0);
+    const prevNetProfit = prevRevenue - prevTotalExp;
 
-  const mostPopularGarment = useMemo(() => {
-    if (itemTypeStats.length === 0) return null;
-    return itemTypeStats[0];
-  }, [itemTypeStats]);
+    return {
+      laundrySales, totalRevenue, expensesByCategory: catMap, totalExpenses: totalExp,
+      netProfit, profitMargin: margin,
+      prevRevenue, prevExpensesByCategory: prevCatMap, prevTotalExpenses: prevTotalExp, prevNetProfit,
+    };
+  }, [orders, expenses, prevOrders, prevExpenses]);
+
+  const ordersByDay = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach((o) => { map[o.orderDate] = (map[o.orderDate] || 0) + 1; });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([date, count]) => ({ date, count }));
+  }, [orders]);
+
+  const overdueOrders = useMemo(() =>
+    orders.filter((o) => o.deliveryDate && o.deliveryDate < today && o.currentStatus !== "delivered"), [orders, today]);
+
+  const readyForPickupOrders = useMemo(() =>
+    orders.filter((o) => o.currentStatus === "ready-for-pickup"), [orders]);
+
+  const mostProfitableService = useMemo(() => serviceStats.length > 0 ? serviceStats[0] : null, [serviceStats]);
+  const mostPopularGarment = useMemo(() => itemTypeStats.length > 0 ? itemTypeStats[0] : null, [itemTypeStats]);
 
   const recentActivity = useMemo(() => {
     const activities: { id: string; orderNumber: string; customer: string; action: string; time: string; status: WorkflowStatus }[] = [];
     allOrders.forEach((o) => {
       o.statusHistory.forEach((sh) => {
         activities.push({
-          id: sh.id,
-          orderNumber: o.orderNumber,
-          customer: o.customerName,
+          id: sh.id, orderNumber: o.orderNumber, customer: o.customerName,
           action: sh.fromStatus ? `${capitalize(sh.fromStatus)} → ${capitalize(sh.toStatus)}` : `Created as ${capitalize(sh.toStatus)}`,
-          time: sh.changedAt,
-          status: sh.toStatus,
+          time: sh.changedAt, status: sh.toStatus,
         });
       });
     });
     return activities.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 10);
   }, [allOrders]);
 
+  const newCustomers = useMemo(() => {
+    if (!bounds) return allCustomers;
+    return allCustomers.filter((c) => { const d = c.createdAt?.split("T")[0] || ""; return d >= bounds[0] && d <= bounds[1]; });
+  }, [allCustomers, bounds]);
+
   return {
-    dateRange, setDateRange, orders, expenses, loading, kpis,
+    dateRange, setDateRange, customStart, setCustomStart, customEnd, setCustomEnd,
+    orders, expenses, allOrders, allCustomers, loading, kpis,
     statusDistribution, paymentDistribution, serviceStats, itemTypeStats,
-    topCustomers, revenueByDay, recentActivity, expensesByCategory,
-    revenueVsExpenses, mostProfitableService, mostPopularGarment,
+    topCustomers, recentActivity, expensesByCategory, revenueVsExpenses,
+    mostProfitableService, mostPopularGarment, incomeStatement,
+    ordersByDay, overdueOrders, readyForPickupOrders, newCustomers,
   };
 }
 
-function capitalize(s: string) {
-  return s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+function capitalize(s: string) { return s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
