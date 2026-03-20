@@ -168,6 +168,66 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_id: string | null
+          error_message: string | null
+          id: string
+          message_body: string | null
+          message_type: string
+          order_id: string
+          provider_message_id: string | null
+          provider_response: string | null
+          recipient_phone: string
+          send_status: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_type?: string
+          order_id: string
+          provider_message_id?: string | null
+          provider_response?: string | null
+          recipient_phone: string
+          send_status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_type?: string
+          order_id?: string
+          provider_message_id?: string | null
+          provider_response?: string | null
+          recipient_phone?: string
+          send_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           brand: string | null
@@ -276,6 +336,7 @@ export type Database = {
           payment_status: string
           pickup_method: string
           qr_value: string | null
+          ready_pickup_whatsapp_sent: boolean
           remaining_amount: number
           subtotal: number
           tax: number
@@ -299,6 +360,7 @@ export type Database = {
           payment_status?: string
           pickup_method?: string
           qr_value?: string | null
+          ready_pickup_whatsapp_sent?: boolean
           remaining_amount?: number
           subtotal?: number
           tax?: number
@@ -322,6 +384,7 @@ export type Database = {
           payment_status?: string
           pickup_method?: string
           qr_value?: string | null
+          ready_pickup_whatsapp_sent?: boolean
           remaining_amount?: number
           subtotal?: number
           tax?: number
