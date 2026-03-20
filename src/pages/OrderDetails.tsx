@@ -5,6 +5,8 @@ import { WORKFLOW_STAGES } from "@/types/workflow";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import type { WorkflowOrder } from "@/types/workflow";
 import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import { sendReadyForPickupWhatsApp, fetchNotificationLogs } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 import PaymentModal from "@/components/payment/PaymentModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +19,7 @@ import {
 import {
   ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
-  CheckCircle2, Circle, ArrowRight, Loader2,
+  CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -30,6 +32,8 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [notifLogs, setNotifLogs] = useState<any[]>([]);
+  const [resending, setResending] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
@@ -37,11 +41,44 @@ export default function OrderDetails() {
     const data = await fetchOrderById(orderId);
     setOrder(data);
     setLoading(false);
+    // Load notification logs
+    const logs = await fetchNotificationLogs(orderId);
+    setNotifLogs(logs);
   }, [orderId]);
 
   useEffect(() => {
     loadOrder();
   }, [loadOrder]);
+
+  const handleResendWhatsApp = async () => {
+    if (!order) return;
+    setResending(true);
+    // Get customer_id from DB
+    const { data: orderRow } = await supabase
+      .from("orders")
+      .select("customer_id")
+      .eq("id", order.id)
+      .maybeSingle();
+
+    const result = await sendReadyForPickupWhatsApp({
+      orderId: order.id,
+      customerId: orderRow?.customer_id,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      remainingAmount: order.remainingBalance,
+    });
+    setResending(false);
+    if (result.success) {
+      toast.success("WhatsApp notification resent successfully.");
+    } else {
+      toast.error(`WhatsApp resend failed: ${result.error || "Unknown error"}`);
+    }
+    // Reload logs
+    const logs = await fetchNotificationLogs(order.id);
+    setNotifLogs(logs);
+  };
 
   if (loading) {
     return (
@@ -339,6 +376,49 @@ export default function OrderDetails() {
             </div>
             <p className="text-center text-[0.6rem] text-muted-foreground mt-4">Thank you for your business!</p>
           </div>
+        </section>
+
+        {/* WhatsApp Notifications */}
+        <section className="pos-section space-y-3 print:hidden">
+          <SectionHeader icon={MessageCircle} title="WhatsApp Notifications" />
+          {notifLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No WhatsApp notifications sent for this order.</p>
+          ) : (
+            <div className="space-y-2">
+              {notifLogs.map((log: any) => (
+                <div key={log.id} className="flex items-start justify-between bg-secondary/50 rounded-md px-3 py-2 text-sm">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium capitalize">{log.message_type?.replace(/_/g, " ")}</span>
+                      <Badge
+                        variant={log.send_status === "sent" ? "default" : log.send_status === "failed" ? "destructive" : "secondary"}
+                        className="text-[0.6rem]"
+                      >
+                        {log.send_status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">To: {log.recipient_phone}</p>
+                    {log.error_message && (
+                      <p className="text-xs text-destructive">Error: {log.error_message}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(log.created_at).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={handleResendWhatsApp}
+            disabled={resending || !order.customerPhone}
+          >
+            {resending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            Resend WhatsApp Notification
+          </Button>
         </section>
 
         {/* Status History */}
