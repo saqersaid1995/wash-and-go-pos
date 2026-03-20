@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { fetchAllOrders, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import { sendReadyForPickupWhatsApp } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface WorkflowFilters {
   search: string;
