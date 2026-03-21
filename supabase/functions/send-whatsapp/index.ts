@@ -6,20 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GRAPH_API_VERSION = "v22.0";
+const GRAPH_API_VERSION = "v18.0";
 
 function normalizePhone(phone: string, defaultCountryCode = "968"): string | null {
-  // Strip all non-digits
   const digits = phone.replace(/\D/g, "");
   if (!digits || digits.length < 7) return null;
-
-  // Already has country code
   if (digits.startsWith("968") && digits.length === 11) return digits;
-  // 8-digit Oman local number
   if (digits.length === 8) return defaultCountryCode + digits;
-  // If it starts with + already stripped, check length
   if (digits.length >= 10) return digits;
-
   return defaultCountryCode + digits;
 }
 
@@ -53,11 +47,14 @@ Deno.serve(async (req) => {
       total_amount,
       remaining_amount,
       message_type = "ready_for_pickup",
+      template_name = "order_ready",
+      template_language = "ar",
+      is_test = false,
     } = body;
 
-    if (!order_id || !customer_phone || !order_number) {
+    if (!customer_phone) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: order_id, customer_phone, order_number" }),
+        JSON.stringify({ error: "Missing required field: customer_phone" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,16 +62,16 @@ Deno.serve(async (req) => {
     // Normalize phone
     const normalizedPhone = normalizePhone(customer_phone);
     if (!normalizedPhone) {
-      // Log as skipped
-      await supabase.from("notification_logs").insert({
-        order_id,
+      const logData: Record<string, unknown> = {
+        order_id: order_id || null,
         customer_id: customer_id || null,
         channel: "whatsapp",
         recipient_phone: customer_phone,
         message_type,
         send_status: "skipped",
         error_message: "Invalid phone number format",
-      });
+      };
+      await supabase.from("notification_logs").insert(logData);
 
       return new Response(
         JSON.stringify({ success: false, status: "skipped", error: "Invalid phone number" }),
@@ -82,45 +79,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build message
+    // Build template message payload
     const name = customer_name || "Customer";
     const total = Number(total_amount || 0).toFixed(3);
-    const remaining = Number(remaining_amount || 0).toFixed(3);
+    const orderNum = order_number || "N/A";
 
-    const messageBody = `Hello ${name},
+    const requestBody = {
+      messaging_product: "whatsapp",
+      to: normalizedPhone,
+      type: "template",
+      template: {
+        name: template_name,
+        language: { code: template_language },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: name },
+              { type: "text", text: orderNum },
+              { type: "text", text: total },
+            ],
+          },
+        ],
+      },
+    };
 
-Your laundry order ${order_number} is now ready for pickup.
-
-Please visit LAVANDERIA to collect your clothes.
-
-Total: ${total} OMR
-Remaining balance: ${remaining} OMR
-
-Thank you.`;
+    const messageDescription = `Template: ${template_name} | To: ${normalizedPhone} | Name: ${name} | Order: ${orderNum} | Total: ${total}`;
+    console.log("Sending WhatsApp:", messageDescription);
+    console.log("Request body:", JSON.stringify(requestBody, null, 2));
 
     // Send via Meta WhatsApp Cloud API
     const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-    // In test mode, Meta only delivers template messages (not free-form text).
-    // Use hello_world template to validate the flow, then switch to custom template later.
-    const TEST_MODE = Deno.env.get("WHATSAPP_TEST_MODE") !== "false"; // default true
-
-    const requestBody = TEST_MODE
-      ? {
-          messaging_product: "whatsapp",
-          to: normalizedPhone,
-          type: "template",
-          template: {
-            name: "hello_world",
-            language: { code: "en_US" },
-          },
-        }
-      : {
-          messaging_product: "whatsapp",
-          to: normalizedPhone,
-          type: "text",
-          text: { body: messageBody },
-        };
 
     const waResponse = await fetch(url, {
       method: "POST",
@@ -132,32 +121,43 @@ Thank you.`;
     });
 
     const waData = await waResponse.json();
+    console.log("WhatsApp API response:", JSON.stringify(waData, null, 2));
 
     if (!waResponse.ok) {
+      const errorMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
+      const errorCode = waData?.error?.code;
+
       // Log failure
       await supabase.from("notification_logs").insert({
-        order_id,
+        order_id: order_id || null,
         customer_id: customer_id || null,
         channel: "whatsapp",
         recipient_phone: normalizedPhone,
-        message_type,
-        message_body: messageBody,
+        message_type: is_test ? "test" : message_type,
+        message_body: messageDescription,
         send_status: "failed",
         provider_response: JSON.stringify(waData),
-        error_message: waData?.error?.message || `HTTP ${waResponse.status}`,
+        error_message: errorMsg,
       });
 
-      // Mark order flag so we don't retry automatically
-      await supabase
-        .from("orders")
-        .update({ ready_pickup_whatsapp_sent: true })
-        .eq("id", order_id);
+      // Flag order if applicable
+      if (order_id) {
+        await supabase
+          .from("orders")
+          .update({ ready_pickup_whatsapp_sent: true })
+          .eq("id", order_id);
+      }
+
+      // Check for token expiry
+      const isTokenError = errorCode === 190 || errorMsg?.toLowerCase().includes("token");
 
       return new Response(
         JSON.stringify({
           success: false,
           status: "failed",
-          error: waData?.error?.message || "WhatsApp API error",
+          error: errorMsg,
+          is_token_error: isTokenError,
+          provider_response: waData,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -167,22 +167,24 @@ Thank you.`;
 
     // Log success
     await supabase.from("notification_logs").insert({
-      order_id,
+      order_id: order_id || null,
       customer_id: customer_id || null,
       channel: "whatsapp",
       recipient_phone: normalizedPhone,
-      message_type,
-      message_body: messageBody,
+      message_type: is_test ? "test" : message_type,
+      message_body: messageDescription,
       send_status: "sent",
       provider_message_id: messageId,
       provider_response: JSON.stringify(waData),
     });
 
-    // Mark order
-    await supabase
-      .from("orders")
-      .update({ ready_pickup_whatsapp_sent: true })
-      .eq("id", order_id);
+    // Mark order if applicable
+    if (order_id) {
+      await supabase
+        .from("orders")
+        .update({ ready_pickup_whatsapp_sent: true })
+        .eq("id", order_id);
+    }
 
     return new Response(
       JSON.stringify({ success: true, status: "sent", message_id: messageId }),

@@ -12,6 +12,7 @@ import Reports from "./pages/Reports.tsx";
 import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
+import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/scan" element={<Scanner />} />
           <Route path="/services" element={<ServicesPricing />} />
+          <Route path="/whatsapp" element={<WhatsAppSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
