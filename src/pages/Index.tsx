@@ -82,6 +82,7 @@ const Index = () => {
             <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
             <a href="/reports" className="text-xs font-medium text-primary hover:underline">Reports →</a>
             <a href="/services" className="text-xs font-medium text-primary hover:underline">Pricing →</a>
+            <a href="/whatsapp" className="text-xs font-medium text-primary hover:underline">WhatsApp →</a>
           </div>
         </div>
       </header>
