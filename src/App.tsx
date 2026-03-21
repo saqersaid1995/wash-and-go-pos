@@ -12,6 +12,7 @@ import Reports from "./pages/Reports.tsx";
 import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
+import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
