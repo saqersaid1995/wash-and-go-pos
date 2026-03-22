@@ -1,99 +1,146 @@
+import { useState } from "react";
 import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, CreditCard, ExternalLink } from "lucide-react";
+import { ChevronRight, ChevronLeft, Clock, CreditCard, ExternalLink, Package, Banknote } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatOMR } from "@/lib/currency";
+import PaymentModal from "@/components/payment/PaymentModal";
 
 interface OrderCardProps {
   order: WorkflowOrder;
   onSelect: (id: string) => void;
   onMoveNext: (id: string) => void;
   onMovePrev: (id: string) => void;
+  onPaymentComplete?: () => void;
 }
 
-export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev }: OrderCardProps) {
+export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev, onPaymentComplete }: OrderCardProps) {
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const today = new Date().toISOString().split("T")[0];
-  const isOverdue = order.deliveryDate < today && order.currentStatus !== "delivered";
+  const isOverdue = order.deliveryDate && order.deliveryDate < today && order.currentStatus !== "delivered";
   const isDueToday = order.deliveryDate === today && order.currentStatus !== "delivered";
   const stageIdx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
   const canMoveNext = stageIdx < WORKFLOW_STAGES.length - 1;
   const canMovePrev = stageIdx > 0;
+  const isReadyForPickup = order.currentStatus === "ready-for-pickup";
+
+  // Color coding
+  const borderColor = isOverdue
+    ? "border-destructive/50 ring-1 ring-destructive/30"
+    : order.orderType === "urgent"
+    ? "border-accent/40"
+    : isDueToday
+    ? "border-warning/40"
+    : "border-border";
+
+  const bgColor = isOverdue
+    ? "bg-destructive/5"
+    : order.orderType === "urgent"
+    ? "bg-accent/5"
+    : "";
 
   return (
-    <div
-      className={`pos-section p-3 space-y-2 cursor-pointer hover:border-primary/30 transition-colors ${
-        order.orderType === "urgent" ? "border-accent/40 bg-accent/5" : ""
-      } ${isOverdue ? "ring-1 ring-destructive/40" : ""}`}
-      onClick={() => onSelect(order.id)}
-    >
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-xs font-mono font-semibold truncate">{order.orderNumber}</span>
-        <div className="flex gap-1 shrink-0">
-          {order.orderType === "urgent" && (
-            <Badge className="bg-accent text-accent-foreground text-[0.6rem] px-1.5 py-0">Urgent</Badge>
+    <>
+      <div
+        className={`pos-section p-3 space-y-2 cursor-pointer hover:border-primary/30 transition-colors ${borderColor} ${bgColor}`}
+        onClick={() => onSelect(order.id)}
+      >
+        {/* Header row */}
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-xs font-mono font-semibold truncate">{order.orderNumber}</span>
+          <div className="flex gap-1 shrink-0">
+            {order.orderType === "urgent" && (
+              <Badge className="bg-accent text-accent-foreground text-[0.6rem] px-1.5 py-0">Urgent</Badge>
+            )}
+            {isOverdue && (
+              <Badge variant="destructive" className="text-[0.6rem] px-1.5 py-0">Overdue</Badge>
+            )}
+            {isDueToday && !isOverdue && (
+              <Badge className="bg-warning text-warning-foreground text-[0.6rem] px-1.5 py-0">Due Today</Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Customer */}
+        <p className="text-sm font-medium truncate">{order.customerName}</p>
+
+        {/* Items + delivery */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Package className="h-3 w-3" />
+            {order.itemCount} items
+          </span>
+          {order.deliveryDate && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {order.deliveryDate}
+            </span>
           )}
-          {isOverdue && (
-            <Badge variant="destructive" className="text-[0.6rem] px-1.5 py-0">Overdue</Badge>
+        </div>
+
+        {/* Payment + total */}
+        <div className="flex items-center gap-1.5">
+          <PaymentBadge status={order.paymentStatus} />
+          <span className="text-sm font-bold ml-auto">{formatOMR(order.totalAmount)}</span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
+          {isReadyForPickup && order.remainingBalance > 0 ? (
+            <Button
+              size="sm"
+              className="h-8 px-3 text-xs flex-1 gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+              onClick={() => setPaymentOpen(true)}
+            >
+              <Banknote className="h-3.5 w-3.5" />
+              Collect & Pay — {formatOMR(order.remainingBalance)}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs flex-1"
+                disabled={!canMovePrev}
+                onClick={() => onMovePrev(order.id)}
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Back
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 px-2 text-xs flex-1"
+                disabled={!canMoveNext}
+                onClick={() => onMoveNext(order.id)}
+              >
+                Next
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </>
           )}
-          {isDueToday && !isOverdue && (
-            <Badge className="bg-warning text-warning-foreground text-[0.6rem] px-1.5 py-0">Due Today</Badge>
-          )}
+        </div>
+
+        <div onClick={(e) => e.stopPropagation()}>
+          <Link to={`/order/${order.id}`} className="text-[0.65rem] text-primary hover:underline flex items-center gap-0.5">
+            <ExternalLink className="h-2.5 w-2.5" /> View Details
+          </Link>
         </div>
       </div>
 
-      <div className="space-y-0.5">
-        <p className="text-sm font-medium truncate">{order.customerName}</p>
-        <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
-      </div>
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {order.deliveryDate}
-        </span>
-        <span>{order.itemCount} items</span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <CreditCard className="h-3 w-3 text-muted-foreground" />
-        <PaymentBadge status={order.paymentStatus} />
-        <span className="text-xs font-medium ml-auto">{formatOMR(order.totalAmount)}</span>
-      </div>
-
-      {order.orderNotes && (
-        <p className="text-[0.65rem] text-muted-foreground truncate italic">{order.orderNotes}</p>
+      {paymentOpen && (
+        <PaymentModal
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          order={order}
+          onPaymentComplete={() => {
+            setPaymentOpen(false);
+            onPaymentComplete?.();
+          }}
+        />
       )}
-
-      <div onClick={(e) => e.stopPropagation()}>
-        <Link to={`/order/${order.id}`} className="text-[0.65rem] text-primary hover:underline flex items-center gap-0.5">
-          <ExternalLink className="h-2.5 w-2.5" /> View Details
-        </Link>
-      </div>
-
-      <div className="flex items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-xs flex-1"
-          disabled={!canMovePrev}
-          onClick={() => onMovePrev(order.id)}
-        >
-          <ChevronLeft className="h-3 w-3" />
-          Back
-        </Button>
-        <Button
-          size="sm"
-          className="h-7 px-2 text-xs flex-1"
-          disabled={!canMoveNext}
-          onClick={() => onMoveNext(order.id)}
-        >
-          Next
-          <ChevronRight className="h-3 w-3" />
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
