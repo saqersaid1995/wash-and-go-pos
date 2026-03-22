@@ -234,6 +234,7 @@ export function useWorkflowState() {
     moveToPrev,
     addNote,
     toggleUrgent,
+    deleteOrder,
     selectedOrder,
     selectedOrderId,
     setSelectedOrderId,

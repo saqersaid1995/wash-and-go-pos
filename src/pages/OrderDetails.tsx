@@ -498,6 +498,24 @@ export default function OrderDetails() {
               Move to {WORKFLOW_STAGES[stageIdx + 1]?.label} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5 text-destructive hover:bg-destructive/10 border-destructive/30"
+            onClick={async () => {
+              if (confirm("Are you sure you want to delete this order? It will be hidden from all views.")) {
+                const ok = await softDeleteOrder(order.id);
+                if (ok) {
+                  toast.success("Order deleted");
+                  navigate("/workflow");
+                } else {
+                  toast.error("Failed to delete order");
+                }
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Order
+          </Button>
           <div className="flex-1" />
           <Link to="/workflow">
             <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
