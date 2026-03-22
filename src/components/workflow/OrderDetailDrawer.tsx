@@ -204,6 +204,21 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
                   <ExternalLink className="h-3 w-3" /> Full Details
                 </Button>
               </Link>
+              {onDeleteOrder && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1 text-destructive hover:bg-destructive/10 border-destructive/30"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this order? It will be hidden from all views.")) {
+                      onDeleteOrder(order.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" /> Delete Order
+                </Button>
+              )}
             </div>
           </ScrollArea>
         </SheetContent>
