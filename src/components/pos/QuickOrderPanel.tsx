@@ -75,39 +75,44 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
         <Zap className="h-4 w-4 text-primary" />
         <h2 className="pos-label">Quick Add</h2>
       </div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {quickItems.map((qi) => {
           const count = itemCounts[qi.name] || 0;
           return (
             <motion.button
               key={qi.name}
               whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.04, boxShadow: "0 8px 24px -8px hsl(var(--primary) / 0.18)" }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
               onClick={() => onAddQuickItem(qi.name, qi.defaultService, qi.defaultPrice)}
-              className="relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-background hover:bg-primary/5 hover:border-primary/30 transition-all text-center min-h-[100px]"
+              className="relative flex flex-col items-center gap-1.5 rounded-xl border border-border bg-background hover:border-primary/40 transition-colors text-center overflow-hidden"
             >
-              {/* Image or fallback */}
-              {qi.imageUrl ? (
-                <img
-                  src={qi.imageUrl}
-                  alt={qi.name}
-                  className="h-10 w-10 rounded object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  {qi.name.charAt(0)}
-                </div>
-              )}
-              {/* Names */}
-              <span className="text-[0.65rem] font-semibold leading-tight">{qi.name}</span>
-              {qi.nameAr && (
-                <span className="text-[0.6rem] text-muted-foreground leading-tight" dir="rtl">{qi.nameAr}</span>
-              )}
-              {/* Price */}
-              <span className="text-[0.55rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+              {/* Image area — dominant */}
+              <div className="w-full aspect-square flex items-center justify-center bg-muted/40 p-2">
+                {qi.imageUrl ? (
+                  <img
+                    src={qi.imageUrl}
+                    alt={qi.name}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-muted-foreground/60">
+                    {qi.name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              {/* Text area — compact */}
+              <div className="px-2 pb-2 space-y-0.5 w-full">
+                <span className="block text-xs font-semibold leading-tight truncate">{qi.name}</span>
+                {qi.nameAr && (
+                  <span className="block text-[0.65rem] text-muted-foreground leading-tight truncate" dir="rtl">{qi.nameAr}</span>
+                )}
+                <span className="block text-[0.6rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+              </div>
               {/* Count badge */}
               {count > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[0.6rem] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[0.65rem] font-bold rounded-full h-5.5 w-5.5 min-w-[1.375rem] flex items-center justify-center shadow-md">
                   {count}
                 </span>
               )}
