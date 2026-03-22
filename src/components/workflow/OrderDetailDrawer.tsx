@@ -22,6 +22,7 @@ interface Props {
   onAddNote: (id: string, text: string) => void;
   onToggleUrgent: (id: string) => void;
   onPaymentComplete?: () => void;
+  onDeleteOrder?: (id: string) => void;
 }
 
 export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, onMovePrev, onAddNote, onToggleUrgent, onPaymentComplete }: Props) {
