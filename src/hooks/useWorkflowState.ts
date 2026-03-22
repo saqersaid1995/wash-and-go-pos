@@ -163,6 +163,11 @@ export function useWorkflowState() {
     await toggleOrderUrgent(orderId, order.orderType);
   }, [orders]);
 
+  const deleteOrder = useCallback(async (orderId: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    await softDeleteOrder(orderId);
+  }, []);
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       if (filters.search) {
