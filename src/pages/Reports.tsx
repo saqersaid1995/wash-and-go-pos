@@ -12,6 +12,7 @@ import { ExpensesTab } from "@/components/reports/ExpensesTab";
 import { IncomeStatementTab } from "@/components/reports/IncomeStatementTab";
 import { OrdersTab } from "@/components/reports/OrdersTab";
 import { CustomersTab } from "@/components/reports/CustomersTab";
+import { BulkCleanupTool } from "@/components/reports/BulkCleanupTool";
 import { exportSalesCSV, exportExpensesCSV, exportCustomersCSV, printReport } from "@/lib/report-exports";
 import {
   Loader2, BarChart3, Download, Printer, CalendarIcon,
