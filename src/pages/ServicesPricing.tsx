@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Plus, Pencil, Trash2, Search, Loader2, DollarSign, Settings, Package, Wrench,
+  Plus, Pencil, Trash2, Search, Loader2, DollarSign, Settings, Package, Wrench, Upload, X, Image as ImageIcon, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { NavLink } from "@/components/NavLink";
