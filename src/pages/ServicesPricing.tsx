@@ -24,6 +24,10 @@ import { formatOMR } from "@/lib/currency";
 interface ItemRecord {
   id: string;
   item_name: string;
+  item_name_ar: string;
+  image_url: string;
+  show_in_quick_add: boolean;
+  sort_order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
