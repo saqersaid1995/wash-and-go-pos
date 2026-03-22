@@ -314,6 +314,7 @@ interface ServicePriceRow {
   enabled: boolean;
   price: string;
   existingRuleId?: string;
+  isDefault: boolean;
 }
 
 function PricingRulesTab() {
