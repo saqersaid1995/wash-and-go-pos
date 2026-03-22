@@ -1,4 +1,4 @@
-import { Plus, Trash2, AlertCircle, PencilLine } from "lucide-react";
+import { Plus, Trash2, AlertCircle, PencilLine, Star } from "lucide-react";
 import type { OrderItem } from "@/types/pos";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +22,7 @@ interface PricingRule {
   service_type: string;
   price: number;
   is_active: boolean;
+  is_default_service: boolean;
 }
 
 interface Props {
@@ -128,14 +129,29 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
           value={item.itemType}
           onChange={(e) => {
             const newItemType = e.target.value;
-            const rule = pricingRules.find((r) => r.item_type === newItemType && r.service_type === item.serviceId && r.is_active);
+            // Find default service for this item
+            const defaultRule = pricingRules.find((r) => r.item_type === newItemType && r.is_default_service && r.is_active);
             const updates: Partial<OrderItem> = {
               itemType: newItemType,
               isManualPriceOverride: false,
+              isDefaultServiceSelected: false,
             };
-            if (rule) {
-              updates.unitPrice = rule.price;
-              updates.defaultPrice = rule.price;
+            if (defaultRule) {
+              updates.serviceId = defaultRule.service_type;
+              updates.unitPrice = defaultRule.price;
+              updates.defaultPrice = defaultRule.price;
+              updates.isDefaultServiceSelected = true;
+            } else {
+              // Fallback: try first active rule for this item
+              const firstRule = pricingRules.find((r) => r.item_type === newItemType && r.is_active);
+              if (firstRule) {
+                updates.serviceId = firstRule.service_type;
+                updates.unitPrice = firstRule.price;
+                updates.defaultPrice = firstRule.price;
+              } else {
+                updates.serviceId = "";
+                updates.unitPrice = 0;
+              }
             }
             onUpdate(item.id, updates);
           }}
@@ -153,6 +169,7 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
             const updates: Partial<OrderItem> = {
               serviceId: newService,
               isManualPriceOverride: false,
+              isDefaultServiceSelected: false,
             };
             if (rule) {
               updates.unitPrice = rule.price;
@@ -207,6 +224,14 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
         </button>
       </div>
 
+      {/* Default service indicator */}
+      {item.isDefaultServiceSelected && !item.isManualPriceOverride && (
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-primary">
+          <Star className="h-3 w-3" />
+          Default service selected
+        </div>
+      )}
+
       {/* Manual price override indicator */}
       {item.isManualPriceOverride && (
         <div className="flex items-center gap-1 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -253,7 +278,7 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
   useEffect(() => {
     async function load() {
       const [prRes, itRes, svRes] = await Promise.all([
-        supabase.from("service_pricing").select("id, item_type, service_type, price, is_active").eq("is_active", true).order("item_type").order("service_type"),
+        supabase.from("service_pricing").select("id, item_type, service_type, price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
         supabase.from("items").select("id, item_name").eq("is_active", true).order("item_name"),
         supabase.from("services").select("id, service_name").eq("is_active", true).order("service_name"),
       ]);

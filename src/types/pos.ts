@@ -24,6 +24,7 @@ export interface OrderItem {
   unitPrice: number;
   defaultPrice?: number;
   isManualPriceOverride?: boolean;
+  isDefaultServiceSelected?: boolean;
   color?: string;
   brand?: string;
   notes?: string;
