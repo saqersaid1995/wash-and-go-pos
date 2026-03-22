@@ -46,6 +46,7 @@ interface PricingRule {
   price: number;
   currency: string;
   is_active: boolean;
+  is_default_service: boolean;
   created_at: string;
   updated_at: string;
 }
