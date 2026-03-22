@@ -444,6 +444,7 @@ function PricingRulesTab() {
           await supabase.from("service_pricing").update({
             price,
             is_active: true,
+            is_default_service: row.isDefault,
             item_type: selectedItem.item_name,
             service_type: row.serviceName,
           }).eq("id", row.existingRuleId);
@@ -455,10 +456,11 @@ function PricingRulesTab() {
             service_type: row.serviceName,
             price,
             is_active: true,
+            is_default_service: row.isDefault,
           });
         }
       } else if (row.existingRuleId) {
-        await supabase.from("service_pricing").update({ is_active: false }).eq("id", row.existingRuleId);
+        await supabase.from("service_pricing").update({ is_active: false, is_default_service: false }).eq("id", row.existingRuleId);
       }
     }
 
