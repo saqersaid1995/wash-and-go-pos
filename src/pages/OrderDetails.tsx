@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import type { WorkflowOrder } from "@/types/workflow";
-import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent, softDeleteOrder } from "@/lib/supabase-queries";
 import { sendReadyForPickupWhatsApp, fetchNotificationLogs } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
 import PaymentModal from "@/components/payment/PaymentModal";
