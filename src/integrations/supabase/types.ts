@@ -336,11 +336,14 @@ export type Database = {
           created_at: string
           current_status: string
           customer_id: string | null
+          deleted_at: string | null
           delivery_date: string | null
           discount: number
           employee_id: string | null
           general_notes: string | null
           id: string
+          is_deleted: boolean
+          is_draft: boolean
           order_date: string
           order_number: string
           order_type: string
@@ -360,11 +363,14 @@ export type Database = {
           created_at?: string
           current_status?: string
           customer_id?: string | null
+          deleted_at?: string | null
           delivery_date?: string | null
           discount?: number
           employee_id?: string | null
           general_notes?: string | null
           id?: string
+          is_deleted?: boolean
+          is_draft?: boolean
           order_date?: string
           order_number: string
           order_type?: string
@@ -384,11 +390,14 @@ export type Database = {
           created_at?: string
           current_status?: string
           customer_id?: string | null
+          deleted_at?: string | null
           delivery_date?: string | null
           discount?: number
           employee_id?: string | null
           general_notes?: string | null
           id?: string
+          is_deleted?: boolean
+          is_draft?: boolean
           order_date?: string
           order_number?: string
           order_type?: string
