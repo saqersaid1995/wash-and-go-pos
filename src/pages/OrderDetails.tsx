@@ -19,7 +19,7 @@ import {
 import {
   ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
-  CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw,
+  CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
