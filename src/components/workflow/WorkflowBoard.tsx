@@ -13,9 +13,10 @@ interface WorkflowBoardProps {
   onSelectOrder: (id: string) => void;
   onMoveNext: (id: string) => void;
   onMovePrev: (id: string) => void;
+  onPaymentComplete?: () => void;
 }
 
-export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNext, onMovePrev }: WorkflowBoardProps) {
+export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNext, onMovePrev, onPaymentComplete }: WorkflowBoardProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 min-h-[400px]">
       {WORKFLOW_STAGES.map((stage) => {
@@ -23,7 +24,6 @@ export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNex
         const orders = ordersByStatus[stage.id];
         return (
           <div key={stage.id} className="flex flex-col">
-            {/* Column header */}
             <div className="flex items-center gap-2 mb-2 px-1">
               <Icon className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stage.label}</h3>
@@ -31,7 +31,6 @@ export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNex
                 {orders.length}
               </span>
             </div>
-            {/* Column body */}
             <ScrollArea className="flex-1 rounded-lg bg-secondary/30 p-2">
               <div className="space-y-2 min-h-[200px]">
                 {orders.length === 0 && (
@@ -44,6 +43,7 @@ export default function WorkflowBoard({ ordersByStatus, onSelectOrder, onMoveNex
                     onSelect={onSelectOrder}
                     onMoveNext={onMoveNext}
                     onMovePrev={onMovePrev}
+                    onPaymentComplete={onPaymentComplete}
                   />
                 ))}
               </div>

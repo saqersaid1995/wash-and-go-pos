@@ -29,6 +29,11 @@ export default function Workflow() {
     toast.info("Order moved back");
   };
 
+  const handlePaymentComplete = () => {
+    toast.success("Payment completed — Order delivered!");
+    wf.refetch();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
@@ -69,6 +74,7 @@ export default function Workflow() {
               onSelectOrder={wf.setSelectedOrderId}
               onMoveNext={handleMoveNext}
               onMovePrev={handleMovePrev}
+              onPaymentComplete={handlePaymentComplete}
             />
           </>
         )}
@@ -82,6 +88,7 @@ export default function Workflow() {
         onMovePrev={handleMovePrev}
         onAddNote={wf.addNote}
         onToggleUrgent={wf.toggleUrgent}
+        onPaymentComplete={handlePaymentComplete}
       />
     </div>
   );

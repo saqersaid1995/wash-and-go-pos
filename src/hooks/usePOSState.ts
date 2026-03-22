@@ -74,6 +74,22 @@ export function usePOSState() {
     ]);
   }, []);
 
+  const addItemWithDefaults = useCallback((itemType: string, serviceId: string, price: number) => {
+    setItems((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        itemType,
+        serviceId,
+        quantity: 1,
+        unitPrice: price,
+        defaultPrice: price,
+        isDefaultServiceSelected: true,
+        conditions: [],
+      },
+    ]);
+  }, []);
+
   const updateItem = useCallback((id: string, updates: Partial<OrderItem>) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -175,7 +191,7 @@ export function usePOSState() {
     orderType, setOrderType, pickupMethod, setPickupMethod,
     employeeId, setEmployeeId, orderNotes, setOrderNotes,
     // Items
-    items, addItem, updateItem, removeItem,
+    items, addItem, addItemWithDefaults, updateItem, removeItem,
     // Pricing
     subtotal, urgentFee, discount, setDiscount, total,
     paidAmount, setPaidAmount, remainingBalance, paymentStatus,
