@@ -25,7 +25,7 @@ interface Props {
   onDeleteOrder?: (id: string) => void;
 }
 
-export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, onMovePrev, onAddNote, onToggleUrgent, onPaymentComplete }: Props) {
+export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, onMovePrev, onAddNote, onToggleUrgent, onPaymentComplete, onDeleteOrder }: Props) {
   const [noteText, setNoteText] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const navigate = useNavigate();
