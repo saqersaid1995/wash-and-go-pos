@@ -22,6 +22,7 @@ interface PricingRule {
   service_type: string;
   price: number;
   is_active: boolean;
+  is_default_service: boolean;
 }
 
 interface Props {

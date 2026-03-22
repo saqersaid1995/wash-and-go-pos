@@ -526,7 +526,12 @@ function PricingRulesTab() {
                 <div className="divide-y divide-border">
                   {grouped[itemName].rules.map((rule) => (
                     <div key={rule.id} className={`flex items-center justify-between px-4 py-2.5 text-sm ${rule.is_active ? "" : "opacity-40"}`}>
-                      <span className="font-medium">{getServiceName(rule)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{getServiceName(rule)}</span>
+                        {rule.is_default_service && rule.is_active && (
+                          <Badge variant="outline" className="text-[0.55rem] border-primary/40 text-primary">Default</Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold">{formatOMR(rule.price)}</span>
                         <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.55rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
