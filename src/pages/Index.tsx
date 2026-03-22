@@ -6,11 +6,24 @@ import GarmentTable from "@/components/pos/GarmentTable";
 import PricingSummary from "@/components/pos/PricingSummary";
 import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
+import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 
 const Index = () => {
   const pos = usePOSState();
+
+  const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
+    // Check if item already exists with same service - increment quantity
+    const existing = pos.items.find((i) => i.itemType === itemType && i.serviceId === serviceId);
+    if (existing) {
+      pos.updateItem(existing.id, { quantity: existing.quantity + 1 });
+      toast.success(`${itemType} × ${existing.quantity + 1}`);
+    } else {
+      pos.addItemWithDefaults(itemType, serviceId, price);
+      toast.success(`${itemType} added`);
+    }
+  };
 
   const handleSave = async () => {
     if (pos.items.length === 0) {
@@ -113,6 +126,7 @@ const Index = () => {
               onNotesChange={pos.setOrderNotes}
             />
           </div>
+          <QuickOrderPanel items={pos.items} onAddQuickItem={handleQuickAdd} />
           <GarmentTable
             items={pos.items}
             onAdd={pos.addItem}

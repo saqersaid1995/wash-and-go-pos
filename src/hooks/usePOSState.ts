@@ -191,7 +191,7 @@ export function usePOSState() {
     orderType, setOrderType, pickupMethod, setPickupMethod,
     employeeId, setEmployeeId, orderNotes, setOrderNotes,
     // Items
-    items, addItem, updateItem, removeItem,
+    items, addItem, addItemWithDefaults, updateItem, removeItem,
     // Pricing
     subtotal, urgentFee, discount, setDiscount, total,
     paidAmount, setPaidAmount, remainingBalance, paymentStatus,
