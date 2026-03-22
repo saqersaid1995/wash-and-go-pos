@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       total_amount,
       remaining_amount,
       message_type = "ready_for_pickup",
-      template_name = "order_ready",
+      template_name = "order_ready_v2",
       template_language = "ar",
       is_test = false,
     } = body;
