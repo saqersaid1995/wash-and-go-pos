@@ -176,7 +176,7 @@ export function usePOSState() {
     setOrderNotes("");
     setItems([]);
     setDiscount(0);
-    setPaymentMethod("cash");
+    setPaymentMethod("pay-later");
     setPaidAmount(0);
     setShowInvoice(false);
     setOrderNumber(generateOrderNumber());
