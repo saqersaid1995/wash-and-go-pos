@@ -284,6 +284,7 @@ export async function fetchOrdersByCustomerId(customerId: string): Promise<Workf
     .from("orders")
     .select(ORDER_SELECT)
     .eq("customer_id", customerId)
+    .eq("is_deleted", false)
     .order("created_at", { ascending: false });
 
   if (error) {
