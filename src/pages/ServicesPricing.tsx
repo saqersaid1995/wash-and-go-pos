@@ -63,32 +63,74 @@ function ItemsTab() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ItemRecord | null>(null);
   const [formName, setFormName] = useState("");
+  const [formNameAr, setFormNameAr] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [formShowInQuickAdd, setFormShowInQuickAdd] = useState(true);
+  const [formSortOrder, setFormSortOrder] = useState(0);
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("items").select("*").order("item_name");
+    const { data } = await supabase.from("items").select("*").order("sort_order").order("item_name");
     setItems((data as ItemRecord[]) || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = items.filter((i) => !search || i.item_name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter((i) => !search || i.item_name.toLowerCase().includes(search.toLowerCase()) || (i.item_name_ar || "").includes(search));
 
-  const openCreate = () => { setEditing(null); setFormName(""); setFormActive(true); setModalOpen(true); };
-  const openEdit = (item: ItemRecord) => { setEditing(item); setFormName(item.item_name); setFormActive(item.is_active); setModalOpen(true); };
+  const openCreate = () => {
+    setEditing(null); setFormName(""); setFormNameAr(""); setFormActive(true);
+    setFormShowInQuickAdd(true); setFormSortOrder(0); setFormImageUrl("");
+    setModalOpen(true);
+  };
+  const openEdit = (item: ItemRecord) => {
+    setEditing(item); setFormName(item.item_name); setFormNameAr(item.item_name_ar || "");
+    setFormActive(item.is_active); setFormShowInQuickAdd(item.show_in_quick_add);
+    setFormSortOrder(item.sort_order); setFormImageUrl(item.image_url || "");
+    setModalOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Image must be under 2MB"); return; }
+
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("item-images").upload(fileName, file, { upsert: true });
+    if (error) { toast.error("Upload failed: " + error.message); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("item-images").getPublicUrl(fileName);
+    setFormImageUrl(urlData.publicUrl);
+    setUploading(false);
+    toast.success("Image uploaded");
+  };
+
+  const removeImage = () => setFormImageUrl("");
 
   const handleSave = async () => {
     if (!formName.trim()) { toast.error("Item name is required"); return; }
     setSaving(true);
+    const payload = {
+      item_name: formName.trim(),
+      item_name_ar: formNameAr.trim(),
+      is_active: formActive,
+      show_in_quick_add: formShowInQuickAdd,
+      sort_order: formSortOrder,
+      image_url: formImageUrl,
+    };
     if (editing) {
-      const { error } = await supabase.from("items").update({ item_name: formName.trim(), is_active: formActive }).eq("id", editing.id);
+      const { error } = await supabase.from("items").update(payload).eq("id", editing.id);
       if (error) { toast.error(error.code === "23505" ? "Item name already exists" : error.message); setSaving(false); return; }
       toast.success("Item updated");
     } else {
-      const { error } = await supabase.from("items").insert({ item_name: formName.trim(), is_active: formActive });
+      const { error } = await supabase.from("items").insert(payload);
       if (error) { toast.error(error.code === "23505" ? "Item name already exists" : error.message); setSaving(false); return; }
       toast.success("Item created");
     }
@@ -129,7 +171,11 @@ function ItemsTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">Image</TableHead>
                 <TableHead>Item Name</TableHead>
+                <TableHead>Arabic Name</TableHead>
+                <TableHead className="text-center">Quick Add</TableHead>
+                <TableHead className="text-center">Order</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -137,7 +183,21 @@ function ItemsTab() {
             <TableBody>
               {filtered.map((item) => (
                 <TableRow key={item.id} className={item.is_active ? "" : "opacity-50"}>
+                  <TableCell>
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.item_name} className="h-8 w-8 rounded object-cover" />
+                    ) : (
+                      <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{item.item_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm" dir="rtl">{item.item_name_ar || "—"}</TableCell>
+                  <TableCell className="text-center">
+                    {item.show_in_quick_add && <Eye className="h-4 w-4 text-primary mx-auto" />}
+                  </TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">{item.sort_order}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={item.is_active ? "default" : "secondary"} className={`text-[0.6rem] ${item.is_active ? "bg-success/15 text-success" : ""}`}>
                       {item.is_active ? "Active" : "Inactive"}
@@ -161,13 +221,54 @@ function ItemsTab() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Item" : "Add Item"}</DialogTitle>
-            <DialogDescription>{editing ? "Update the item name." : "Add a new laundry item type."}</DialogDescription>
+            <DialogDescription>{editing ? "Update the item details." : "Add a new laundry item type."}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Image upload */}
             <div className="space-y-2">
-              <Label>Item Name</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Thobe, Kumma, Ghutra..." />
+              <Label>Item Image</Label>
+              {formImageUrl ? (
+                <div className="relative w-24 h-24">
+                  <img src={formImageUrl} alt="Item" className="w-24 h-24 rounded-lg object-cover border border-border" />
+                  <button onClick={removeImage} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-24 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary/40 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                  <span className="text-[0.6rem]">{uploading ? "Uploading" : "Upload"}</span>
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Item Name (English)</Label>
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Abaya" />
+              </div>
+              <div className="space-y-2">
+                <Label>Item Name (Arabic)</Label>
+                <Input value={formNameAr} onChange={(e) => setFormNameAr(e.target.value)} placeholder="e.g. عباية" dir="rtl" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-3">
+                <Switch checked={formShowInQuickAdd} onCheckedChange={setFormShowInQuickAdd} />
+                <Label>Show in Quick Add</Label>
+              </div>
+              <div className="space-y-2">
+                <Label>Sort Order</Label>
+                <Input type="number" min="0" value={formSortOrder} onChange={(e) => setFormSortOrder(parseInt(e.target.value) || 0)} />
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <Switch checked={formActive} onCheckedChange={setFormActive} />
               <Label>Active</Label>
