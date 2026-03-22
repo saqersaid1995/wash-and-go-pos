@@ -224,6 +224,14 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
         </button>
       </div>
 
+      {/* Default service indicator */}
+      {item.isDefaultServiceSelected && !item.isManualPriceOverride && (
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-primary">
+          <Star className="h-3 w-3" />
+          Default service selected
+        </div>
+      )}
+
       {/* Manual price override indicator */}
       {item.isManualPriceOverride && (
         <div className="flex items-center gap-1 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
