@@ -559,19 +559,34 @@ function PricingRulesTab() {
 
             {formItemId && serviceRows.length > 0 && (
               <div className="border border-border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[1fr_60px_140px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
                   <span>Service</span>
                   <span className="text-center">Enabled</span>
+                  <span className="text-center">Default</span>
                   <span className="text-right">Price (OMR)</span>
                 </div>
                 <div className="divide-y divide-border">
                   {serviceRows.map((row) => (
-                    <div key={row.serviceId} className={`grid grid-cols-[1fr_60px_140px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
+                    <div key={row.serviceId} className={`grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
                       <span className="text-sm font-medium">{row.serviceName}</span>
                       <div className="flex justify-center">
                         <Checkbox
                           checked={row.enabled}
-                          onCheckedChange={(checked) => updateRow(row.serviceId, { enabled: !!checked })}
+                          onCheckedChange={(checked) => {
+                            const updates: Partial<ServicePriceRow> = { enabled: !!checked };
+                            if (!checked) updates.isDefault = false;
+                            updateRow(row.serviceId, updates);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-center">
+                        <input
+                          type="radio"
+                          name="default-service"
+                          checked={row.isDefault}
+                          disabled={!row.enabled}
+                          onChange={() => updateRow(row.serviceId, { isDefault: true })}
+                          className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
                         />
                       </div>
                       <div className="relative">
