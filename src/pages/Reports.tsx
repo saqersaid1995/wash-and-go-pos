@@ -12,6 +12,7 @@ import { ExpensesTab } from "@/components/reports/ExpensesTab";
 import { IncomeStatementTab } from "@/components/reports/IncomeStatementTab";
 import { OrdersTab } from "@/components/reports/OrdersTab";
 import { CustomersTab } from "@/components/reports/CustomersTab";
+import { BulkCleanupTool } from "@/components/reports/BulkCleanupTool";
 import { exportSalesCSV, exportExpensesCSV, exportCustomersCSV, printReport } from "@/lib/report-exports";
 import {
   Loader2, BarChart3, Download, Printer, CalendarIcon,
@@ -118,7 +119,7 @@ const Reports = () => {
         <div id="report-content">
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-transparent p-0">
-              {["overview", "sales", "expenses", "income-statement", "orders", "customers"].map((tab) => (
+              {["overview", "sales", "expenses", "income-statement", "orders", "customers", "cleanup"].map((tab) => (
                 <TabsTrigger key={tab} value={tab}
                   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md px-4 py-2 text-sm capitalize">
                   {tab.replace("-", " ")}
@@ -169,6 +170,10 @@ const Reports = () => {
                 newCustomers={data.newCustomers}
                 topCustomers={data.topCustomers}
               />
+            </TabsContent>
+
+            <TabsContent value="cleanup">
+              <BulkCleanupTool onComplete={() => window.location.reload()} />
             </TabsContent>
           </Tabs>
         </div>

@@ -69,17 +69,63 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
   };
 }
 
-export async function fetchAllOrders(): Promise<WorkflowOrder[]> {
-  const { data, error } = await supabase
+export async function fetchAllOrders(includeDeleted = false): Promise<WorkflowOrder[]> {
+  let query = supabase
     .from("orders")
     .select(ORDER_SELECT)
     .order("created_at", { ascending: false });
+
+  if (!includeDeleted) {
+    query = query.eq("is_deleted", false).eq("is_draft", false);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("fetchAllOrders error:", error);
     return [];
   }
   return (data || []).map(mapDbOrderToWorkflow);
+}
+
+export async function softDeleteOrder(orderId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("orders")
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) {
+    console.error("softDeleteOrder error:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function bulkSoftDelete(filters: {
+  draftsOnly?: boolean;
+  beforeDate?: string;
+  unpaidOnly?: boolean;
+}): Promise<number> {
+  let query = supabase
+    .from("orders")
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq("is_deleted", false);
+
+  if (filters.draftsOnly) {
+    query = query.eq("is_draft", true);
+  }
+  if (filters.beforeDate) {
+    query = query.lte("order_date", filters.beforeDate);
+  }
+  if (filters.unpaidOnly) {
+    query = query.eq("payment_status", "unpaid");
+  }
+
+  const { data, error, count } = await query.select();
+  if (error) {
+    console.error("bulkSoftDelete error:", error);
+    return 0;
+  }
+  return data?.length || 0;
 }
 
 export async function fetchOrderById(orderId: string): Promise<WorkflowOrder | null> {
@@ -238,6 +284,7 @@ export async function fetchOrdersByCustomerId(customerId: string): Promise<Workf
     .from("orders")
     .select(ORDER_SELECT)
     .eq("customer_id", customerId)
+    .eq("is_deleted", false)
     .order("created_at", { ascending: false });
 
   if (error) {

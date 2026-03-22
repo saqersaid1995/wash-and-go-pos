@@ -89,6 +89,10 @@ export default function Workflow() {
         onAddNote={wf.addNote}
         onToggleUrgent={wf.toggleUrgent}
         onPaymentComplete={handlePaymentComplete}
+        onDeleteOrder={async (id) => {
+          await wf.deleteOrder(id);
+          toast.success("Order deleted");
+        }}
       />
     </div>
   );

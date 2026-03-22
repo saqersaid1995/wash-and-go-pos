@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy } from "lucide-react";
+import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
@@ -22,9 +22,10 @@ interface Props {
   onAddNote: (id: string, text: string) => void;
   onToggleUrgent: (id: string) => void;
   onPaymentComplete?: () => void;
+  onDeleteOrder?: (id: string) => void;
 }
 
-export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, onMovePrev, onAddNote, onToggleUrgent, onPaymentComplete }: Props) {
+export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, onMovePrev, onAddNote, onToggleUrgent, onPaymentComplete, onDeleteOrder }: Props) {
   const [noteText, setNoteText] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const navigate = useNavigate();
@@ -203,6 +204,21 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
                   <ExternalLink className="h-3 w-3" /> Full Details
                 </Button>
               </Link>
+              {onDeleteOrder && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1 text-destructive hover:bg-destructive/10 border-destructive/30"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this order? It will be hidden from all views.")) {
+                      onDeleteOrder(order.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" /> Delete Order
+                </Button>
+              )}
             </div>
           </ScrollArea>
         </SheetContent>

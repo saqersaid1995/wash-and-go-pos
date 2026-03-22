@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import type { WorkflowOrder } from "@/types/workflow";
-import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent, softDeleteOrder } from "@/lib/supabase-queries";
 import { sendReadyForPickupWhatsApp, fetchNotificationLogs } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
 import PaymentModal from "@/components/payment/PaymentModal";
@@ -19,7 +19,7 @@ import {
 import {
   ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
-  CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw,
+  CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -498,6 +498,24 @@ export default function OrderDetails() {
               Move to {WORKFLOW_STAGES[stageIdx + 1]?.label} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5 text-destructive hover:bg-destructive/10 border-destructive/30"
+            onClick={async () => {
+              if (confirm("Are you sure you want to delete this order? It will be hidden from all views.")) {
+                const ok = await softDeleteOrder(order.id);
+                if (ok) {
+                  toast.success("Order deleted");
+                  navigate("/workflow");
+                } else {
+                  toast.error("Failed to delete order");
+                }
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Order
+          </Button>
           <div className="flex-1" />
           <Link to="/workflow">
             <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">

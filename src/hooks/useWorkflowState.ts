@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import type { WorkflowOrder, WorkflowStatus } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
-import { fetchAllOrders, updateOrderStatus, addInternalNote, toggleOrderUrgent } from "@/lib/supabase-queries";
+import { fetchAllOrders, updateOrderStatus, addInternalNote, toggleOrderUrgent, softDeleteOrder } from "@/lib/supabase-queries";
 import { sendReadyForPickupWhatsApp } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -163,6 +163,11 @@ export function useWorkflowState() {
     await toggleOrderUrgent(orderId, order.orderType);
   }, [orders]);
 
+  const deleteOrder = useCallback(async (orderId: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    await softDeleteOrder(orderId);
+  }, []);
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       if (filters.search) {
@@ -229,6 +234,7 @@ export function useWorkflowState() {
     moveToPrev,
     addNote,
     toggleUrgent,
+    deleteOrder,
     selectedOrder,
     selectedOrderId,
     setSelectedOrderId,
