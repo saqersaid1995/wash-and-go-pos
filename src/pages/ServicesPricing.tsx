@@ -379,6 +379,7 @@ function PricingRulesTab() {
         enabled: !!existing && existing.is_active,
         price: existing ? String(existing.price) : "",
         existingRuleId: existing?.id,
+        isDefault: !!existing?.is_default_service,
       };
     });
     setServiceRows(rows);
