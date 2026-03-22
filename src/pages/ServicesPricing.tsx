@@ -410,7 +410,14 @@ function PricingRulesTab() {
   };
 
   const updateRow = (serviceId: string, updates: Partial<ServicePriceRow>) => {
-    setServiceRows((prev) => prev.map((r) => r.serviceId === serviceId ? { ...r, ...updates } : r));
+    setServiceRows((prev) => {
+      let next = prev.map((r) => r.serviceId === serviceId ? { ...r, ...updates } : r);
+      // If setting as default, clear default from other rows
+      if (updates.isDefault) {
+        next = next.map((r) => r.serviceId === serviceId ? r : { ...r, isDefault: false });
+      }
+      return next;
+    });
   };
 
   const handleSave = async () => {
