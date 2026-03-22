@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, Plus } from "lucide-react";
+import { Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatOMR } from "@/lib/currency";
 import type { OrderItem } from "@/types/pos";
@@ -15,8 +15,11 @@ interface PricingRule {
 
 interface QuickItem {
   name: string;
+  nameAr: string;
+  imageUrl: string;
   defaultService: string;
   defaultPrice: number;
+  sortOrder: number;
 }
 
 interface Props {
@@ -31,11 +34,11 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
   useEffect(() => {
     async function load() {
       const [itemsRes, pricingRes] = await Promise.all([
-        supabase.from("items").select("item_name").eq("is_active", true).order("item_name"),
+        supabase.from("items").select("item_name, item_name_ar, image_url, sort_order, show_in_quick_add").eq("is_active", true).eq("show_in_quick_add", true).order("sort_order").order("item_name"),
         supabase.from("service_pricing").select("item_type, service_type, price, is_active, is_default_service").eq("is_active", true),
       ]);
 
-      const allItems = itemsRes.data || [];
+      const allItems = (itemsRes.data || []) as Array<{ item_name: string; item_name_ar: string; image_url: string; sort_order: number; show_in_quick_add: boolean }>;
       const rules = (pricingRes.data || []) as PricingRule[];
 
       const mapped: QuickItem[] = allItems.map((i) => {
@@ -44,8 +47,11 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
         const rule = defaultRule || fallback;
         return {
           name: i.item_name,
+          nameAr: i.item_name_ar || "",
+          imageUrl: i.image_url || "",
           defaultService: rule?.service_type || "",
           defaultPrice: rule?.price || 0,
+          sortOrder: i.sort_order,
         };
       }).filter((q) => q.defaultService);
 
@@ -77,10 +83,29 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
               key={qi.name}
               whileTap={{ scale: 0.95 }}
               onClick={() => onAddQuickItem(qi.name, qi.defaultService, qi.defaultPrice)}
-              className="relative flex flex-col items-center justify-center gap-1 p-3 rounded-lg border border-border bg-background hover:bg-primary/5 hover:border-primary/30 transition-all text-center min-h-[72px]"
+              className="relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-background hover:bg-primary/5 hover:border-primary/30 transition-all text-center min-h-[100px]"
             >
-              <span className="text-xs font-semibold leading-tight">{qi.name}</span>
-              <span className="text-[0.6rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+              {/* Image or fallback */}
+              {qi.imageUrl ? (
+                <img
+                  src={qi.imageUrl}
+                  alt={qi.name}
+                  className="h-10 w-10 rounded object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                  {qi.name.charAt(0)}
+                </div>
+              )}
+              {/* Names */}
+              <span className="text-[0.65rem] font-semibold leading-tight">{qi.name}</span>
+              {qi.nameAr && (
+                <span className="text-[0.6rem] text-muted-foreground leading-tight" dir="rtl">{qi.nameAr}</span>
+              )}
+              {/* Price */}
+              <span className="text-[0.55rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+              {/* Count badge */}
               {count > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[0.6rem] font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {count}
