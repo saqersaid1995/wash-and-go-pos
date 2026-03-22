@@ -32,7 +32,7 @@ export function usePOSState() {
 
   // Payment
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pay-later");
   const [paidAmount, setPaidAmount] = useState(0);
 
   // Invoice & saving
@@ -176,7 +176,7 @@ export function usePOSState() {
     setOrderNotes("");
     setItems([]);
     setDiscount(0);
-    setPaymentMethod("cash");
+    setPaymentMethod("pay-later");
     setPaidAmount(0);
     setShowInvoice(false);
     setOrderNumber(generateOrderNumber());
