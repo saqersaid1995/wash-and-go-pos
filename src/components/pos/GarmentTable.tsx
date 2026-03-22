@@ -169,6 +169,7 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
             const updates: Partial<OrderItem> = {
               serviceId: newService,
               isManualPriceOverride: false,
+              isDefaultServiceSelected: false,
             };
             if (rule) {
               updates.unitPrice = rule.price;
