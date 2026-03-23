@@ -15,6 +15,7 @@ export interface CustomerRecord {
   name: string;
   phone: string;
   customerType: CustomerType;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   notes: CustomerNote[];

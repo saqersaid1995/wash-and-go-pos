@@ -231,6 +231,7 @@ export function mapDbCustomer(row: any, notes: any[] = []): CustomerRecord {
     name: row.full_name,
     phone: row.phone_number,
     customerType: (row.customer_type || "Regular").toLowerCase() as "regular" | "vip",
+    isActive: row.is_active !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     notes: notes.map((n) => ({
@@ -241,6 +242,33 @@ export function mapDbCustomer(row: any, notes: any[] = []): CustomerRecord {
       createdBy: n.created_by || undefined,
     })),
   };
+}
+
+export async function deleteCustomer(id: string): Promise<boolean> {
+  const { error } = await supabase.from("customers").delete().eq("id", id);
+  if (error) console.error("deleteCustomer error:", error);
+  return !error;
+}
+
+export async function archiveCustomer(id: string): Promise<boolean> {
+  const { error } = await supabase.from("customers").update({ is_active: false } as any).eq("id", id);
+  if (error) console.error("archiveCustomer error:", error);
+  return !error;
+}
+
+export async function restoreCustomer(id: string): Promise<boolean> {
+  const { error } = await supabase.from("customers").update({ is_active: true } as any).eq("id", id);
+  if (error) console.error("restoreCustomer error:", error);
+  return !error;
+}
+
+export async function customerHasOrders(customerId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", customerId);
+  if (error) return true; // assume yes on error to be safe
+  return (count || 0) > 0;
 }
 
 export async function fetchAllCustomers(): Promise<CustomerRecord[]> {

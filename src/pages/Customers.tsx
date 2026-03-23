@@ -1,12 +1,53 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, Crown, AlertCircle, DollarSign, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, Users, Crown, AlertCircle, DollarSign, ArrowLeft, Loader2, MoreHorizontal, Eye, Trash2, ArchiveRestore } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCustomerState } from "@/hooks/useCustomerState";
+import { toast } from "sonner";
+import type { CustomerWithStats } from "@/types/customer";
 
 export default function Customers() {
   const nav = useNavigate();
   const state = useCustomerState();
+  const [confirmTarget, setConfirmTarget] = useState<CustomerWithStats | null>(null);
+
+  const handleRemove = async () => {
+    if (!confirmTarget) return;
+    const result = await state.removeCustomer(confirmTarget.id);
+    if (result.action === "deleted") {
+      toast.success("Customer deleted successfully");
+    } else if (result.action === "archived") {
+      toast.success("Customer archived (has existing orders)");
+    } else {
+      toast.error("Failed to remove customer");
+    }
+    setConfirmTarget(null);
+  };
+
+  const handleRestore = async (id: string) => {
+    const ok = await state.restoreCustomer(id);
+    if (ok) toast.success("Customer restored");
+    else toast.error("Failed to restore customer");
+  };
+
+  const targetHasHistory = confirmTarget ? confirmTarget.totalOrders > 0 || confirmTarget.outstandingBalance > 0 : false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,6 +111,15 @@ export default function Customers() {
                 />
                 Outstanding Balance
               </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={state.showArchived}
+                  onChange={(e) => state.setShowArchived(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Show Archived
+              </label>
             </div>
 
             {/* Customer Table */}
@@ -83,20 +133,23 @@ export default function Customers() {
                     <th className="p-3 font-medium text-muted-foreground text-right hidden md:table-cell">Spent</th>
                     <th className="p-3 font-medium text-muted-foreground text-right">Balance</th>
                     <th className="p-3 font-medium text-muted-foreground hidden lg:table-cell">Last Order</th>
+                    <th className="p-3 font-medium text-muted-foreground w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {state.customers.map((c) => (
                     <tr
                       key={c.id}
-                      onClick={() => nav(`/customer/${c.id}`)}
-                      className="border-b border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors"
+                      className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${!c.isActive ? "opacity-60" : ""}`}
                     >
-                      <td className="p-3">
+                      <td className="p-3 cursor-pointer" onClick={() => nav(`/customer/${c.id}`)}>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{c.name}</span>
                           {c.customerType === "vip" && (
                             <Badge className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0">VIP</Badge>
+                          )}
+                          {!c.isActive && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Archived</Badge>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground sm:hidden">{c.phone}</span>
@@ -112,10 +165,36 @@ export default function Customers() {
                         )}
                       </td>
                       <td className="p-3 text-muted-foreground hidden lg:table-cell">{c.lastOrderDate ?? "—"}</td>
+                      <td className="p-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => nav(`/customer/${c.id}`)}>
+                              <Eye className="h-3.5 w-3.5 mr-2" /> View
+                            </DropdownMenuItem>
+                            {!c.isActive ? (
+                              <DropdownMenuItem onClick={() => handleRestore(c.id)}>
+                                <ArchiveRestore className="h-3.5 w-3.5 mr-2" /> Restore
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setConfirmTarget(c)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   ))}
                   {state.customers.length === 0 && (
-                    <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">
                       {state.search || state.typeFilter !== "all" || state.balanceFilter ? "No customers match your filters" : "No customers yet"}
                     </td></tr>
                   )}
@@ -125,6 +204,28 @@ export default function Customers() {
           </>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {targetHasHistory ? "Archive Customer?" : "Delete Customer?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {targetHasHistory
+                ? `"${confirmTarget?.name}" has existing orders or outstanding balance. They will be archived instead of permanently deleted. Historical data will remain intact.`
+                : `Are you sure you want to permanently delete "${confirmTarget?.name}"? This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {targetHasHistory ? "Archive" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

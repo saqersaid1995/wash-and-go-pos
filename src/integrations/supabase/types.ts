@@ -52,6 +52,7 @@ export type Database = {
           customer_type: string
           full_name: string
           id: string
+          is_active: boolean
           notes: string | null
           phone_number: string
           updated_at: string
@@ -61,6 +62,7 @@ export type Database = {
           customer_type?: string
           full_name: string
           id?: string
+          is_active?: boolean
           notes?: string | null
           phone_number: string
           updated_at?: string
@@ -70,6 +72,7 @@ export type Database = {
           customer_type?: string
           full_name?: string
           id?: string
+          is_active?: boolean
           notes?: string | null
           phone_number?: string
           updated_at?: string

@@ -7,6 +7,10 @@ import {
   fetchOrdersByCustomerId,
   addCustomerNote as addCustomerNoteDb,
   updateCustomerRecord,
+  deleteCustomer as deleteCustomerDb,
+  archiveCustomer as archiveCustomerDb,
+  restoreCustomer as restoreCustomerDb,
+  customerHasOrders,
   fetchAllOrders,
 } from "@/lib/supabase-queries";
 
@@ -41,6 +45,7 @@ export function useCustomerState() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "regular" | "vip">("all");
   const [balanceFilter, setBalanceFilter] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -67,6 +72,9 @@ export function useCustomerState() {
 
   const filtered = useMemo(() => {
     let result = customersWithStats;
+    if (!showArchived) {
+      result = result.filter((c) => c.isActive);
+    }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -80,7 +88,7 @@ export function useCustomerState() {
       result = result.filter((c) => c.outstandingBalance > 0);
     }
     return result;
-  }, [customersWithStats, search, typeFilter, balanceFilter]);
+  }, [customersWithStats, search, typeFilter, balanceFilter, showArchived]);
 
   const getCustomer = useCallback(
     (id: string) => {
@@ -109,11 +117,30 @@ export function useCustomerState() {
     if (success) await loadData();
   }, [loadData]);
 
+  const removeCustomer = useCallback(async (id: string): Promise<{ action: "deleted" | "archived" | "error" }> => {
+    const hasOrders = await customerHasOrders(id);
+    if (hasOrders) {
+      const ok = await archiveCustomerDb(id);
+      if (ok) { await loadData(); return { action: "archived" }; }
+      return { action: "error" };
+    } else {
+      const ok = await deleteCustomerDb(id);
+      if (ok) { await loadData(); return { action: "deleted" }; }
+      return { action: "error" };
+    }
+  }, [loadData]);
+
+  const restoreCustomer = useCallback(async (id: string) => {
+    const ok = await restoreCustomerDb(id);
+    if (ok) await loadData();
+    return ok;
+  }, [loadData]);
+
   const totals = useMemo(() => ({
-    total: customersWithStats.length,
-    vip: customersWithStats.filter((c) => c.customerType === "vip").length,
-    withBalance: customersWithStats.filter((c) => c.outstandingBalance > 0).length,
-    totalRevenue: customersWithStats.reduce((s, c) => s + c.totalSpent, 0),
+    total: customersWithStats.filter((c) => c.isActive).length,
+    vip: customersWithStats.filter((c) => c.customerType === "vip" && c.isActive).length,
+    withBalance: customersWithStats.filter((c) => c.outstandingBalance > 0 && c.isActive).length,
+    totalRevenue: customersWithStats.filter((c) => c.isActive).reduce((s, c) => s + c.totalSpent, 0),
   }), [customersWithStats]);
 
   return {
@@ -122,9 +149,12 @@ export function useCustomerState() {
     search, setSearch,
     typeFilter, setTypeFilter,
     balanceFilter, setBalanceFilter,
+    showArchived, setShowArchived,
     getCustomer,
     addNote,
     updateCustomer,
+    removeCustomer,
+    restoreCustomer,
     totals,
     refetch: loadData,
   };
