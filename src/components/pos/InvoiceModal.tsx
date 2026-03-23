@@ -139,7 +139,7 @@ function buildReceiptHtml({
 
     .phone-row {
       text-align: center;
-      font-size: 15px;
+      font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.5px;
       margin: 4px 0;
@@ -387,7 +387,7 @@ export default function InvoiceModal(props: Props) {
             <div className="h-px bg-border" />
             <div className="text-center py-1">
               <span className="text-[10px] text-muted-foreground">Phone: </span>
-              <span className="text-[15px] font-bold tracking-wide">{customerPhone || "—"}</span>
+              <span className="text-[22px] font-bold tracking-wide">{customerPhone || "—"}</span>
             </div>
             <div className="h-px bg-border" />
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
