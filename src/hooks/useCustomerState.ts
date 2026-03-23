@@ -45,6 +45,7 @@ export function useCustomerState() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "regular" | "vip">("all");
   const [balanceFilter, setBalanceFilter] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
