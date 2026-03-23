@@ -7,6 +7,10 @@ import {
   fetchOrdersByCustomerId,
   addCustomerNote as addCustomerNoteDb,
   updateCustomerRecord,
+  deleteCustomer as deleteCustomerDb,
+  archiveCustomer as archiveCustomerDb,
+  restoreCustomer as restoreCustomerDb,
+  customerHasOrders,
   fetchAllOrders,
 } from "@/lib/supabase-queries";
 
