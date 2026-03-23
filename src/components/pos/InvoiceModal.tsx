@@ -137,6 +137,20 @@ function buildReceiptHtml({
       margin: 4px 0;
     }
 
+    .phone-row {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 4px 0;
+    }
+
+    .phone-row .label {
+      font-weight: 400;
+      font-size: 10px;
+      color: #666;
+    }
+
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -237,12 +251,17 @@ function buildReceiptHtml({
 
     <hr class="divider" />
 
+    <div class="phone-row">
+      <span class="label">Phone: </span>${escapeHtml(customerPhone || "—")}
+    </div>
+
+    <hr class="divider" />
+
     <div class="info-grid">
       <div><span class="label">Order: </span><strong>${escapeHtml(orderNumber)}</strong></div>
       <div><span class="label">Date: </span><strong>${escapeHtml(orderDate)}</strong></div>
       <div><span class="label">Customer: </span><strong>${escapeHtml(customerName || "Walk-in")}</strong></div>
-      <div><span class="label">Phone: </span><strong>${escapeHtml(customerPhone || "—")}</strong></div>
-      ${deliveryDate ? `<div class="full"><span class="label">Delivery: </span><strong>${escapeHtml(deliveryDate)}</strong></div>` : ""}
+      ${deliveryDate ? `<div><span class="label">Delivery: </span><strong>${escapeHtml(deliveryDate)}</strong></div>` : ""}
     </div>
 
     <hr class="divider" />
@@ -366,13 +385,17 @@ export default function InvoiceModal(props: Props) {
               </div>
             </div>
             <div className="h-px bg-border" />
+            <div className="text-center py-1">
+              <span className="text-[10px] text-muted-foreground">Phone: </span>
+              <span className="text-[15px] font-bold tracking-wide">{customerPhone || "—"}</span>
+            </div>
+            <div className="h-px bg-border" />
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
               <div><span className="text-muted-foreground">Order: </span><span className="font-medium">{orderNumber}</span></div>
               <div><span className="text-muted-foreground">Date: </span><span className="font-medium">{orderDate}</span></div>
               <div><span className="text-muted-foreground">Customer: </span><span className="font-medium">{customerName || "Walk-in"}</span></div>
-              <div><span className="text-muted-foreground">Phone: </span><span className="font-medium">{customerPhone || "—"}</span></div>
               {deliveryDate && (
-                <div className="col-span-2"><span className="text-muted-foreground">Delivery: </span><span className="font-medium">{deliveryDate}</span></div>
+                <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium">{deliveryDate}</span></div>
               )}
             </div>
             <div className="h-px bg-border" />
