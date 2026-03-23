@@ -72,6 +72,9 @@ export function useCustomerState() {
 
   const filtered = useMemo(() => {
     let result = customersWithStats;
+    if (!showArchived) {
+      result = result.filter((c) => c.isActive);
+    }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -85,7 +88,7 @@ export function useCustomerState() {
       result = result.filter((c) => c.outstandingBalance > 0);
     }
     return result;
-  }, [customersWithStats, search, typeFilter, balanceFilter]);
+  }, [customersWithStats, search, typeFilter, balanceFilter, showArchived]);
 
   const getCustomer = useCallback(
     (id: string) => {
