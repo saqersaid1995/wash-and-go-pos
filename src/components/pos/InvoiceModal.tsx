@@ -251,12 +251,17 @@ function buildReceiptHtml({
 
     <hr class="divider" />
 
+    <div class="phone-row">
+      <span class="label">Phone: </span>${escapeHtml(customerPhone || "—")}
+    </div>
+
+    <hr class="divider" />
+
     <div class="info-grid">
       <div><span class="label">Order: </span><strong>${escapeHtml(orderNumber)}</strong></div>
       <div><span class="label">Date: </span><strong>${escapeHtml(orderDate)}</strong></div>
       <div><span class="label">Customer: </span><strong>${escapeHtml(customerName || "Walk-in")}</strong></div>
-      <div><span class="label">Phone: </span><strong>${escapeHtml(customerPhone || "—")}</strong></div>
-      ${deliveryDate ? `<div class="full"><span class="label">Delivery: </span><strong>${escapeHtml(deliveryDate)}</strong></div>` : ""}
+      ${deliveryDate ? `<div><span class="label">Delivery: </span><strong>${escapeHtml(deliveryDate)}</strong></div>` : ""}
     </div>
 
     <hr class="divider" />
