@@ -385,13 +385,17 @@ export default function InvoiceModal(props: Props) {
               </div>
             </div>
             <div className="h-px bg-border" />
+            <div className="text-center py-1">
+              <span className="text-[10px] text-muted-foreground">Phone: </span>
+              <span className="text-[15px] font-bold tracking-wide">{customerPhone || "—"}</span>
+            </div>
+            <div className="h-px bg-border" />
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
               <div><span className="text-muted-foreground">Order: </span><span className="font-medium">{orderNumber}</span></div>
               <div><span className="text-muted-foreground">Date: </span><span className="font-medium">{orderDate}</span></div>
               <div><span className="text-muted-foreground">Customer: </span><span className="font-medium">{customerName || "Walk-in"}</span></div>
-              <div><span className="text-muted-foreground">Phone: </span><span className="font-medium">{customerPhone || "—"}</span></div>
               {deliveryDate && (
-                <div className="col-span-2"><span className="text-muted-foreground">Delivery: </span><span className="font-medium">{deliveryDate}</span></div>
+                <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium">{deliveryDate}</span></div>
               )}
             </div>
             <div className="h-px bg-border" />
