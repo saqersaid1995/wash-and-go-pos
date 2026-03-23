@@ -149,9 +149,12 @@ export function useCustomerState() {
     search, setSearch,
     typeFilter, setTypeFilter,
     balanceFilter, setBalanceFilter,
+    showArchived, setShowArchived,
     getCustomer,
     addNote,
     updateCustomer,
+    removeCustomer,
+    restoreCustomer,
     totals,
     refetch: loadData,
   };
