@@ -64,7 +64,8 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev, onP
         </div>
 
         {/* Customer */}
-        <p className="text-sm font-medium truncate">{order.customerName}</p>
+        <p className="text-sm font-bold truncate tracking-wide">{order.customerPhone}</p>
+        <p className="text-[0.65rem] text-muted-foreground truncate">{order.customerName}</p>
 
         {/* Items + delivery */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
