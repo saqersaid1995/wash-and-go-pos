@@ -1,5 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
-import { useRef, useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type { OrderItem } from "@/types/pos";
 import { formatOMR } from "@/lib/currency";
 import { BUSINESS } from "@/lib/business-config";
@@ -17,6 +17,269 @@ interface Props {
   onClose: () => void;
 }
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+function buildReceiptHtml({
+  orderNumber,
+  customerName,
+  customerPhone,
+  orderDate,
+  deliveryDate,
+  items,
+  total,
+  paidAmount,
+  remainingBalance,
+  logoUrl,
+  qrMarkup,
+}: {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  orderDate: string;
+  deliveryDate: string;
+  items: OrderItem[];
+  total: number;
+  paidAmount: number;
+  remainingBalance: number;
+  logoUrl: string;
+  qrMarkup: string;
+}) {
+  const rows = items
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.itemType || "—")}</td>
+          <td>${escapeHtml(item.serviceId || "—")}</td>
+          <td class="c">${item.quantity}</td>
+          <td class="r">${escapeHtml(formatOMR(item.unitPrice * item.quantity))}</td>
+        </tr>`
+    )
+    .join("");
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Receipt</title>
+  <style>
+    @page {
+      size: 80mm 210mm;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #fff;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .receipt {
+      width: 72mm;
+      margin: 6mm auto 0;
+      font-size: 11px;
+      line-height: 1.35;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .header img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      flex: none;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .tagline {
+      margin: 1px 0 0;
+      font-size: 9px;
+      color: #666;
+    }
+
+    .divider {
+      border: 0;
+      border-top: 1px solid #d8d8d8;
+      margin: 4px 0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 8px;
+      font-size: 10px;
+    }
+
+    .info-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .label {
+      color: #666;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 4px 0;
+      font-size: 10px;
+    }
+
+    th {
+      padding: 0 0 2px;
+      text-align: left;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #666;
+    }
+
+    td {
+      padding: 2px 0;
+      border-top: 1px solid #ededed;
+      vertical-align: top;
+    }
+
+    .c {
+      text-align: center;
+    }
+
+    .r {
+      text-align: right;
+    }
+
+    .totals {
+      display: grid;
+      gap: 2px;
+      margin-top: 2px;
+      font-size: 11px;
+    }
+
+    .totals-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .totals-row.total {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .totals-row.remaining {
+      color: #c1121f;
+    }
+
+    .qr {
+      display: flex;
+      justify-content: center;
+      padding: 5px 0 3px;
+    }
+
+    .qr svg {
+      width: 55px;
+      height: 55px;
+      display: block;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 9px;
+      color: #666;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <article class="receipt">
+    <div class="header">
+      <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(BUSINESS.name)}" />
+      <div>
+        <h1>${escapeHtml(BUSINESS.name)}</h1>
+        <p class="tagline">${escapeHtml(BUSINESS.tagline)}</p>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="info-grid">
+      <div><span class="label">Order: </span><strong>${escapeHtml(orderNumber)}</strong></div>
+      <div><span class="label">Date: </span><strong>${escapeHtml(orderDate)}</strong></div>
+      <div><span class="label">Customer: </span><strong>${escapeHtml(customerName || "Walk-in")}</strong></div>
+      <div><span class="label">Phone: </span><strong>${escapeHtml(customerPhone || "—")}</strong></div>
+      ${deliveryDate ? `<div class="full"><span class="label">Delivery: </span><strong>${escapeHtml(deliveryDate)}</strong></div>` : ""}
+    </div>
+
+    <hr class="divider" />
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Service</th>
+          <th class="c">Qty</th>
+          <th class="r">Total</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <hr class="divider" />
+
+    <div class="totals">
+      <div class="totals-row total">
+        <span>Total</span>
+        <span>${escapeHtml(formatOMR(total))}</span>
+      </div>
+      <div class="totals-row">
+        <span class="label">Paid</span>
+        <span>${escapeHtml(formatOMR(paidAmount))}</span>
+      </div>
+      ${remainingBalance > 0 ? `<div class="totals-row remaining"><span>Remaining</span><span>${escapeHtml(formatOMR(remainingBalance))}</span></div>` : ""}
+    </div>
+
+    <div class="qr">${qrMarkup}</div>
+    <p class="footer">Thank you for your business!</p>
+  </article>
+</body>
+</html>`;
+}
+
 export default function InvoiceModal(props: Props) {
   const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, total, paidAmount, remainingBalance, onClose } = props;
   const printTriggered = useRef(false);
@@ -25,130 +288,73 @@ export default function InvoiceModal(props: Props) {
     if (printTriggered.current) return;
     printTriggered.current = true;
 
-    // Build receipt HTML and print in a new window to completely isolate from the app DOM
-    const receiptHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Receipt</title>
-<style>
-  @page { size: 80mm auto; margin: 0; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    width: 80mm;
-    font-family: 'Arial', 'Helvetica', sans-serif;
-    font-size: 11px;
-    line-height: 1.35;
-    color: #000;
-    background: #fff;
-    padding: 3mm;
-  }
-  .center { text-align: center; }
-  .header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
-  .header img { width: 28px; height: 28px; object-fit: contain; }
-  .header h1 { font-size: 13px; font-weight: 700; margin: 0; line-height: 1.1; }
-  .header .tagline { font-size: 9px; color: #666; margin: 0; }
-  .divider { border: none; border-top: 1px solid #ccc; margin: 4px 0; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 10px; margin: 4px 0; }
-  .info-grid .label { color: #666; }
-  .info-grid .full { grid-column: 1 / -1; }
-  table { width: 100%; border-collapse: collapse; font-size: 10px; margin: 4px 0; }
-  th { text-align: left; font-size: 9px; text-transform: uppercase; color: #666; padding-bottom: 2px; letter-spacing: 0.5px; }
-  th.r, td.r { text-align: right; }
-  th.c, td.c { text-align: center; }
-  td { padding: 2px 0; border-top: 1px solid #eee; }
-  .totals { margin: 4px 0; font-size: 11px; }
-  .totals .row { display: flex; justify-content: space-between; }
-  .totals .total-row { font-weight: 700; font-size: 13px; }
-  .totals .label { color: #666; }
-  .totals .remaining { color: #c00; }
-  .qr { text-align: center; padding: 4px 0; }
-  .qr svg { width: 55px; height: 55px; }
-  .footer { text-align: center; font-size: 9px; color: #666; padding-bottom: 2px; }
-</style>
-</head>
-<body>
-  <div class="header">
-    <img src="${BUSINESS.logo}" alt="${BUSINESS.name}" />
-    <div>
-      <h1>${BUSINESS.name}</h1>
-      <p class="tagline">${BUSINESS.tagline}</p>
-    </div>
-  </div>
-  <hr class="divider" />
-  <div class="info-grid">
-    <div><span class="label">Order: </span><strong>${orderNumber}</strong></div>
-    <div><span class="label">Date: </span><strong>${orderDate}</strong></div>
-    <div><span class="label">Customer: </span><strong>${customerName || "Walk-in"}</strong></div>
-    <div><span class="label">Phone: </span><strong>${customerPhone || "—"}</strong></div>
-    ${deliveryDate ? `<div class="full"><span class="label">Delivery: </span><strong>${deliveryDate}</strong></div>` : ""}
-  </div>
-  <hr class="divider" />
-  <table>
-    <thead><tr><th>Item</th><th>Service</th><th class="c">Qty</th><th class="r">Total</th></tr></thead>
-    <tbody>
-      ${items.map(item => `<tr><td>${item.itemType || "—"}</td><td>${item.serviceId}</td><td class="c">${item.quantity}</td><td class="r">${formatOMR(item.unitPrice * item.quantity)}</td></tr>`).join("")}
-    </tbody>
-  </table>
-  <hr class="divider" />
-  <div class="totals">
-    <div class="row total-row"><span>Total</span><span>${formatOMR(total)}</span></div>
-    <div class="row"><span class="label">Paid</span><span>${formatOMR(paidAmount)}</span></div>
-    ${remainingBalance > 0 ? `<div class="row remaining"><span>Remaining</span><span>${formatOMR(remainingBalance)}</span></div>` : ""}
-  </div>
-  <div class="qr" id="qr-placeholder"></div>
-  <p class="footer">Thank you for your business!</p>
-</body>
-</html>`;
+    const qrSvg = document.querySelector(".invoice-qr-source svg");
+    const qrMarkup = qrSvg ? new XMLSerializer().serializeToString(qrSvg) : "";
+    const logoUrl = new URL(BUSINESS.logo, window.location.origin).toString();
+    const printWindow = window.open("", "_blank");
 
-    const printWindow = window.open("", "_blank", "width=350,height=600");
     if (!printWindow) {
       printTriggered.current = false;
       return;
     }
-    printWindow.document.write(receiptHTML);
+
+    const releasePrintLock = () => {
+      printTriggered.current = false;
+    };
+
+    const receiptHtml = buildReceiptHtml({
+      orderNumber,
+      customerName,
+      customerPhone,
+      orderDate,
+      deliveryDate,
+      items,
+      total,
+      paidAmount,
+      remainingBalance,
+      logoUrl,
+      qrMarkup,
+    });
+
+    printWindow.document.open();
+    printWindow.document.write(receiptHtml);
     printWindow.document.close();
 
-    // Render QR code into the print window
-    const qrContainer = printWindow.document.getElementById("qr-placeholder");
-    if (qrContainer) {
-      const svgNS = "http://www.w3.org/2000/svg";
-      // Use a simple text placeholder for QR - we'll inject from the main document
-      const qrSvg = document.querySelector(".invoice-qr-source svg");
-      if (qrSvg) {
-        qrContainer.innerHTML = qrSvg.outerHTML;
-      }
-    }
+    const resetTimer = window.setTimeout(() => {
+      releasePrintLock();
+    }, 10000);
 
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-        printTriggered.current = false;
-      }, 300);
+    printWindow.onafterprint = () => {
+      window.clearTimeout(resetTimer);
+      releasePrintLock();
+      printWindow.close();
     };
-    // Fallback if onload doesn't fire
-    setTimeout(() => {
-      if (printTriggered.current) {
-        try {
-          printWindow.print();
-          printWindow.close();
-        } catch (_) {}
-        printTriggered.current = false;
-      }
-    }, 2000);
-  }, [orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, total, paidAmount, remainingBalance]);
+
+    printWindow.onload = async () => {
+      const images = Array.from(printWindow.document.images);
+      await Promise.all(
+        images.map(
+          (image) =>
+            image.complete
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  image.addEventListener("load", () => resolve(), { once: true });
+                  image.addEventListener("error", () => resolve(), { once: true });
+                })
+        )
+      );
+
+      printWindow.focus();
+      printWindow.print();
+    };
+  }, [customerName, customerPhone, deliveryDate, items, orderDate, orderNumber, paidAmount, remainingBalance, total]);
 
   return (
     <>
-      {/* Hidden QR source for copying into print window */}
       <div className="invoice-qr-source" style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
         <QRCodeSVG value={`ORDER:${orderNumber}`} size={55} />
       </div>
 
-      {/* SCREEN-ONLY modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40">
         <div className="bg-card rounded-lg shadow-lg w-full max-w-sm max-h-[90vh] overflow-auto">
           <div className="p-4 space-y-3" style={{ maxWidth: "80mm", margin: "0 auto" }}>
