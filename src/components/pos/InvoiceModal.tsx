@@ -139,7 +139,7 @@ function buildReceiptHtml({
 
     .phone-row {
       text-align: center;
-      font-size: 15px;
+      font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.5px;
       margin: 4px 0;
