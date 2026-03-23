@@ -137,6 +137,20 @@ function buildReceiptHtml({
       margin: 4px 0;
     }
 
+    .phone-row {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 4px 0;
+    }
+
+    .phone-row .label {
+      font-weight: 400;
+      font-size: 10px;
+      color: #666;
+    }
+
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
