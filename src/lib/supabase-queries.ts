@@ -301,6 +301,7 @@ export async function fetchCustomerByPhone(phone: string): Promise<CustomerRecor
     .from("customers")
     .select("*, customer_notes(*)")
     .eq("phone_number", phone)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (error || !data) return null;
