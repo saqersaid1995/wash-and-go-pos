@@ -111,9 +111,66 @@
 }
 
 @media print {
-  body * { visibility: hidden; }
-  .invoice-print, .invoice-print * { visibility: visible; }
-  .invoice-print { position: absolute; left: 0; top: 0; width: 100%; }
-  .label-print, .label-print * { visibility: visible; }
-  .label-print { position: absolute; left: 0; top: 0; width: 100%; }
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  html, body {
+    width: 80mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible !important;
+  }
+
+  .invoice-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 3mm !important;
+    overflow: visible !important;
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  .invoice-print table {
+    width: 100% !important;
+    font-size: 9px !important;
+  }
+
+  .invoice-print h1 {
+    font-size: 14px !important;
+  }
+
+  .invoice-print .qr-section svg {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .label-print,
+  .label-print * {
+    visibility: visible !important;
+  }
+
+  .label-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

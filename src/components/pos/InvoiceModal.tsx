@@ -1,4 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
+import { useRef } from "react";
 import type { OrderItem } from "@/types/pos";
 import { formatOMR } from "@/lib/currency";
 import { BUSINESS } from "@/lib/business-config";
@@ -18,73 +19,79 @@ interface Props {
 
 export default function InvoiceModal(props: Props) {
   const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, total, paidAmount, remainingBalance, onClose } = props;
+  const printTriggered = useRef(false);
 
   const handlePrint = () => {
+    if (printTriggered.current) return;
+    printTriggered.current = true;
     window.print();
+    // Reset after print dialog closes
+    setTimeout(() => {
+      printTriggered.current = false;
+    }, 1000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40">
-      <div className="bg-card rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 print:hidden">
+      <div className="bg-card rounded-lg shadow-lg w-full max-w-sm max-h-[90vh] overflow-auto">
         {/* Print area */}
-        <div className="invoice-print p-8 space-y-6">
+        <div className="invoice-print p-4 space-y-3" style={{ maxWidth: "80mm", margin: "0 auto" }}>
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={BUSINESS.logo} alt={BUSINESS.name} className="h-14 w-14 object-contain print:h-12 print:w-12" />
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">{BUSINESS.name}</h1>
-                <p className="text-xs text-muted-foreground">{BUSINESS.tagline}</p>
-              </div>
+          <div className="flex items-center gap-2 justify-center">
+            <img src={BUSINESS.logo} alt={BUSINESS.name} className="h-10 w-10 object-contain print:h-8 print:w-8" />
+            <div className="text-center">
+              <h1 className="text-base font-bold tracking-tight leading-tight">{BUSINESS.name}</h1>
+              <p className="text-[10px] text-muted-foreground">{BUSINESS.tagline}</p>
             </div>
-            <p className="text-sm text-muted-foreground">Invoice</p>
           </div>
 
           <div className="h-px bg-border" />
 
-          {/* Info */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          {/* Info - compact */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
             <div>
-              <p className="text-muted-foreground">Order #</p>
-              <p className="font-medium">{orderNumber}</p>
+              <span className="text-muted-foreground">Order: </span>
+              <span className="font-medium">{orderNumber}</span>
             </div>
             <div>
-              <p className="text-muted-foreground">Date</p>
-              <p className="font-medium">{orderDate}</p>
+              <span className="text-muted-foreground">Date: </span>
+              <span className="font-medium">{orderDate}</span>
             </div>
             <div>
-              <p className="text-muted-foreground">Customer</p>
-              <p className="font-medium">{customerName || "Walk-in"}</p>
+              <span className="text-muted-foreground">Customer: </span>
+              <span className="font-medium">{customerName || "Walk-in"}</span>
             </div>
             <div>
-              <p className="text-muted-foreground">Phone</p>
-              <p className="font-medium">{customerPhone || "—"}</p>
+              <span className="text-muted-foreground">Phone: </span>
+              <span className="font-medium">{customerPhone || "—"}</span>
             </div>
-            <div>
-              <p className="text-muted-foreground">Delivery</p>
-              <p className="font-medium">{deliveryDate || "—"}</p>
-            </div>
+            {deliveryDate && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Delivery: </span>
+                <span className="font-medium">{deliveryDate}</span>
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-border" />
 
           {/* Items */}
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-muted-foreground text-xs uppercase tracking-wider">
-                <th className="pb-2">Item</th>
-                <th className="pb-2">Service</th>
-                <th className="pb-2 text-center">Qty</th>
-                <th className="pb-2 text-right">Total</th>
+              <tr className="text-left text-muted-foreground text-[10px] uppercase tracking-wider">
+                <th className="pb-1">Item</th>
+                <th className="pb-1">Service</th>
+                <th className="pb-1 text-center">Qty</th>
+                <th className="pb-1 text-right">Total</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-t border-border">
-                  <td className="py-2">{item.itemType || "—"}</td>
-                  <td className="py-2">{item.serviceId}</td>
-                  <td className="py-2 text-center">{item.quantity}</td>
-                  <td className="py-2 text-right">{formatOMR(item.unitPrice * item.quantity)}</td>
+                  <td className="py-1">{item.itemType || "—"}</td>
+                  <td className="py-1">{item.serviceId}</td>
+                  <td className="py-1 text-center">{item.quantity}</td>
+                  <td className="py-1 text-right">{formatOMR(item.unitPrice * item.quantity)}</td>
                 </tr>
               ))}
             </tbody>
@@ -93,8 +100,8 @@ export default function InvoiceModal(props: Props) {
           <div className="h-px bg-border" />
 
           {/* Totals */}
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between font-bold text-lg">
+          <div className="space-y-0.5 text-xs">
+            <div className="flex justify-between font-bold text-sm">
               <span>Total</span>
               <span>{formatOMR(total)}</span>
             </div>
@@ -111,18 +118,18 @@ export default function InvoiceModal(props: Props) {
           </div>
 
           {/* QR Code */}
-          <div className="flex justify-center pt-2">
-            <QRCodeSVG value={`ORDER:${orderNumber}`} size={80} />
+          <div className="qr-section flex justify-center pt-1">
+            <QRCodeSVG value={`ORDER:${orderNumber}`} size={60} />
           </div>
-          <p className="text-center text-xs text-muted-foreground">Thank you for your business!</p>
+          <p className="text-center text-[10px] text-muted-foreground pb-1">Thank you for your business!</p>
         </div>
 
-        {/* Actions (non-print) */}
-        <div className="flex gap-2 p-4 border-t border-border">
-          <button onClick={handlePrint} className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+        {/* Actions (hidden in print) */}
+        <div className="flex gap-2 p-3 border-t border-border print:hidden">
+          <button onClick={handlePrint} className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
             Print
           </button>
-          <button onClick={onClose} className="flex-1 h-10 rounded-md bg-background border border-border text-sm font-medium hover:bg-secondary transition-colors">
+          <button onClick={onClose} className="flex-1 h-9 rounded-md bg-background border border-border text-sm font-medium hover:bg-secondary transition-colors">
             Close
           </button>
         </div>
