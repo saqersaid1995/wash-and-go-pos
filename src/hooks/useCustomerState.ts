@@ -117,11 +117,30 @@ export function useCustomerState() {
     if (success) await loadData();
   }, [loadData]);
 
+  const removeCustomer = useCallback(async (id: string): Promise<{ action: "deleted" | "archived" | "error" }> => {
+    const hasOrders = await customerHasOrders(id);
+    if (hasOrders) {
+      const ok = await archiveCustomerDb(id);
+      if (ok) { await loadData(); return { action: "archived" }; }
+      return { action: "error" };
+    } else {
+      const ok = await deleteCustomerDb(id);
+      if (ok) { await loadData(); return { action: "deleted" }; }
+      return { action: "error" };
+    }
+  }, [loadData]);
+
+  const restoreCustomer = useCallback(async (id: string) => {
+    const ok = await restoreCustomerDb(id);
+    if (ok) await loadData();
+    return ok;
+  }, [loadData]);
+
   const totals = useMemo(() => ({
-    total: customersWithStats.length,
-    vip: customersWithStats.filter((c) => c.customerType === "vip").length,
-    withBalance: customersWithStats.filter((c) => c.outstandingBalance > 0).length,
-    totalRevenue: customersWithStats.reduce((s, c) => s + c.totalSpent, 0),
+    total: customersWithStats.filter((c) => c.isActive).length,
+    vip: customersWithStats.filter((c) => c.customerType === "vip" && c.isActive).length,
+    withBalance: customersWithStats.filter((c) => c.outstandingBalance > 0 && c.isActive).length,
+    totalRevenue: customersWithStats.filter((c) => c.isActive).reduce((s, c) => s + c.totalSpent, 0),
   }), [customersWithStats]);
 
   return {
