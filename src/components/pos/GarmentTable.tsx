@@ -4,6 +4,7 @@ import { GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCachedItems, getCachedServices, getCachedPricing } from "@/lib/offline-db";
 import { formatOMR } from "@/lib/currency";
 
 interface ItemRecord {
