@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { NavLink } from "@/components/NavLink";
+import AppHeader from "@/components/AppHeader";
 import { OverviewTab } from "@/components/reports/OverviewTab";
 import { SalesTab } from "@/components/reports/SalesTab";
 import { ExpensesTab } from "@/components/reports/ExpensesTab";
