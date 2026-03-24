@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
+import { saveOfflineOrder, addToSyncQueue, generateLocalId, getCachedCustomerByPhone } from "@/lib/offline-db";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
