@@ -39,7 +39,18 @@ const WhatsAppSettings = () => {
 
   useEffect(() => {
     fetchLogs();
+    fetchOrders();
   }, []);
+
+  const fetchOrders = async () => {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, order_number, total_amount, customer_id, customers(full_name, phone_number)")
+      .eq("is_deleted", false)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setOrders((data as any[]) || []);
+  };
 
   const fetchLogs = async () => {
     setLoadingLogs(true);
