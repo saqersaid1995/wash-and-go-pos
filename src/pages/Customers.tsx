@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, Crown, AlertCircle, DollarSign, ArrowLeft, Loader2, MoreHorizontal, Eye, Trash2, ArchiveRestore } from "lucide-react";
+import { Search, Users, Crown, AlertCircle, DollarSign, Loader2, MoreHorizontal, Eye, Trash2, ArchiveRestore } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
