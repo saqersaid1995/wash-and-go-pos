@@ -81,12 +81,22 @@ async function generateBrandedPdf(
   let fontBold: any;
 
   try {
-    const [regularBytes, boldBytes] = await Promise.all([
-      fetch(ARABIC_FONT_URL).then(r => r.arrayBuffer()),
-      fetch(ARABIC_FONT_BOLD_URL).then(r => r.arrayBuffer()),
+    const [regularResp, boldResp] = await Promise.all([
+      fetch(ARABIC_FONT_URL),
+      fetch(ARABIC_FONT_BOLD_URL),
     ]);
-    fontRegular = await pdf.embedFont(regularBytes, { subset: true });
-    fontBold = await pdf.embedFont(boldBytes, { subset: true });
+    console.log(`Font fetch status: regular=${regularResp.status}, bold=${boldResp.status}`);
+    if (!regularResp.ok || !boldResp.ok) {
+      throw new Error(`Font fetch failed: regular=${regularResp.status}, bold=${boldResp.status}`);
+    }
+    const [regularBytes, boldBytes] = await Promise.all([
+      regularResp.arrayBuffer(),
+      boldResp.arrayBuffer(),
+    ]);
+    console.log(`Font sizes: regular=${regularBytes.byteLength}, bold=${boldBytes.byteLength}`);
+    fontRegular = await pdf.embedFont(regularBytes);
+    fontBold = await pdf.embedFont(boldBytes);
+    console.log("Arabic fonts embedded successfully");
   } catch (e) {
     console.error("Failed to load Arabic fonts, falling back to built-in:", e);
     const { StandardFonts } = await import("https://esm.sh/pdf-lib@1.17.1");
