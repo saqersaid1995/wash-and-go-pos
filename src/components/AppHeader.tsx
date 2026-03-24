@@ -133,5 +133,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
         </div>
       </div>
     </header>
+    <OfflineStatusBar />
+    </>
   );
 }
