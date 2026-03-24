@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </NetworkProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
