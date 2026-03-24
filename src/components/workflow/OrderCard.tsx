@@ -51,6 +51,9 @@ export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev, onP
         <div className="flex items-center justify-between gap-1">
           <span className="text-xs font-mono font-semibold truncate">{order.orderNumber}</span>
           <div className="flex gap-1 shrink-0">
+            {order.id.startsWith("local-") && (
+              <Badge variant="outline" className="text-[0.6rem] px-1.5 py-0 border-warning text-warning">Pending Sync</Badge>
+            )}
             {order.orderType === "urgent" && (
               <Badge className="bg-accent text-accent-foreground text-[0.6rem] px-1.5 py-0">Urgent</Badge>
             )}
