@@ -1,5 +1,6 @@
 // Laundry POS - Real Data Mode
 import { usePOSState } from "@/hooks/usePOSState";
+import { useOfflineCache } from "@/hooks/useOfflineCache";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
 import GarmentTable from "@/components/pos/GarmentTable";
