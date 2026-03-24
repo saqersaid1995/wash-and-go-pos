@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCachedItems, getCachedPricing } from "@/lib/offline-db";
 import { Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatOMR } from "@/lib/currency";
@@ -33,13 +34,44 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
 
   useEffect(() => {
     async function load() {
-      const [itemsRes, pricingRes] = await Promise.all([
-        supabase.from("items").select("item_name, item_name_ar, image_url, sort_order, show_in_quick_add").eq("is_active", true).eq("show_in_quick_add", true).order("sort_order").order("item_name"),
-        supabase.from("service_pricing").select("item_type, service_type, price, is_active, is_default_service").eq("is_active", true),
-      ]);
+      let allItems: Array<{ item_name: string; item_name_ar: string | null; image_url: string | null; sort_order: number; show_in_quick_add: boolean }> = [];
+      let rules: PricingRule[] = [];
 
-      const allItems = (itemsRes.data || []) as Array<{ item_name: string; item_name_ar: string; image_url: string; sort_order: number; show_in_quick_add: boolean }>;
-      const rules = (pricingRes.data || []) as PricingRule[];
+      if (navigator.onLine) {
+        const [itemsRes, pricingRes] = await Promise.all([
+          supabase.from("items").select("item_name, item_name_ar, image_url, sort_order, show_in_quick_add").eq("is_active", true).eq("show_in_quick_add", true).order("sort_order").order("item_name"),
+          supabase.from("service_pricing").select("item_type, service_type, price, is_active, is_default_service").eq("is_active", true),
+        ]);
+        allItems = (itemsRes.data || []) as typeof allItems;
+        rules = (pricingRes.data || []) as PricingRule[];
+      }
+
+      // Fallback to IndexedDB if online fetch returned nothing or offline
+      if (allItems.length === 0) {
+        const cachedItems = await getCachedItems();
+        allItems = cachedItems
+          .filter((i) => i.show_in_quick_add && i.is_active)
+          .sort((a, b) => a.sort_order - b.sort_order || a.item_name.localeCompare(b.item_name))
+          .map((i) => ({
+            item_name: i.item_name,
+            item_name_ar: i.item_name_ar,
+            image_url: i.image_url,
+            sort_order: i.sort_order,
+            show_in_quick_add: i.show_in_quick_add,
+          }));
+      }
+      if (rules.length === 0) {
+        const cachedPricing = await getCachedPricing();
+        rules = cachedPricing
+          .filter((p) => p.is_active)
+          .map((p) => ({
+            item_type: p.item_type,
+            service_type: p.service_type,
+            price: p.price,
+            is_active: p.is_active,
+            is_default_service: p.is_default_service,
+          }));
+      }
 
       const mapped: QuickItem[] = allItems.map((i) => {
         const defaultRule = rules.find((r) => r.item_type === i.item_name && r.is_default_service);
