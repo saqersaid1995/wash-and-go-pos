@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +28,10 @@ const WhatsAppSettings = () => {
   const [testName, setTestName] = useState("Saqer");
   const [testOrderNumber, setTestOrderNumber] = useState("ORD-12345");
   const [testAmount, setTestAmount] = useState("5.200");
-  const [templateName, setTemplateName] = useState("order_ready");
+  const [templateName, setTemplateName] = useState("order_ready_pdf_ar");
   const [templateLang, setTemplateLang] = useState("ar");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState("");
   const [productionMode, setProductionMode] = useState(false);
   const [sending, setSending] = useState(false);
   const [logs, setLogs] = useState<NotificationLog[]>([]);
@@ -37,7 +40,18 @@ const WhatsAppSettings = () => {
 
   useEffect(() => {
     fetchLogs();
+    fetchOrders();
   }, []);
+
+  const fetchOrders = async () => {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, order_number, total_amount, customer_id, customers(full_name, phone_number)")
+      .eq("is_deleted", false)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setOrders((data as any[]) || []);
+  };
 
   const fetchLogs = async () => {
     setLoadingLogs(true);
@@ -67,6 +81,7 @@ const WhatsAppSettings = () => {
     try {
       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
         body: {
+          order_id: selectedOrderId || null,
           customer_phone: testPhone,
           customer_name: testName,
           order_number: testOrderNumber,
@@ -202,6 +217,37 @@ const WhatsAppSettings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Order Selector */}
+            <div className="space-y-2">
+              <Label>Select Order (auto-fills fields & attaches PDF)</Label>
+              <Select
+                value={selectedOrderId}
+                onValueChange={(val) => {
+                  setSelectedOrderId(val);
+                  const order = orders.find((o: any) => o.id === val);
+                  if (order) {
+                    setTestOrderNumber(order.order_number);
+                    setTestAmount(Number(order.total_amount).toFixed(3));
+                    if (order.customers) {
+                      setTestName(order.customers.full_name || "");
+                      setTestPhone(order.customers.phone_number || "968");
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an order to test with..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o: any) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.order_number} — OMR {Number(o.total_amount).toFixed(3)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="test-phone">Recipient Phone</Label>
