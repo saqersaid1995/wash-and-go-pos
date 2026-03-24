@@ -366,7 +366,14 @@ Deno.serve(async (req) => {
       pdfBytes = await generateBrandedPdf(fallbackOrder, []);
     }
 
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    // Convert to base64 in chunks to avoid stack overflow
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    const pdfBase64 = btoa(binary);
 
     // ─── Build template message ───
     const total = Number(total_amount || 0).toFixed(3);
