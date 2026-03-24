@@ -3,6 +3,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Login from "./pages/Login.tsx";
 import Index from "./pages/Index.tsx";
 import Workflow from "./pages/Workflow.tsx";
 import OrderDetails from "./pages/OrderDetails.tsx";
@@ -13,6 +16,7 @@ import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
 import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
+import StaffManagement from "./pages/StaffManagement.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -23,20 +27,23 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/workflow" element={<Workflow />} />
-          <Route path="/order/:orderId" element={<OrderDetails />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/customer/:customerId" element={<CustomerProfile />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/scan" element={<Scanner />} />
-          <Route path="/services" element={<ServicesPricing />} />
-          <Route path="/whatsapp" element={<WhatsAppSettings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/workflow" element={<ProtectedRoute><Workflow /></ProtectedRoute>} />
+            <Route path="/order/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/customer/:customerId" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+            <Route path="/scan" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin"]}><Reports /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute allowedRoles={["admin"]}><Expenses /></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute allowedRoles={["admin"]}><ServicesPricing /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppSettings /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
