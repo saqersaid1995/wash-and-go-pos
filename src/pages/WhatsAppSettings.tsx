@@ -27,8 +27,10 @@ const WhatsAppSettings = () => {
   const [testName, setTestName] = useState("Saqer");
   const [testOrderNumber, setTestOrderNumber] = useState("ORD-12345");
   const [testAmount, setTestAmount] = useState("5.200");
-  const [templateName, setTemplateName] = useState("order_ready");
+  const [templateName, setTemplateName] = useState("order_ready_pdf_ar");
   const [templateLang, setTemplateLang] = useState("ar");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState("");
   const [productionMode, setProductionMode] = useState(false);
   const [sending, setSending] = useState(false);
   const [logs, setLogs] = useState<NotificationLog[]>([]);

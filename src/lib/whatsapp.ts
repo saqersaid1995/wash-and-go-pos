@@ -28,6 +28,8 @@ export async function sendReadyForPickupWhatsApp(params: SendWhatsAppParams): Pr
         total_amount: params.totalAmount,
         remaining_amount: params.remainingAmount,
         message_type: "ready_for_pickup",
+        template_name: "order_ready_pdf_ar",
+        template_language: "ar",
       },
     });
 
