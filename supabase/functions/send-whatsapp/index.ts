@@ -13,9 +13,9 @@ const GRAPH_API_VERSION = "v18.0";
 
 // Reliable URLs for assets
 const LOGO_URL = "https://odrvdzxondyoxzpzfqdk.supabase.co/storage/v1/object/public/item-images/branding%2Flavanderia-logo.jpeg";
-// Amiri font — excellent Arabic + Latin support, static TTF files on npm CDN
-const ARABIC_FONT_URL = "https://cdn.jsdelivr.net/npm/amiri-font@0.117/ttf/amiri-regular.ttf";
-const ARABIC_FONT_BOLD_URL = "https://cdn.jsdelivr.net/npm/amiri-font@0.117/ttf/amiri-bold.ttf";
+// Self-hosted Amiri font files for stable Arabic + Latin rendering
+const ARABIC_FONT_URL = "https://odrvdzxondyoxzpzfqdk.supabase.co/storage/v1/object/public/item-images/fonts%2FAmiri-Regular.ttf";
+const ARABIC_FONT_BOLD_URL = "https://odrvdzxondyoxzpzfqdk.supabase.co/storage/v1/object/public/item-images/fonts%2FAmiri-Bold.ttf";
 
 function normalizePhone(phone: string, defaultCountryCode = "968"): string | null {
   const digits = phone.replace(/\D/g, "");
@@ -67,9 +67,11 @@ function drawQrCode(
 async function generateBrandedPdf(
   order: any,
   items: any[],
+  options: { includeLogo?: boolean } = {},
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
+  const { includeLogo = true } = options;
 
   // Receipt-style page: 80mm x 210mm → points
   const W = 226.8;
@@ -98,10 +100,8 @@ async function generateBrandedPdf(
     fontBold = await pdf.embedFont(boldBytes);
     console.log("Arabic fonts embedded successfully");
   } catch (e) {
-    console.error("Failed to load Arabic fonts, falling back to built-in:", e);
-    const { StandardFonts } = await import("https://esm.sh/pdf-lib@1.17.1");
-    fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
-    fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    console.error("Failed to load Arabic fonts:", e);
+    throw new Error("Arabic font loading failed");
   }
 
   const gray = rgb(0.4, 0.4, 0.4);
@@ -136,17 +136,19 @@ async function generateBrandedPdf(
 
   // ─── Logo + Header ───
   let logoImage: any = null;
-  try {
-    const logoResp = await fetch(LOGO_URL);
-    if (logoResp.ok) {
-      const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
-      const ct = logoResp.headers.get("content-type") || "";
-      logoImage = ct.includes("png")
-        ? await pdf.embedPng(logoBytes)
-        : await pdf.embedJpg(logoBytes);
+  if (includeLogo) {
+    try {
+      const logoResp = await fetch(LOGO_URL);
+      if (logoResp.ok) {
+        const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
+        const ct = logoResp.headers.get("content-type") || "";
+        logoImage = ct.includes("png")
+          ? await pdf.embedPng(logoBytes)
+          : await pdf.embedJpg(logoBytes);
+      }
+    } catch (e) {
+      console.error("Logo embed failed:", e);
     }
-  } catch (e) {
-    console.error("Logo embed failed:", e);
   }
 
   const brandName = "LAVANDERIA";
@@ -341,6 +343,7 @@ Deno.serve(async (req) => {
     // ─── Fetch order details and generate branded PDF ───
     let pdfBytes: Uint8Array | null = null;
     let pdfFilename = `invoice_${order_number || "unknown"}.pdf`;
+    let orderItemsForPdf: any[] = [];
 
     if (order_id) {
       const { data: orderData } = await supabase
@@ -350,13 +353,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (orderData) {
+        orderItemsForPdf = orderData.order_items || [];
         const orderForPdf = {
           ...orderData,
           customer_name: orderData.customers?.full_name || customer_name || "Walk-in",
           customer_phone: orderData.customers?.phone_number || customer_phone,
         };
 
-        pdfBytes = await generateBrandedPdf(orderForPdf, orderData.order_items || []);
+        pdfBytes = await generateBrandedPdf(orderForPdf, orderItemsForPdf, { includeLogo: true });
         pdfFilename = `invoice_${orderData.order_number}.pdf`;
       }
     }
@@ -373,17 +377,8 @@ Deno.serve(async (req) => {
         paid_amount: (total_amount || 0) - (remaining_amount || 0),
         remaining_amount: remaining_amount || 0,
       };
-      pdfBytes = await generateBrandedPdf(fallbackOrder, []);
+      pdfBytes = await generateBrandedPdf(fallbackOrder, [], { includeLogo: true });
     }
-
-    // Convert to base64 in chunks to avoid stack overflow
-    let binary = "";
-    const chunkSize = 8192;
-    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-      const chunk = pdfBytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode(...chunk);
-    }
-    const pdfBase64 = btoa(binary);
 
     // ─── Build template message ───
     const total = Number(total_amount || 0).toFixed(3);
@@ -420,9 +415,8 @@ Deno.serve(async (req) => {
 
     // Upload PDF as media to WhatsApp
     let mediaId: string | null = null;
-    const pdfBuffer = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
     const formData = new FormData();
-    formData.append("file", new Blob([pdfBuffer], { type: "application/pdf" }), pdfFilename);
+    formData.append("file", new Blob([pdfBytes], { type: "application/pdf" }), pdfFilename);
     formData.append("messaging_product", "whatsapp");
     formData.append("type", "application/pdf");
 
@@ -444,9 +438,57 @@ Deno.serve(async (req) => {
       }
     } else {
       console.error("Media upload failed:", mediaData);
-      requestBody.template.components = requestBody.template.components.filter(
-        (c: any) => c.type !== "header"
-      );
+
+      const shouldRetryWithoutLogo = JSON.stringify(mediaData).toLowerCase().includes("file") || JSON.stringify(mediaData).toLowerCase().includes("size");
+      if (shouldRetryWithoutLogo && order_id) {
+        const { data: orderData } = await supabase
+          .from("orders")
+          .select("*, order_items(*), customers(full_name, phone_number)")
+          .eq("id", order_id)
+          .maybeSingle();
+
+        if (orderData) {
+          const retryOrder = {
+            ...orderData,
+            customer_name: orderData.customers?.full_name || customer_name || "Walk-in",
+            customer_phone: orderData.customers?.phone_number || customer_phone,
+          };
+          pdfBytes = await generateBrandedPdf(retryOrder, orderData.order_items || [], { includeLogo: false });
+
+          const retryFormData = new FormData();
+          retryFormData.append("file", new Blob([pdfBytes], { type: "application/pdf" }), pdfFilename);
+          retryFormData.append("messaging_product", "whatsapp");
+          retryFormData.append("type", "application/pdf");
+
+          const retryMediaResponse = await fetch(mediaUrl, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+            body: retryFormData,
+          });
+          const retryMediaData = await retryMediaResponse.json();
+          console.log("Retry media upload response:", JSON.stringify(retryMediaData, null, 2));
+
+          if (retryMediaResponse.ok && retryMediaData.id) {
+            mediaId = retryMediaData.id;
+            const headerComp = requestBody.template.components.find((c: any) => c.type === "header");
+            if (headerComp) {
+              headerComp.parameters[0].document.id = mediaId;
+            }
+          } else {
+            requestBody.template.components = requestBody.template.components.filter(
+              (c: any) => c.type !== "header"
+            );
+          }
+        } else {
+          requestBody.template.components = requestBody.template.components.filter(
+            (c: any) => c.type !== "header"
+          );
+        }
+      } else {
+        requestBody.template.components = requestBody.template.components.filter(
+          (c: any) => c.type !== "header"
+        );
+      }
     }
 
     const messageDescription = `Template: ${template_name} | To: ${normalizedPhone} | Order: ${orderNum} | Total: OMR ${total} | PDF: ${mediaId ? "attached" : "none"}`;
