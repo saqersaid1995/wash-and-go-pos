@@ -278,14 +278,41 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
 
   useEffect(() => {
     async function load() {
-      const [prRes, itRes, svRes] = await Promise.all([
-        supabase.from("service_pricing").select("id, item_type, service_type, price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
-        supabase.from("items").select("id, item_name").eq("is_active", true).order("item_name"),
-        supabase.from("services").select("id, service_name").eq("is_active", true).order("service_name"),
-      ]);
-      if (prRes.data) setPricingRules(prRes.data as PricingRule[]);
-      if (itRes.data) setDbItems(itRes.data as ItemRecord[]);
-      if (svRes.data) setDbServices(svRes.data as ServiceRecord[]);
+      let prData: PricingRule[] = [];
+      let itData: ItemRecord[] = [];
+      let svData: ServiceRecord[] = [];
+
+      if (navigator.onLine) {
+        const [prRes, itRes, svRes] = await Promise.all([
+          supabase.from("service_pricing").select("id, item_type, service_type, price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
+          supabase.from("items").select("id, item_name").eq("is_active", true).order("item_name"),
+          supabase.from("services").select("id, service_name").eq("is_active", true).order("service_name"),
+        ]);
+        prData = (prRes.data || []) as PricingRule[];
+        itData = (itRes.data || []) as ItemRecord[];
+        svData = (svRes.data || []) as ServiceRecord[];
+      }
+
+      // Fallback to IndexedDB cached data
+      if (prData.length === 0) {
+        const cached = await getCachedPricing();
+        prData = cached.filter((p) => p.is_active).map((p) => ({
+          id: p.id, item_type: p.item_type, service_type: p.service_type,
+          price: p.price, is_active: p.is_active, is_default_service: p.is_default_service,
+        }));
+      }
+      if (itData.length === 0) {
+        const cached = await getCachedItems();
+        itData = cached.filter((i) => i.is_active).map((i) => ({ id: i.id, item_name: i.item_name }));
+      }
+      if (svData.length === 0) {
+        const cached = await getCachedServices();
+        svData = cached.filter((s) => s.is_active).map((s) => ({ id: s.id, service_name: s.service_name }));
+      }
+
+      setPricingRules(prData);
+      setDbItems(itData);
+      setDbServices(svData);
     }
     load();
   }, []);
