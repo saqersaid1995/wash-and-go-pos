@@ -13,9 +13,9 @@ const GRAPH_API_VERSION = "v18.0";
 
 // Reliable URLs for assets
 const LOGO_URL = "https://odrvdzxondyoxzpzfqdk.supabase.co/storage/v1/object/public/item-images/branding%2Flavanderia-logo.jpeg";
-// Noto Sans Arabic — supports Arabic + Latin glyphs
-const ARABIC_FONT_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansArabic/NotoSansArabic-Regular.ttf";
-const ARABIC_FONT_BOLD_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansArabic/NotoSansArabic-Bold.ttf";
+// Amiri font — excellent Arabic + Latin support, static TTF files on npm CDN
+const ARABIC_FONT_URL = "https://cdn.jsdelivr.net/npm/amiri-font@0.117/ttf/amiri-regular.ttf";
+const ARABIC_FONT_BOLD_URL = "https://cdn.jsdelivr.net/npm/amiri-font@0.117/ttf/amiri-bold.ttf";
 
 function normalizePhone(phone: string, defaultCountryCode = "968"): string | null {
   const digits = phone.replace(/\D/g, "");
