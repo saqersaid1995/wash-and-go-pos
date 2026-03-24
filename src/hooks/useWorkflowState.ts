@@ -4,6 +4,8 @@ import { WORKFLOW_STAGES } from "@/types/workflow";
 import { fetchAllOrders, updateOrderStatus, addInternalNote, toggleOrderUrgent, softDeleteOrder } from "@/lib/supabase-queries";
 import { sendReadyForPickupWhatsApp } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
+import { getUnsyncedOrders, getAllOfflineOrders, updateOfflineOrderStatus, addToSyncQueue, generateLocalId, type OfflineOrder } from "@/lib/offline-db";
+import { toast } from "sonner";
 
 export interface WorkflowFilters {
   search: string;
@@ -21,6 +23,40 @@ const initialFilters: WorkflowFilters = {
   dateFilter: "all",
 };
 
+function offlineOrderToWorkflow(o: OfflineOrder): WorkflowOrder {
+  const items = (o.items || []).map((item: any) => ({
+    itemType: item.itemType || "",
+    service: item.serviceId || "",
+    quantity: item.quantity || 1,
+    unitPrice: item.unitPrice || 0,
+    notes: item.notes,
+    conditions: item.conditions || [],
+  }));
+
+  return {
+    id: o.localId,
+    orderNumber: o.orderNumber,
+    customerName: o.customerName || "Walk-in",
+    customerPhone: o.customerPhone || "",
+    orderDate: o.orderDate,
+    deliveryDate: o.deliveryDate || "",
+    orderType: (o.orderType as "regular" | "urgent") || "regular",
+    pickupMethod: (o.pickupMethod as "walk-in" | "delivery" | "app") || "walk-in",
+    paymentStatus: (o.paymentStatus as "unpaid" | "partially-paid" | "paid") || "unpaid",
+    paymentMethod: o.paymentMethod || "cash",
+    totalAmount: o.total,
+    paidAmount: o.paidAmount,
+    remainingBalance: o.remainingBalance,
+    itemCount: items.reduce((s: number, i: any) => s + i.quantity, 0),
+    items,
+    currentStatus: (o.currentStatus as WorkflowStatus) || "received",
+    statusUpdatedAt: o.createdAt,
+    orderNotes: o.orderNotes || undefined,
+    statusHistory: [],
+    internalNotes: [],
+  };
+}
+
 export function useWorkflowState() {
   const [orders, setOrders] = useState<WorkflowOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +65,32 @@ export function useWorkflowState() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Load orders from Supabase
   const loadOrders = useCallback(async () => {
     setLoading(true);
-    const data = await fetchAllOrders();
-    setOrders(data);
+    try {
+      if (navigator.onLine) {
+        const cloudOrders = await fetchAllOrders();
+        // Also merge any unsynced offline orders
+        const offlineOrders = await getUnsyncedOrders();
+        const offlineWorkflow = offlineOrders.map(offlineOrderToWorkflow);
+        // Avoid duplicates (offline orders that haven't synced yet)
+        const cloudIds = new Set(cloudOrders.map((o) => o.orderNumber));
+        const uniqueOffline = offlineWorkflow.filter((o) => !cloudIds.has(o.orderNumber));
+        setOrders([...uniqueOffline, ...cloudOrders]);
+      } else {
+        // Offline: load all offline orders from IndexedDB
+        const allOffline = await getAllOfflineOrders();
+        setOrders(allOffline.map(offlineOrderToWorkflow));
+      }
+    } catch (err) {
+      console.error("loadOrders error, falling back to offline:", err);
+      try {
+        const allOffline = await getAllOfflineOrders();
+        setOrders(allOffline.map(offlineOrderToWorkflow));
+      } catch {
+        setOrders([]);
+      }
+    }
     setLoading(false);
   }, []);
 
@@ -76,12 +133,26 @@ export function useWorkflowState() {
       })
     );
 
+    if (!navigator.onLine) {
+      // Offline: update local order and queue sync action
+      const isLocalOrder = orderId.startsWith("local-");
+      if (isLocalOrder) {
+        await updateOfflineOrderStatus(orderId, toStatus);
+      } else {
+        await addToSyncQueue({
+          actionType: "update_order_status",
+          localId: generateLocalId(),
+          payload: { orderId, fromStatus, toStatus },
+        });
+      }
+      return {};
+    }
+
     await updateOrderStatus(orderId, fromStatus, toStatus, changedBy);
 
     // Trigger WhatsApp when moving from received → ready-for-pickup
     let whatsappResult: { success: boolean; status: string; error?: string } | undefined;
     if (fromStatus === "received" && toStatus === "ready-for-pickup") {
-      // Check if already sent
       const { data: orderData } = await supabase
         .from("orders")
         .select("ready_pickup_whatsapp_sent, customer_id")
@@ -145,6 +216,15 @@ export function useWorkflowState() {
       )
     );
 
+    if (!navigator.onLine) {
+      await addToSyncQueue({
+        actionType: "add_note",
+        localId: generateLocalId(),
+        payload: { orderId, text, createdBy },
+      });
+      return;
+    }
+
     await addInternalNote(orderId, text, createdBy);
   }, []);
 
@@ -160,11 +240,20 @@ export function useWorkflowState() {
       )
     );
 
+    if (!navigator.onLine) {
+      toast.info("Urgent toggle will sync when online.");
+      return;
+    }
+
     await toggleOrderUrgent(orderId, order.orderType);
   }, [orders]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    if (!navigator.onLine) {
+      toast.info("Delete will sync when online.");
+      return;
+    }
     await softDeleteOrder(orderId);
   }, []);
 

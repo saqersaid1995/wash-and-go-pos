@@ -13,6 +13,7 @@ import {
   customerHasOrders,
   fetchAllOrders,
 } from "@/lib/supabase-queries";
+import { getCachedCustomers, getUnsyncedOrders, type CachedCustomer } from "@/lib/offline-db";
 
 function buildCustomerStats(customer: CustomerRecord, orders: WorkflowOrder[]): CustomerWithStats {
   const activeOrders = orders.filter((o) => o.currentStatus !== "delivered");
@@ -38,6 +39,19 @@ function buildCustomerStats(customer: CustomerRecord, orders: WorkflowOrder[]): 
   };
 }
 
+function cachedToCustomerRecord(c: CachedCustomer): CustomerRecord {
+  return {
+    id: c.id,
+    name: c.full_name,
+    phone: c.phone_number,
+    customerType: (c.customer_type || "Regular").toLowerCase() as "regular" | "vip",
+    isActive: c.is_active,
+    createdAt: c.cachedAt || "",
+    updatedAt: c.cachedAt || "",
+    notes: [],
+  };
+}
+
 export function useCustomerState() {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [allOrders, setAllOrders] = useState<WorkflowOrder[]>([]);
@@ -49,9 +63,29 @@ export function useCustomerState() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [custs, ords] = await Promise.all([fetchAllCustomers(), fetchAllOrders()]);
-    setCustomers(custs);
-    setAllOrders(ords);
+    try {
+      if (navigator.onLine) {
+        const [custs, ords] = await Promise.all([fetchAllCustomers(), fetchAllOrders()]);
+        setCustomers(custs);
+        setAllOrders(ords);
+      } else {
+        // Offline: load from IndexedDB cache
+        const cachedCusts = await getCachedCustomers();
+        setCustomers(cachedCusts.map(cachedToCustomerRecord));
+        // For orders offline, we have no cloud orders cached yet but we have offline-created orders
+        // We'll show empty orders for now (offline orders don't have customer_id linkage)
+        setAllOrders([]);
+      }
+    } catch (err) {
+      console.error("loadData error, falling back to cache:", err);
+      try {
+        const cachedCusts = await getCachedCustomers();
+        setCustomers(cachedCusts.map(cachedToCustomerRecord));
+        setAllOrders([]);
+      } catch {
+        // IndexedDB also failed
+      }
+    }
     setLoading(false);
   }, []);
 
@@ -103,11 +137,19 @@ export function useCustomerState() {
   );
 
   const addNote = useCallback(async (customerId: string, text: string, createdBy?: string) => {
+    if (!navigator.onLine) {
+      toast_offline();
+      return;
+    }
     const success = await addCustomerNoteDb(customerId, text, createdBy);
     if (success) await loadData();
   }, [loadData]);
 
   const updateCustomer = useCallback(async (id: string, updates: Partial<Pick<CustomerRecord, "name" | "phone" | "customerType">>) => {
+    if (!navigator.onLine) {
+      toast_offline();
+      return;
+    }
     const dbUpdates: any = {};
     if (updates.name) dbUpdates.full_name = updates.name;
     if (updates.phone) dbUpdates.phone_number = updates.phone;
@@ -118,6 +160,10 @@ export function useCustomerState() {
   }, [loadData]);
 
   const removeCustomer = useCallback(async (id: string): Promise<{ action: "deleted" | "archived" | "error" }> => {
+    if (!navigator.onLine) {
+      toast_offline();
+      return { action: "error" };
+    }
     const hasOrders = await customerHasOrders(id);
     if (hasOrders) {
       const ok = await archiveCustomerDb(id);
@@ -131,6 +177,10 @@ export function useCustomerState() {
   }, [loadData]);
 
   const restoreCustomer = useCallback(async (id: string) => {
+    if (!navigator.onLine) {
+      toast_offline();
+      return false;
+    }
     const ok = await restoreCustomerDb(id);
     if (ok) await loadData();
     return ok;
@@ -158,4 +208,11 @@ export function useCustomerState() {
     totals,
     refetch: loadData,
   };
+}
+
+function toast_offline() {
+  // Lazy import to avoid circular deps
+  import("sonner").then(({ toast }) => {
+    toast.info("This action requires internet connection. Changes will sync when online.");
+  });
 }

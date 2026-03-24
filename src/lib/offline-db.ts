@@ -274,6 +274,20 @@ export async function markOrderSynced(localId: string, cloudId: string) {
   }
 }
 
+export async function getAllOfflineOrders(): Promise<OfflineOrder[]> {
+  const db = await getOfflineDB();
+  return db.getAll("offlineOrders");
+}
+
+export async function updateOfflineOrderStatus(localId: string, newStatus: string) {
+  const db = await getOfflineDB();
+  const order = await db.get("offlineOrders", localId);
+  if (order) {
+    order.currentStatus = newStatus;
+    await db.put("offlineOrders", order);
+  }
+}
+
 // ── Meta ──
 
 export async function setMeta(key: string, value: string) {
