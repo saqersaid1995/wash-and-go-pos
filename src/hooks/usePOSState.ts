@@ -135,7 +135,7 @@ export function usePOSState() {
   const paymentStatus: PaymentStatus =
     paidAmount >= total && total > 0 ? "paid" : paidAmount > 0 ? "partially-paid" : "unpaid";
 
-  // Save to Supabase
+  // Save to Supabase (or offline)
   const saveOrder = useCallback(async () => {
     if (items.length === 0) return { success: false, error: "No items" };
     if (!customerName.trim() && !customerPhone.trim()) {
@@ -144,6 +144,47 @@ export function usePOSState() {
 
     setSaving(true);
     try {
+      const orderItems = items.map((item) => ({
+        itemType: item.itemType,
+        serviceId: item.serviceId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        color: item.color,
+        brand: item.brand,
+        notes: item.notes,
+        conditions: item.conditions,
+      }));
+
+      if (!navigator.onLine) {
+        // Save offline
+        const localId = generateLocalId();
+        await saveOfflineOrder({
+          localId,
+          orderNumber,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          orderDate,
+          deliveryDate,
+          orderType,
+          pickupMethod,
+          paymentStatus,
+          paymentMethod,
+          subtotal,
+          urgentFee,
+          discount,
+          tax: 0,
+          total,
+          paidAmount,
+          remainingBalance,
+          orderNotes,
+          items: orderItems,
+          currentStatus: "received",
+          createdAt: new Date().toISOString(),
+          synced: false,
+        });
+        return { success: true, orderId: localId };
+      }
+
       const result = await createOrder({
         customerId: matchedCustomerId,
         customerName: customerName.trim(),
@@ -155,16 +196,7 @@ export function usePOSState() {
         pickupMethod,
         employeeId,
         orderNotes,
-        items: items.map((item) => ({
-          itemType: item.itemType,
-          serviceId: item.serviceId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          color: item.color,
-          brand: item.brand,
-          notes: item.notes,
-          conditions: item.conditions,
-        })),
+        items: orderItems,
         subtotal,
         urgentFee,
         discount,
