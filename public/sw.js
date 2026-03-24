@@ -1,10 +1,12 @@
-const CACHE_NAME = "lavinderia-v1";
+const CACHE_NAME = "lavinderia-v2";
 const OFFLINE_URL = "/";
 
 // Assets to pre-cache during install
 const PRE_CACHE = [
   "/",
   "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png",
   "/favicon.jpeg",
 ];
 
@@ -34,10 +36,10 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
 
-  // Supabase API calls - network only (offline-db handles caching)
+  // Supabase API calls - network only
   if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/")) return;
 
-  // For navigation requests, use network-first then fall back to cache
+  // Navigation requests: network-first, fallback to cached index
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
@@ -46,7 +48,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => caches.match(OFFLINE_URL) || caches.match(event.request))
+        .catch(() => caches.match(OFFLINE_URL).then((r) => r || caches.match(event.request)))
     );
     return;
   }
@@ -89,8 +91,6 @@ self.addEventListener("message", (event) => {
   if (event.data === "CACHE_ALL") {
     event.waitUntil(
       caches.open(CACHE_NAME).then(async (cache) => {
-        // Cache current page and all sub-resources
-        const keys = await cache.keys();
         return cache.addAll(PRE_CACHE);
       })
     );

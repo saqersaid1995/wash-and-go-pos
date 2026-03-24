@@ -3,7 +3,7 @@ import { useNetwork } from "@/contexts/NetworkContext";
 import { refreshOfflineCache } from "@/lib/offline-cache";
 import { promptInstall, getDeferredPrompt, isPWAInstalled, cacheAppShell } from "@/lib/pwa";
 import {
-  Download, RefreshCw, Cloud, Wifi, WifiOff, CheckCircle2, Loader2, Smartphone,
+  Download, RefreshCw, Cloud, Wifi, WifiOff, CheckCircle2, Loader2, Smartphone, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,61 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { getMeta } from "@/lib/offline-db";
 
+function getDeviceType(): "ios" | "android" | "desktop" {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "desktop";
+}
+
+function ManualInstallInstructions() {
+  const device = getDeviceType();
+
+  return (
+    <Card className="border-dashed border-muted-foreground/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          How to Install
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-xs text-muted-foreground space-y-2">
+        {device === "ios" ? (
+          <>
+            <p className="font-medium text-foreground">On iPhone / iPad (Safari):</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Tap the <strong>Share</strong> button (square with arrow)</li>
+              <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+              <li>Tap <strong>"Add"</strong> to confirm</li>
+            </ol>
+          </>
+        ) : device === "android" ? (
+          <>
+            <p className="font-medium text-foreground">On Android (Chrome):</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Tap the <strong>⋮ menu</strong> (three dots, top right)</li>
+              <li>Tap <strong>"Install app"</strong> or <strong>"Add to Home Screen"</strong></li>
+              <li>Tap <strong>"Install"</strong> to confirm</li>
+            </ol>
+          </>
+        ) : (
+          <>
+            <p className="font-medium text-foreground">On Desktop (Chrome / Edge):</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Look for the <strong>install icon</strong> (⊕) in the address bar</li>
+              <li>Or open the <strong>⋮ menu</strong> → <strong>"Install Lavinderia POS"</strong></li>
+              <li>Click <strong>"Install"</strong> to confirm</li>
+            </ol>
+          </>
+        )}
+        <p className="pt-1 text-muted-foreground/70">
+          After installing, the app will open in its own window and work offline.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OfflineModePanel() {
   const { isOnline, pendingCount, lastSyncTime, isSyncing, syncNow } = useNetwork();
   const [canInstall, setCanInstall] = useState(false);
@@ -19,7 +74,6 @@ export default function OfflineModePanel() {
   const [isCaching, setIsCaching] = useState(false);
   const [cacheInfo, setCacheInfo] = useState<Record<string, string | null>>({});
 
-  // Listen for install prompt availability
   useEffect(() => {
     const check = () => setCanInstall(!!getDeferredPrompt());
     check();
@@ -27,7 +81,6 @@ export default function OfflineModePanel() {
     return () => window.removeEventListener("pwa-install-available", check);
   }, []);
 
-  // Load cache timestamps
   useEffect(() => {
     (async () => {
       const [customers, items, services, pricing] = await Promise.all([
@@ -53,15 +106,12 @@ export default function OfflineModePanel() {
   const handleEnableOffline = useCallback(async () => {
     setIsCaching(true);
     try {
-      // 1. Cache app shell via SW
       await cacheAppShell();
-      // 2. Cache reference data to IndexedDB
       const result = await refreshOfflineCache();
       if (result.success) {
         toast.success(
           `Offline data ready! Cached ${result.counts.customers || 0} customers, ${result.counts.items || 0} items, ${result.counts.pricing || 0} prices.`
         );
-        // Refresh cache info display
         const [customers, items, services, pricing] = await Promise.all([
           getMeta("customers_cached_at"),
           getMeta("items_cached_at"),
@@ -120,17 +170,17 @@ export default function OfflineModePanel() {
         </CardContent>
       </Card>
 
-      {/* Actions Card */}
+      {/* Install & Actions Card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Offline Actions</CardTitle>
+          <CardTitle className="text-sm">Install & Offline Setup</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {/* Install PWA */}
+        <CardContent className="space-y-3">
+          {/* Install PWA - native prompt */}
           {canInstall && !isInstalled && (
-            <Button onClick={handleInstall} className="w-full gap-2" variant="default">
+            <Button onClick={handleInstall} className="w-full gap-2" size="lg">
               <Smartphone className="h-4 w-4" />
-              Install App on Device
+              Install Offline App
             </Button>
           )}
 
@@ -140,6 +190,9 @@ export default function OfflineModePanel() {
               App installed on this device
             </div>
           )}
+
+          {/* Manual instructions when native prompt is not available */}
+          {!canInstall && !isInstalled && <ManualInstallInstructions />}
 
           {/* Enable / Refresh Offline Data */}
           <Button
