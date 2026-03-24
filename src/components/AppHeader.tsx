@@ -34,9 +34,22 @@ interface AppHeaderProps {
 
 export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) {
   const location = useLocation();
-  const { profile, role, signOut } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
+  // Safely try to use auth context - may not be available in all render paths
+  let profile: any = null;
+  let role: AppRole | null = null;
+  let signOut: (() => Promise<void>) | null = null;
+  
+  try {
+    const auth = useAuth();
+    profile = auth.profile;
+    role = auth.role;
+    signOut = auth.signOut;
+  } catch {
+    // Auth context not available (e.g. during initial render)
+  }
+
+  const visibleItems = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
@@ -108,9 +121,11 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {role}
               </Badge>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} title="Logout">
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
+              {signOut && (
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} title="Logout">
+                  <LogOut className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           )}
         </div>
