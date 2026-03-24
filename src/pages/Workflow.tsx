@@ -6,6 +6,7 @@ import OrderDetailDrawer from "@/components/workflow/OrderDetailDrawer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Plus, Loader2 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { toast } from "sonner";
 
 export default function Workflow() {
