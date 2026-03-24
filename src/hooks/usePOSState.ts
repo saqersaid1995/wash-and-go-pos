@@ -44,15 +44,37 @@ export function usePOSState() {
   const searchCustomer = useCallback(async (phone: string) => {
     setCustomerPhoneRaw(phone);
     if (phone.length >= 4) {
-      const found = await fetchCustomerByPhone(phone);
-      if (found) {
-        setMatchedCustomer(found);
-        setMatchedCustomerId(found.id);
-        setCustomerName(found.name);
-        setCustomerNotes(found.notes?.[0]?.text || "");
+      if (navigator.onLine) {
+        const found = await fetchCustomerByPhone(phone);
+        if (found) {
+          setMatchedCustomer(found);
+          setMatchedCustomerId(found.id);
+          setCustomerName(found.name);
+          setCustomerNotes(found.notes?.[0]?.text || "");
+        } else {
+          setMatchedCustomer(null);
+          setMatchedCustomerId(null);
+        }
       } else {
-        setMatchedCustomer(null);
-        setMatchedCustomerId(null);
+        // Offline: search cached customers
+        const cached = await getCachedCustomerByPhone(phone);
+        if (cached) {
+          setMatchedCustomer({
+            id: cached.id,
+            name: cached.full_name,
+            phone: cached.phone_number,
+            customerType: cached.customer_type.toLowerCase() as "regular" | "vip",
+            isActive: cached.is_active,
+            createdAt: "",
+            updatedAt: "",
+            notes: [],
+          });
+          setMatchedCustomerId(cached.id);
+          setCustomerName(cached.full_name);
+        } else {
+          setMatchedCustomer(null);
+          setMatchedCustomerId(null);
+        }
       }
     } else {
       setMatchedCustomer(null);
