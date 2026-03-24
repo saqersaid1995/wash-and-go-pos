@@ -17,10 +17,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
+  Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
   CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw, Trash2,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { formatOMR } from "@/lib/currency";
