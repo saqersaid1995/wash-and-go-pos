@@ -1,27 +1,42 @@
 import { useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-const NAV_ITEMS = [
-  { to: "/", label: "POS" },
-  { to: "/customers", label: "Customers" },
-  { to: "/workflow", label: "Workflow" },
-  { to: "/scan", label: "Scan" },
-  { to: "/reports", label: "Reports" },
-  { to: "/expenses", label: "Expenses" },
-  { to: "/services", label: "Pricing" },
-  { to: "/whatsapp", label: "WhatsApp" },
+type AppRole = "admin" | "cashier";
+
+interface NavItem {
+  to: string;
+  label: string;
+  roles: AppRole[];
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { to: "/", label: "POS", roles: ["admin", "cashier"] },
+  { to: "/customers", label: "Customers", roles: ["admin", "cashier"] },
+  { to: "/workflow", label: "Workflow", roles: ["admin", "cashier"] },
+  { to: "/scan", label: "Scan", roles: ["admin", "cashier"] },
+  { to: "/reports", label: "Reports", roles: ["admin"] },
+  { to: "/expenses", label: "Expenses", roles: ["admin"] },
+  { to: "/services", label: "Pricing", roles: ["admin"] },
+  { to: "/whatsapp", label: "WhatsApp", roles: ["admin"] },
+  { to: "/staff", label: "Staff", roles: ["admin"] },
 ];
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
-  /** Optional right-side content (e.g. POS order summary or page-specific controls) */
   actions?: React.ReactNode;
 }
 
 export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) {
   const location = useLocation();
+  const { profile, role, signOut } = useAuth();
+
+  const visibleItems = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
@@ -38,7 +53,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
 
         {/* Center: Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isActive =
               item.to === "/"
                 ? location.pathname === "/"
@@ -62,7 +77,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
 
         {/* Mobile nav */}
         <nav className="flex md:hidden items-center gap-0.5 overflow-x-auto scrollbar-none">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isActive =
               item.to === "/"
                 ? location.pathname === "/"
@@ -84,12 +99,21 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
           })}
         </nav>
 
-        {/* Right: Actions */}
-        {actions && (
-          <div className="hidden sm:flex items-center gap-2 shrink-0 ml-2">
-            {actions}
-          </div>
-        )}
+        {/* Right: User info + Actions */}
+        <div className="hidden sm:flex items-center gap-2 shrink-0 ml-2">
+          {actions}
+          {profile && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-foreground">{profile.username}</span>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {role}
+              </Badge>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} title="Logout">
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
