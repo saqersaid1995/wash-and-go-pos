@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/customers", label: "Customers", roles: ["admin", "cashier"] },
   { to: "/workflow", label: "Workflow", roles: ["admin", "cashier"] },
   { to: "/scan", label: "Scan", roles: ["admin", "cashier"] },
+  { to: "/offline", label: "Offline", roles: ["admin", "cashier"] },
   { to: "/reports", label: "Reports", roles: ["admin"] },
   { to: "/expenses", label: "Expenses", roles: ["admin"] },
   { to: "/services", label: "Pricing", roles: ["admin"] },
