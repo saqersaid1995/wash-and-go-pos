@@ -1,5 +1,6 @@
 // Laundry POS - Real Data Mode
 import { usePOSState } from "@/hooks/usePOSState";
+import { useOfflineCache } from "@/hooks/useOfflineCache";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
 import GarmentTable from "@/components/pos/GarmentTable";
@@ -13,6 +14,7 @@ import AppHeader from "@/components/AppHeader";
 
 const Index = () => {
   const pos = usePOSState();
+  useOfflineCache();
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
     // Check if item already exists with same service - increment quantity
@@ -37,7 +39,8 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
-      toast.success(`Order ${pos.orderNumber} saved!`);
+      const offlineTag = !navigator.onLine ? " (saved offline)" : "";
+      toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       pos.clearForm();
     } else {
       toast.error(result.error || "Failed to save order");
@@ -55,8 +58,14 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
-      toast.success(`Order ${pos.orderNumber} saved!`);
-      pos.setShowInvoice(true);
+      const offlineTag = !navigator.onLine ? " (saved offline)" : "";
+      toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
+      if (navigator.onLine) {
+        pos.setShowInvoice(true);
+      } else {
+        toast.info("Invoice printing unavailable offline");
+        pos.clearForm();
+      }
     } else {
       toast.error(result.error || "Failed to save order");
     }

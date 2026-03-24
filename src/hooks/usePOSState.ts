@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
+import { saveOfflineOrder, addToSyncQueue, generateLocalId, getCachedCustomerByPhone } from "@/lib/offline-db";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
@@ -43,15 +44,37 @@ export function usePOSState() {
   const searchCustomer = useCallback(async (phone: string) => {
     setCustomerPhoneRaw(phone);
     if (phone.length >= 4) {
-      const found = await fetchCustomerByPhone(phone);
-      if (found) {
-        setMatchedCustomer(found);
-        setMatchedCustomerId(found.id);
-        setCustomerName(found.name);
-        setCustomerNotes(found.notes?.[0]?.text || "");
+      if (navigator.onLine) {
+        const found = await fetchCustomerByPhone(phone);
+        if (found) {
+          setMatchedCustomer(found);
+          setMatchedCustomerId(found.id);
+          setCustomerName(found.name);
+          setCustomerNotes(found.notes?.[0]?.text || "");
+        } else {
+          setMatchedCustomer(null);
+          setMatchedCustomerId(null);
+        }
       } else {
-        setMatchedCustomer(null);
-        setMatchedCustomerId(null);
+        // Offline: search cached customers
+        const cached = await getCachedCustomerByPhone(phone);
+        if (cached) {
+          setMatchedCustomer({
+            id: cached.id,
+            name: cached.full_name,
+            phone: cached.phone_number,
+            customerType: cached.customer_type.toLowerCase() as "regular" | "vip",
+            isActive: cached.is_active,
+            createdAt: "",
+            updatedAt: "",
+            notes: [],
+          });
+          setMatchedCustomerId(cached.id);
+          setCustomerName(cached.full_name);
+        } else {
+          setMatchedCustomer(null);
+          setMatchedCustomerId(null);
+        }
       }
     } else {
       setMatchedCustomer(null);
@@ -112,7 +135,7 @@ export function usePOSState() {
   const paymentStatus: PaymentStatus =
     paidAmount >= total && total > 0 ? "paid" : paidAmount > 0 ? "partially-paid" : "unpaid";
 
-  // Save to Supabase
+  // Save to Supabase (or offline)
   const saveOrder = useCallback(async () => {
     if (items.length === 0) return { success: false, error: "No items" };
     if (!customerName.trim() && !customerPhone.trim()) {
@@ -121,6 +144,47 @@ export function usePOSState() {
 
     setSaving(true);
     try {
+      const orderItems = items.map((item) => ({
+        itemType: item.itemType,
+        serviceId: item.serviceId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        color: item.color,
+        brand: item.brand,
+        notes: item.notes,
+        conditions: item.conditions,
+      }));
+
+      if (!navigator.onLine) {
+        // Save offline
+        const localId = generateLocalId();
+        await saveOfflineOrder({
+          localId,
+          orderNumber,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          orderDate,
+          deliveryDate,
+          orderType,
+          pickupMethod,
+          paymentStatus,
+          paymentMethod,
+          subtotal,
+          urgentFee,
+          discount,
+          tax: 0,
+          total,
+          paidAmount,
+          remainingBalance,
+          orderNotes,
+          items: orderItems,
+          currentStatus: "received",
+          createdAt: new Date().toISOString(),
+          synced: false,
+        });
+        return { success: true, orderId: localId };
+      }
+
       const result = await createOrder({
         customerId: matchedCustomerId,
         customerName: customerName.trim(),
@@ -132,16 +196,7 @@ export function usePOSState() {
         pickupMethod,
         employeeId,
         orderNotes,
-        items: items.map((item) => ({
-          itemType: item.itemType,
-          serviceId: item.serviceId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          color: item.color,
-          brand: item.brand,
-          notes: item.notes,
-          conditions: item.conditions,
-        })),
+        items: orderItems,
         subtotal,
         urgentFee,
         discount,

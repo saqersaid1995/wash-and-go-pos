@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import OfflineStatusBar from "@/components/OfflineStatusBar";
 
 type AppRole = "admin" | "cashier";
 
@@ -52,6 +53,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
   const visibleItems = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
 
   return (
+    <>
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm print:hidden">
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 max-w-[1800px] mx-auto">
         {/* Left: Title */}
@@ -131,5 +133,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
         </div>
       </div>
     </header>
+    <OfflineStatusBar />
+    </>
   );
 }

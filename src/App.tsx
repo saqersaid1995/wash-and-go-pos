@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NetworkProvider } from "@/contexts/NetworkContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Login from "./pages/Login.tsx";
 import Index from "./pages/Index.tsx";
@@ -28,6 +29,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <NetworkProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -43,6 +45,7 @@ const App = () => (
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </NetworkProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
