@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ScanLine, Search, ArrowLeft, Keyboard, X, Tag, Phone,
+  ScanLine, Search, Keyboard, X, Tag, Phone,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { toast } from "sonner";
 import { WORKFLOW_STAGES } from "@/types/workflow";
 import {
