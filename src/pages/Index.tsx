@@ -9,6 +9,7 @@ import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
+import AppHeader from "@/components/AppHeader";
 
 const Index = () => {
   const pos = usePOSState();
