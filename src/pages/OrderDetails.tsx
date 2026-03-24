@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Printer, ChevronRight, ChevronLeft, AlertTriangle,
+  ArrowLeft, Printer, ChevronRight, ChevronLeft, AlertTriangle,
   Clock, StickyNote, History, User, Package, CreditCard, FileText,
   CheckCircle2, Circle, ArrowRight, Loader2, MessageCircle, Send, RefreshCw, Trash2,
 } from "lucide-react";
