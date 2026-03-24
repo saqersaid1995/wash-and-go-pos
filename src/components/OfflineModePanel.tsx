@@ -97,9 +97,9 @@ export default function OfflineModePanel() {
     const accepted = await promptInstall();
     if (accepted) {
       setIsInstalled(true);
-      toast.success("App installed! You can now use it offline.");
+      toast.success("Lavinderia POS is now installed. You can open it from your desktop shortcut or apps list.");
     } else {
-      toast.info("Installation cancelled.");
+      toast.info("Installation cancelled. You can try again anytime.");
     }
   };
 
