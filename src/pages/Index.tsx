@@ -58,8 +58,14 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
-      toast.success(`Order ${pos.orderNumber} saved!`);
-      pos.setShowInvoice(true);
+      const offlineTag = !navigator.onLine ? " (saved offline)" : "";
+      toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
+      if (navigator.onLine) {
+        pos.setShowInvoice(true);
+      } else {
+        toast.info("Invoice printing unavailable offline");
+        pos.clearForm();
+      }
     } else {
       toast.error(result.error || "Failed to save order");
     }
