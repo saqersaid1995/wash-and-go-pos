@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, Crown, AlertCircle, DollarSign, ArrowLeft, Loader2, MoreHorizontal, Eye, Trash2, ArchiveRestore } from "lucide-react";
+import { Search, Users, Crown, AlertCircle, DollarSign, Loader2, MoreHorizontal, Eye, Trash2, ArchiveRestore } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,20 +52,7 @@ export default function Customers() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-3">
-            <button onClick={() => nav("/")} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-lg font-bold tracking-tight">Customers</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-xs font-medium text-primary hover:underline">POS →</a>
-            <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Customers" />
 
       <div className="p-4 max-w-[1400px] mx-auto space-y-4">
         {state.loading ? (

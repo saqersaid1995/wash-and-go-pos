@@ -9,6 +9,7 @@ import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
+import AppHeader from "@/components/AppHeader";
 
 const Index = () => {
   const pos = usePOSState();
@@ -77,28 +78,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold tracking-tight">New Order</h1>
-            <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-              {pos.orderNumber}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:inline">
-              {pos.items.length} Items • {formatOMR(pos.total)}
-            </span>
-            <a href="/scan" className="text-xs font-medium text-primary hover:underline">Scan →</a>
-            <a href="/customers" className="text-xs font-medium text-primary hover:underline">Customers →</a>
-            <a href="/workflow" className="text-xs font-medium text-primary hover:underline">Workflow →</a>
-            <a href="/reports" className="text-xs font-medium text-primary hover:underline">Reports →</a>
-            <a href="/services" className="text-xs font-medium text-primary hover:underline">Pricing →</a>
-            <a href="/whatsapp" className="text-xs font-medium text-primary hover:underline">WhatsApp →</a>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        title="New Order"
+        subtitle={pos.orderNumber}
+        actions={
+          <span className="text-sm text-muted-foreground">
+            {pos.items.length} Items • {formatOMR(pos.total)}
+          </span>
+        }
+      />
 
       {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-4 p-4 max-w-[1600px] mx-auto">

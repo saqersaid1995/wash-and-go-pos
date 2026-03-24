@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { NavLink } from "@/components/NavLink";
+import AppHeader from "@/components/AppHeader";
 import { Plus, Trash2, Loader2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
@@ -81,16 +81,7 @@ const Expenses = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <h1 className="text-lg font-bold tracking-tight">Expense Management</h1>
-          <div className="flex items-center gap-3">
-            <NavLink to="/">POS</NavLink>
-            <NavLink to="/reports">Reports</NavLink>
-            <NavLink to="/workflow">Workflow</NavLink>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Expenses" />
 
       <div className="p-4 max-w-[1200px] mx-auto space-y-6">
         {/* Add Expense Form */}

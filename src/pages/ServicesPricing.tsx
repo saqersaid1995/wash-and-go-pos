@@ -17,7 +17,7 @@ import {
   Plus, Pencil, Trash2, Search, Loader2, DollarSign, Settings, Package, Wrench, Upload, X, Image as ImageIcon, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { NavLink } from "@/components/NavLink";
+import AppHeader from "@/components/AppHeader";
 import { formatOMR } from "@/lib/currency";
 
 // ─── Types ───
@@ -741,19 +741,7 @@ function PricingRulesTab() {
 export default function ServicesPricing() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-3">
-            <Settings className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold tracking-tight">Services & Pricing</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavLink to="/">POS</NavLink>
-            <NavLink to="/workflow">Workflow</NavLink>
-            <NavLink to="/reports">Reports</NavLink>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Services & Pricing" />
 
       <div className="p-4 max-w-[1200px] mx-auto">
         <Tabs defaultValue="items" className="space-y-4">
