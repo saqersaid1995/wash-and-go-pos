@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, StandardFonts, rgb, grayscale } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb, grayscale } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
+import { encode as encodeQR } from "https://esm.sh/uqr@0.1.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +10,12 @@ const corsHeaders = {
 };
 
 const GRAPH_API_VERSION = "v18.0";
+
+// Reliable URLs for assets
+const LOGO_URL = "https://odrvdzxondyoxzpzfqdk.supabase.co/storage/v1/object/public/item-images/branding%2Flavanderia-logo.jpeg";
+// Noto Sans Arabic — supports Arabic + Latin glyphs
+const ARABIC_FONT_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansArabic/NotoSansArabic-Regular.ttf";
+const ARABIC_FONT_BOLD_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansArabic/NotoSansArabic-Bold.ttf";
 
 function normalizePhone(phone: string, defaultCountryCode = "968"): string | null {
   const digits = phone.replace(/\D/g, "");
@@ -22,103 +30,137 @@ function fmtOMR(amount: number): string {
   return `OMR ${Math.abs(amount).toFixed(3)}`;
 }
 
-// ─── Branded PDF generation using pdf-lib ───
+// Check if text contains Arabic characters
+function hasArabic(text: string): boolean {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
+// Draw QR code using pdf-lib shapes from uqr matrix
+function drawQrCode(
+  page: any,
+  matrix: boolean[][],
+  x: number,
+  y: number,
+  size: number
+) {
+  const modules = matrix.length;
+  const cellSize = size / modules;
+  const black = rgb(0, 0, 0);
+
+  for (let row = 0; row < modules; row++) {
+    for (let col = 0; col < modules; col++) {
+      if (matrix[row][col]) {
+        page.drawRectangle({
+          x: x + col * cellSize,
+          y: y + (modules - 1 - row) * cellSize,
+          width: cellSize,
+          height: cellSize,
+          color: black,
+        });
+      }
+    }
+  }
+}
+
+// ─── Branded PDF generation ───
 
 async function generateBrandedPdf(
   order: any,
   items: any[],
-  logoUrl?: string | null
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  // Receipt-style page: 80mm x 210mm → points (1mm ≈ 2.835pt)
-  const W = 226.8; // 80mm
-  const H = 595.3; // 210mm
+  pdf.registerFontkit(fontkit);
+
+  // Receipt-style page: 80mm x 210mm → points
+  const W = 226.8;
+  const H = 595.3;
   const page = pdf.addPage([W, H]);
 
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
+  // ─── Load fonts ───
+  let fontRegular: any;
+  let fontBold: any;
+
+  try {
+    const [regularBytes, boldBytes] = await Promise.all([
+      fetch(ARABIC_FONT_URL).then(r => r.arrayBuffer()),
+      fetch(ARABIC_FONT_BOLD_URL).then(r => r.arrayBuffer()),
+    ]);
+    fontRegular = await pdf.embedFont(regularBytes, { subset: true });
+    fontBold = await pdf.embedFont(boldBytes, { subset: true });
+  } catch (e) {
+    console.error("Failed to load Arabic fonts, falling back to built-in:", e);
+    const { StandardFonts } = await import("https://esm.sh/pdf-lib@1.17.1");
+    fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
+    fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  }
 
   const gray = rgb(0.4, 0.4, 0.4);
   const black = rgb(0, 0, 0);
-  const red = rgb(0.757, 0.071, 0.122); // #c1121f
+  const red = rgb(0.757, 0.071, 0.122);
   const lineGray = grayscale(0.85);
 
-  const LM = 14; // left margin
-  const RM = W - 14; // right margin
-  const CW = RM - LM; // content width
+  const LM = 14;
+  const RM = W - 14;
+  const CW = RM - LM;
   let y = H - 20;
 
-  // Helper: draw horizontal divider
   const divider = () => {
     page.drawLine({ start: { x: LM, y }, end: { x: RM, y }, thickness: 0.5, color: lineGray });
     y -= 8;
   };
 
-  // Helper: draw text right-aligned
   const drawRight = (text: string, yPos: number, font = fontRegular, size = 8, color = black) => {
     const tw = font.widthOfTextAtSize(text, size);
     page.drawText(text, { x: RM - tw, y: yPos, size, font, color });
   };
 
-  // Helper: safe text (replace non-Latin chars that Helvetica can't render with ?)
-  const safe = (text: string) => {
-    // Helvetica supports Latin-1 (code points 0-255). Replace others.
-    return text.replace(/[^\x00-\xFF]/g, (ch) => {
-      // Try to keep basic Arabic numerals mapped
-      return "?";
-    });
+  // Truncate text to fit within a max width
+  const truncate = (text: string, font: any, size: number, maxW: number): string => {
+    if (font.widthOfTextAtSize(text, size) <= maxW) return text;
+    let t = text;
+    while (t.length > 1 && font.widthOfTextAtSize(t + "…", size) > maxW) {
+      t = t.slice(0, -1);
+    }
+    return t + "…";
   };
 
   // ─── Logo + Header ───
   let logoImage: any = null;
-  if (logoUrl) {
-    try {
-      const logoResp = await fetch(logoUrl);
-      if (logoResp.ok) {
-        const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
-        const ct = logoResp.headers.get("content-type") || "";
-        if (ct.includes("png")) {
-          logoImage = await pdf.embedPng(logoBytes);
-        } else {
-          logoImage = await pdf.embedJpg(logoBytes);
-        }
-      }
-    } catch (e) {
-      console.error("Logo embed failed:", e);
+  try {
+    const logoResp = await fetch(LOGO_URL);
+    if (logoResp.ok) {
+      const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
+      const ct = logoResp.headers.get("content-type") || "";
+      logoImage = ct.includes("png")
+        ? await pdf.embedPng(logoBytes)
+        : await pdf.embedJpg(logoBytes);
     }
+  } catch (e) {
+    console.error("Logo embed failed:", e);
   }
+
+  const brandName = "LAVANDERIA";
+  const tagline = "Professional Laundry Services";
 
   if (logoImage) {
     const logoSize = 22;
-    const logoX = (W - logoSize - fontBold.widthOfTextAtSize("LAVANDERIA", 11) - 6) / 2;
+    const titleW = fontBold.widthOfTextAtSize(brandName, 11);
+    const logoX = (W - logoSize - titleW - 6) / 2;
     page.drawImage(logoImage, { x: logoX, y: y - logoSize + 4, width: logoSize, height: logoSize });
-    page.drawText("LAVANDERIA", {
-      x: logoX + logoSize + 6,
-      y: y - 8,
-      size: 11,
-      font: fontBold,
-      color: black,
-    });
-    page.drawText("Professional Laundry Services", {
-      x: logoX + logoSize + 6,
-      y: y - 18,
-      size: 7,
-      font: fontRegular,
-      color: gray,
-    });
+    page.drawText(brandName, { x: logoX + logoSize + 6, y: y - 8, size: 11, font: fontBold, color: black });
+    page.drawText(tagline, { x: logoX + logoSize + 6, y: y - 18, size: 7, font: fontRegular, color: gray });
   } else {
-    // No logo — center text
-    const titleW = fontBold.widthOfTextAtSize("LAVANDERIA", 11);
-    page.drawText("LAVANDERIA", { x: (W - titleW) / 2, y: y - 8, size: 11, font: fontBold, color: black });
-    const tagW = fontRegular.widthOfTextAtSize("Professional Laundry Services", 7);
-    page.drawText("Professional Laundry Services", { x: (W - tagW) / 2, y: y - 18, size: 7, font: fontRegular, color: gray });
+    const titleW = fontBold.widthOfTextAtSize(brandName, 11);
+    page.drawText(brandName, { x: (W - titleW) / 2, y: y - 8, size: 11, font: fontBold, color: black });
+    const tagW = fontRegular.widthOfTextAtSize(tagline, 7);
+    page.drawText(tagline, { x: (W - tagW) / 2, y: y - 18, size: 7, font: fontRegular, color: gray });
   }
 
   y -= 28;
   divider();
 
   // ─── Phone row (large) ───
-  const phone = safe(order.customer_phone || "—");
+  const phone = order.customer_phone || "—";
   const phoneLabelW = fontRegular.widthOfTextAtSize("Phone: ", 7);
   const phoneW = fontBold.widthOfTextAtSize(phone, 16);
   const phoneBlockW = phoneLabelW + phoneW;
@@ -129,13 +171,10 @@ async function generateBrandedPdf(
   divider();
 
   // ─── Info grid ───
-  const infoSize = 8;
-  const labelSize = 7;
-
   const drawInfoRow = (label: string, value: string, x: number, yPos: number) => {
-    page.drawText(label, { x, y: yPos, size: labelSize, font: fontRegular, color: gray });
-    const lw = fontRegular.widthOfTextAtSize(label, labelSize);
-    page.drawText(safe(value), { x: x + lw, y: yPos, size: infoSize, font: fontBold, color: black });
+    page.drawText(label, { x, y: yPos, size: 7, font: fontRegular, color: gray });
+    const lw = fontRegular.widthOfTextAtSize(label, 7);
+    page.drawText(value, { x: x + lw, y: yPos, size: 8, font: fontBold, color: black });
   };
 
   const col2X = LM + CW / 2 + 4;
@@ -168,15 +207,18 @@ async function generateBrandedPdf(
   y -= 10;
 
   // ─── Table rows ───
+  const itemColMaxW = CW * 0.28;
+  const serviceColMaxW = CW * 0.28;
+
   for (const item of items) {
-    if (y < 60) break; // safety
-    const itemName = safe(item.item_type || "—");
-    const serviceName = safe(item.service_type || "—");
+    if (y < 80) break; // leave space for totals + QR
+    const itemName = truncate(item.item_type || "—", fontRegular, tdSize, itemColMaxW);
+    const serviceName = truncate(item.service_type || "—", fontRegular, tdSize, serviceColMaxW);
     const qty = String(item.quantity || 1);
     const lineTotal = fmtOMR((Number(item.unit_price) || 0) * (item.quantity || 1));
 
-    page.drawText(itemName.substring(0, 14), { x: colItem, y, size: tdSize, font: fontRegular, color: black });
-    page.drawText(serviceName.substring(0, 12), { x: colService, y, size: tdSize, font: fontRegular, color: black });
+    page.drawText(itemName, { x: colItem, y, size: tdSize, font: fontRegular, color: black });
+    page.drawText(serviceName, { x: colService, y, size: tdSize, font: fontRegular, color: black });
     const qtyW = fontRegular.widthOfTextAtSize(qty, tdSize);
     page.drawText(qty, { x: colQty - qtyW / 2, y, size: tdSize, font: fontRegular, color: black });
     drawRight(lineTotal, y, fontRegular, tdSize);
@@ -207,6 +249,18 @@ async function generateBrandedPdf(
   }
 
   y -= 6;
+
+  // ─── QR Code ───
+  const qrValue = order.qr_value || order.order_number || "N/A";
+  try {
+    const qrResult = encodeQR(qrValue);
+    const qrSize = 50;
+    const qrX = (W - qrSize) / 2;
+    drawQrCode(page, qrResult.data, qrX, Math.max(y - qrSize, 20), qrSize);
+    y = Math.max(y - qrSize - 6, 20);
+  } catch (e) {
+    console.error("QR generation failed:", e);
+  }
 
   // ─── Footer ───
   const footerText = "Thank you for your business!";
@@ -278,9 +332,6 @@ Deno.serve(async (req) => {
     let pdfBytes: Uint8Array | null = null;
     let pdfFilename = `invoice_${order_number || "unknown"}.pdf`;
 
-    // Try to get the logo from the published app
-    const logoUrl = "https://wash-and-go-pos.lovable.app/assets/lavanderia-logo.jpeg";
-
     if (order_id) {
       const { data: orderData } = await supabase
         .from("orders")
@@ -295,12 +346,12 @@ Deno.serve(async (req) => {
           customer_phone: orderData.customers?.phone_number || customer_phone,
         };
 
-        pdfBytes = await generateBrandedPdf(orderForPdf, orderData.order_items || [], logoUrl);
+        pdfBytes = await generateBrandedPdf(orderForPdf, orderData.order_items || []);
         pdfFilename = `invoice_${orderData.order_number}.pdf`;
       }
     }
 
-    // If no order found but we still have basic info, generate a minimal PDF
+    // Fallback minimal PDF
     if (!pdfBytes) {
       const fallbackOrder = {
         order_number: order_number || "N/A",
@@ -312,7 +363,7 @@ Deno.serve(async (req) => {
         paid_amount: (total_amount || 0) - (remaining_amount || 0),
         remaining_amount: remaining_amount || 0,
       };
-      pdfBytes = await generateBrandedPdf(fallbackOrder, [], logoUrl);
+      pdfBytes = await generateBrandedPdf(fallbackOrder, []);
     }
 
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
@@ -323,20 +374,14 @@ Deno.serve(async (req) => {
 
     const components: any[] = [];
 
-    // Add document header component
     components.push({
       type: "header",
-      parameters: [
-        {
-          type: "document",
-          document: {
-            filename: pdfFilename,
-          },
-        },
-      ],
+      parameters: [{
+        type: "document",
+        document: { filename: pdfFilename },
+      }],
     });
 
-    // Body parameters: {{1}} = order_number, {{2}} = total_amount
     components.push({
       type: "body",
       parameters: [
