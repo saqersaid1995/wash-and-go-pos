@@ -17,7 +17,7 @@ import {
   Plus, Pencil, Trash2, Search, Loader2, DollarSign, Settings, Package, Wrench, Upload, X, Image as ImageIcon, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { NavLink } from "@/components/NavLink";
+import AppHeader from "@/components/AppHeader";
 import { formatOMR } from "@/lib/currency";
 
 // ─── Types ───
