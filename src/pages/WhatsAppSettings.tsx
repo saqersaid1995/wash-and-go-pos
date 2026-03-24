@@ -81,6 +81,7 @@ const WhatsAppSettings = () => {
     try {
       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
         body: {
+          order_id: selectedOrderId || null,
           customer_phone: testPhone,
           customer_name: testName,
           order_number: testOrderNumber,
