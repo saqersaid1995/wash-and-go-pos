@@ -39,7 +39,8 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
-      toast.success(`Order ${pos.orderNumber} saved!`);
+      const offlineTag = !navigator.onLine ? " (saved offline)" : "";
+      toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       pos.clearForm();
     } else {
       toast.error(result.error || "Failed to save order");
