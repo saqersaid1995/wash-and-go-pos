@@ -14,6 +14,7 @@ import AppHeader from "@/components/AppHeader";
 
 const Index = () => {
   const pos = usePOSState();
+  useOfflineCache();
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
     // Check if item already exists with same service - increment quantity
