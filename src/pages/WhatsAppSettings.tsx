@@ -140,33 +140,24 @@ const WhatsAppSettings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-5 w-5" />
-            </a>
-            <MessageSquare className="h-5 w-5 text-green-600" />
-            <h1 className="text-lg font-bold tracking-tight">WhatsApp Settings</h1>
+      <AppHeader
+        title="WhatsApp Settings"
+        actions={
+          <div className="flex items-center gap-2">
+            <Label htmlFor="prod-mode" className="text-sm text-muted-foreground">
+              Production Mode
+            </Label>
+            <Switch
+              id="prod-mode"
+              checked={productionMode}
+              onCheckedChange={setProductionMode}
+            />
+            <Badge variant={productionMode ? "default" : "secondary"}>
+              {productionMode ? "ON" : "OFF"}
+            </Badge>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="prod-mode" className="text-sm text-muted-foreground">
-                Production Mode
-              </Label>
-              <Switch
-                id="prod-mode"
-                checked={productionMode}
-                onCheckedChange={setProductionMode}
-              />
-              <Badge variant={productionMode ? "default" : "secondary"}>
-                {productionMode ? "ON" : "OFF"}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       <div className="max-w-5xl mx-auto p-4 space-y-6">
         {/* Token Alert */}

@@ -37,21 +37,7 @@ export default function Workflow() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold tracking-tight">Workflow</h1>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Operations Board</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link to="/">
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                <Plus className="h-3.5 w-3.5" /> New Order
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Workflow" subtitle="Operations Board" />
 
       <div className="p-4 space-y-4 max-w-[1800px] mx-auto">
         {wf.loading ? (

@@ -48,21 +48,7 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold tracking-tight">Reports & Analytics</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavLink to="/">POS</NavLink>
-            <NavLink to="/expenses">Expenses</NavLink>
-            <NavLink to="/workflow">Workflow</NavLink>
-            <NavLink to="/customers">Customers</NavLink>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Reports & Analytics" />
 
       <div className="p-4 max-w-[1600px] mx-auto space-y-4">
         {/* Period Selector & Export Row */}
