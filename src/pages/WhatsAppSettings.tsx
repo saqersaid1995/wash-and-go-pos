@@ -217,6 +217,37 @@ const WhatsAppSettings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Order Selector */}
+            <div className="space-y-2">
+              <Label>Select Order (auto-fills fields & attaches PDF)</Label>
+              <Select
+                value={selectedOrderId}
+                onValueChange={(val) => {
+                  setSelectedOrderId(val);
+                  const order = orders.find((o: any) => o.id === val);
+                  if (order) {
+                    setTestOrderNumber(order.order_number);
+                    setTestAmount(Number(order.total_amount).toFixed(3));
+                    if (order.customers) {
+                      setTestName(order.customers.full_name || "");
+                      setTestPhone(order.customers.phone_number || "968");
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an order to test with..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o: any) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.order_number} — OMR {Number(o.total_amount).toFixed(3)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="test-phone">Recipient Phone</Label>
