@@ -20,7 +20,15 @@ import { ScanBarcode } from "lucide-react";
 const Index = () => {
   const pos = usePOSState();
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanCode, setScanCode] = useState<string | undefined>();
   useOfflineCache();
+
+  // Global barcode scanner listener — auto-opens payment modal
+  const handleBarcodeScan = useCallback((code: string) => {
+    setScanCode(code);
+    setScanOpen(true);
+  }, []);
+  useBarcodeScanner(handleBarcodeScan, !scanOpen);
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
     // Check if item already exists with same service - increment quantity
