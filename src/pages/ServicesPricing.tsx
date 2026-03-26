@@ -548,10 +548,12 @@ function PricingRulesTab() {
     // Upsert enabled rows, disable unchecked existing rows
     for (const row of serviceRows) {
       const price = parseFloat(row.price) || 0;
+      const urgentPrice = row.urgentPrice ? parseFloat(row.urgentPrice) : null;
       if (row.enabled) {
         if (row.existingRuleId) {
           await supabase.from("service_pricing").update({
             price,
+            urgent_price: urgentPrice,
             is_active: true,
             is_default_service: row.isDefault,
             item_type: selectedItem.item_name,
@@ -564,6 +566,7 @@ function PricingRulesTab() {
             item_type: selectedItem.item_name,
             service_type: row.serviceName,
             price,
+            urgent_price: urgentPrice,
             is_active: true,
             is_default_service: row.isDefault,
           });
