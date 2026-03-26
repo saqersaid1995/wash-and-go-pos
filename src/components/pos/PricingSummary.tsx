@@ -63,12 +63,6 @@ export default function PricingSummary(props: Props) {
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatOMR(subtotal)}</span>
         </div>
-        {urgentFee > 0 && (
-          <div className="flex justify-between text-accent">
-            <span>Urgent Fee (50%)</span>
-            <span>+{formatOMR(urgentFee)}</span>
-          </div>
-        )}
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Discount</span>
           <input

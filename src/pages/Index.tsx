@@ -137,7 +137,6 @@ const Index = () => {
           <div className="lg:sticky lg:top-20 space-y-4">
             <PricingSummary
               subtotal={pos.subtotal}
-              urgentFee={pos.urgentFee}
               discount={pos.discount}
               total={pos.total}
               paidAmount={pos.paidAmount}
