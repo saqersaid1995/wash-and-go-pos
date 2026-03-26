@@ -22,12 +22,14 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   is_active: boolean;
   is_default_service: boolean;
 }
 
 interface Props {
   items: OrderItem[];
+  orderType: "regular" | "urgent";
   onAdd: () => void;
   onUpdate: (id: string, updates: Partial<OrderItem>) => void;
   onRemove: (id: string) => void;
