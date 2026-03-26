@@ -136,7 +136,6 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
           value={item.itemType}
           onChange={(e) => {
             const newItemType = e.target.value;
-            // Find default service for this item
             const defaultRule = pricingRules.find((r) => r.item_type === newItemType && r.is_default_service && r.is_active);
             const updates: Partial<OrderItem> = {
               itemType: newItemType,
@@ -144,17 +143,18 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
               isDefaultServiceSelected: false,
             };
             if (defaultRule) {
+              const effectivePrice = orderType === "urgent" && defaultRule.urgent_price != null ? defaultRule.urgent_price : defaultRule.price;
               updates.serviceId = defaultRule.service_type;
-              updates.unitPrice = defaultRule.price;
-              updates.defaultPrice = defaultRule.price;
+              updates.unitPrice = effectivePrice;
+              updates.defaultPrice = effectivePrice;
               updates.isDefaultServiceSelected = true;
             } else {
-              // Fallback: try first active rule for this item
               const firstRule = pricingRules.find((r) => r.item_type === newItemType && r.is_active);
               if (firstRule) {
+                const effectivePrice = orderType === "urgent" && firstRule.urgent_price != null ? firstRule.urgent_price : firstRule.price;
                 updates.serviceId = firstRule.service_type;
-                updates.unitPrice = firstRule.price;
-                updates.defaultPrice = firstRule.price;
+                updates.unitPrice = effectivePrice;
+                updates.defaultPrice = effectivePrice;
               } else {
                 updates.serviceId = "";
                 updates.unitPrice = 0;
