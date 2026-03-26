@@ -57,8 +57,15 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
   }, []);
 
   useEffect(() => {
-    if (open) resetToScan();
-  }, [open, resetToScan]);
+    if (open) {
+      resetToScan();
+      // Auto-search if opened with a pre-scanned code
+      if (initialCode) {
+        setValue(initialCode);
+        setTimeout(() => handleSearch(initialCode), 50);
+      }
+    }
+  }, [open, resetToScan, initialCode, handleSearch]);
 
   const handleSearch = useCallback(async (code: string) => {
     const trimmed = code.trim();
