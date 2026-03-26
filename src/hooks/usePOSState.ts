@@ -128,6 +128,31 @@ export function usePOSState() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
+  // Recalculate all item prices when order type changes
+  const setOrderType = useCallback(async (newType: OrderType) => {
+    setOrderTypeRaw(newType);
+    // Fetch pricing rules if not cached
+    if (pricingRulesRef.current.length === 0 && navigator.onLine) {
+      const { data } = await supabase
+        .from("service_pricing")
+        .select("item_type, service_type, price, urgent_price")
+        .eq("is_active", true);
+      if (data) pricingRulesRef.current = data as typeof pricingRulesRef.current;
+    }
+    const rules = pricingRulesRef.current;
+    if (rules.length === 0) return;
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.isManualPriceOverride) return item; // Don't override manual prices
+        const rule = rules.find((r) => r.item_type === item.itemType && r.service_type === item.serviceId);
+        if (!rule) return item;
+        const effectivePrice = newType === "urgent" && rule.urgent_price != null ? rule.urgent_price : rule.price;
+        return { ...item, unitPrice: effectivePrice, defaultPrice: effectivePrice };
+      })
+    );
+  }, []);
+
   // Calculations — no global urgent multiplier; prices are per-item
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const urgentFee = 0; // kept for API compatibility but no longer used
