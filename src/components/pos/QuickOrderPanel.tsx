@@ -10,6 +10,7 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   is_active: boolean;
   is_default_service: boolean;
 }
@@ -20,11 +21,13 @@ interface QuickItem {
   imageUrl: string;
   defaultService: string;
   defaultPrice: number;
+  defaultUrgentPrice: number | null;
   sortOrder: number;
 }
 
 interface Props {
   items: OrderItem[];
+  orderType: "regular" | "urgent";
   onAddQuickItem: (itemType: string, serviceId: string, price: number) => void;
 }
 
