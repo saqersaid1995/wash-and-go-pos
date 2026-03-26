@@ -78,6 +78,9 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
   );
   const hasWarning = item.itemType && item.serviceId && !matchingRule;
 
+  // Determine if urgent price is missing for urgent orders
+  const urgentPriceMissing = orderType === "urgent" && matchingRule && matchingRule.urgent_price == null;
+
   const availableServiceNames = item.itemType
     ? [...new Set(pricingRules.filter((r) => r.item_type === item.itemType && r.is_active).map((r) => r.service_type))]
     : dbServices.map((s) => s.service_name);
