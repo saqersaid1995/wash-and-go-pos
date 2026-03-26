@@ -251,6 +251,13 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
         </div>
       )}
 
+      {urgentPriceMissing && (
+        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Urgent price not set — using regular price
+        </div>
+      )}
+
       {hasWarning && (
         <div className="flex items-center gap-1.5 mt-2 text-xs text-destructive">
           <AlertCircle className="h-3.5 w-3.5" />
