@@ -198,7 +198,14 @@ const Index = () => {
         />
       )}
       {/* Scan Order Modal */}
-      <ScanOrderModal open={scanOpen} onOpenChange={setScanOpen} />
+      <ScanOrderModal
+        open={scanOpen}
+        onOpenChange={(open) => {
+          setScanOpen(open);
+          if (!open) setScanCode(undefined);
+        }}
+        initialCode={scanCode}
+      />
     </div>
   );
 };
