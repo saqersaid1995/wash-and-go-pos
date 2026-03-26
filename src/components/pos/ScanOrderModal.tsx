@@ -297,7 +297,7 @@ export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalPro
               <InfoRow label="Customer" value={order.customerName} />
               <InfoRow label="Status" value="Ready for Pickup" icon={<PackageCheck className="h-3.5 w-3.5 text-primary" />} />
               <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
-              <div className="flex justify-between font-semibold text-green-600">
+              <div className="flex justify-between font-semibold text-primary">
                 <span>Fully Paid</span>
                 <span><CheckCircle2 className="h-4 w-4 inline" /></span>
               </div>
