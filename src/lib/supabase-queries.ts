@@ -158,11 +158,11 @@ export async function searchOrderByCode(code: string): Promise<WorkflowOrder | n
   let order = await fetchOrderByNumber(cleaned);
   if (order) return order;
 
-  // Try qr_value
+  // Try qr_value (try both with and without prefix)
   const { data } = await supabase
     .from("orders")
     .select(ORDER_SELECT)
-    .eq("qr_value", `ORDER:${code}`)
+    .eq("qr_value", `ORDER:${cleaned}`)
     .maybeSingle();
 
   if (data) return mapDbOrderToWorkflow(data);
@@ -171,7 +171,7 @@ export async function searchOrderByCode(code: string): Promise<WorkflowOrder | n
   const { data: partialData } = await supabase
     .from("orders")
     .select(ORDER_SELECT)
-    .ilike("order_number", `%${code}%`)
+    .ilike("order_number", `%${cleaned}%`)
     .limit(1)
     .maybeSingle();
 
