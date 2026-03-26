@@ -252,7 +252,7 @@ export function usePOSState() {
     setMatchedCustomer(null);
     setMatchedCustomerId(null);
     setDeliveryDate("");
-    setOrderType("regular");
+    setOrderTypeRaw("regular");
     setPickupMethod("walk-in");
     setEmployeeId("");
     setOrderNotes("");
