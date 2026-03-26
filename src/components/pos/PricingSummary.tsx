@@ -4,7 +4,6 @@ import { formatOMR } from "@/lib/currency";
 
 interface Props {
   subtotal: number;
-  urgentFee: number;
   discount: number;
   total: number;
   paidAmount: number;
