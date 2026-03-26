@@ -43,7 +43,7 @@ export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Pr
       if (navigator.onLine) {
         const [itemsRes, pricingRes] = await Promise.all([
           supabase.from("items").select("item_name, item_name_ar, image_url, sort_order, show_in_quick_add").eq("is_active", true).eq("show_in_quick_add", true).order("sort_order").order("item_name"),
-          supabase.from("service_pricing").select("item_type, service_type, price, is_active, is_default_service").eq("is_active", true),
+          supabase.from("service_pricing").select("item_type, service_type, price, urgent_price, is_active, is_default_service").eq("is_active", true),
         ]);
         allItems = (itemsRes.data || []) as typeof allItems;
         rules = (pricingRes.data || []) as PricingRule[];
