@@ -22,8 +22,11 @@ export function usePOSState() {
   const [orderNumber, setOrderNumber] = useState(generateOrderNumber);
   const [orderDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deliveryDate, setDeliveryDate] = useState("");
-  const [orderType, setOrderType] = useState<OrderType>("regular");
+  const [orderType, setOrderTypeRaw] = useState<OrderType>("regular");
   const [pickupMethod, setPickupMethod] = useState<PickupMethod>("walk-in");
+
+  // Keep a ref to pricing rules for order type switching
+  const pricingRulesRef = useRef<Array<{ item_type: string; service_type: string; price: number; urgent_price: number | null }>>([]);
   const [employeeId, setEmployeeId] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
 
