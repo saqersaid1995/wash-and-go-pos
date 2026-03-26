@@ -312,7 +312,7 @@ export default function GarmentTable({ items, orderType, onAdd, onUpdate, onRemo
         const cached = await getCachedPricing();
         prData = cached.filter((p) => p.is_active).map((p) => ({
           id: p.id, item_type: p.item_type, service_type: p.service_type,
-          price: p.price, is_active: p.is_active, is_default_service: p.is_default_service,
+          price: p.price, urgent_price: (p as any).urgent_price ?? null, is_active: p.is_active, is_default_service: p.is_default_service,
         }));
       }
       if (itData.length === 0) {
