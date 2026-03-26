@@ -285,7 +285,7 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
   );
 }
 
-export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props) {
+export default function GarmentTable({ items, orderType, onAdd, onUpdate, onRemove }: Props) {
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [dbItems, setDbItems] = useState<ItemRecord[]>([]);
   const [dbServices, setDbServices] = useState<ServiceRecord[]>([]);
