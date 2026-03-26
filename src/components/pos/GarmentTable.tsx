@@ -62,13 +62,14 @@ function ConditionTags({ itemId, conditions, onUpdate }: { itemId: string; condi
   );
 }
 
-function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }: {
+function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, orderType }: {
   item: OrderItem;
   onUpdate: Props["onUpdate"];
   onRemove: Props["onRemove"];
   pricingRules: PricingRule[];
   dbItems: ItemRecord[];
   dbServices: ServiceRecord[];
+  orderType: "regular" | "urgent";
 }) {
   const [expanded, setExpanded] = useState(false);
 
