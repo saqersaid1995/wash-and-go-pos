@@ -56,17 +56,6 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
-  useEffect(() => {
-    if (open) {
-      resetToScan();
-      // Auto-search if opened with a pre-scanned code
-      if (initialCode) {
-        setValue(initialCode);
-        setTimeout(() => handleSearch(initialCode), 50);
-      }
-    }
-  }, [open, resetToScan, initialCode, handleSearch]);
-
   const handleSearch = useCallback(async (code: string) => {
     const trimmed = code.trim();
     if (!trimmed) return;
@@ -108,6 +97,16 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       setSearching(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      resetToScan();
+      if (initialCode) {
+        setValue(initialCode);
+        setTimeout(() => handleSearch(initialCode), 50);
+      }
+    }
+  }, [open, resetToScan, initialCode, handleSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); handleSearch(value); }
