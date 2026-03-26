@@ -1,4 +1,5 @@
 // Laundry POS - Real Data Mode
+import { useState } from "react";
 import { usePOSState } from "@/hooks/usePOSState";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 import CustomerSection from "@/components/pos/CustomerSection";
@@ -8,9 +9,12 @@ import PricingSummary from "@/components/pos/PricingSummary";
 import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
+import ScanOrderModal from "@/components/pos/ScanOrderModal";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
+import { ScanBarcode } from "lucide-react";
 
 const Index = () => {
   const pos = usePOSState();
