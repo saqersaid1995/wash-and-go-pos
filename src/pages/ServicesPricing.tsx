@@ -681,15 +681,16 @@ function PricingRulesTab() {
 
             {formItemId && serviceRows.length > 0 && (
               <div className="border border-border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="grid grid-cols-[1fr_50px_50px_120px_120px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
                   <span>Service</span>
-                  <span className="text-center">Enabled</span>
-                  <span className="text-center">Default</span>
-                  <span className="text-right">Price (OMR)</span>
+                  <span className="text-center">On</span>
+                  <span className="text-center">Def</span>
+                  <span className="text-right">Regular (OMR)</span>
+                  <span className="text-right">Urgent (OMR)</span>
                 </div>
                 <div className="divide-y divide-border">
                   {serviceRows.map((row) => (
-                    <div key={row.serviceId} className={`grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
+                    <div key={row.serviceId} className={`grid grid-cols-[1fr_50px_50px_120px_120px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
                       <span className="text-sm font-medium">{row.serviceName}</span>
                       <div className="flex justify-center">
                         <Checkbox
@@ -722,6 +723,19 @@ function PricingRulesTab() {
                           disabled={!row.enabled}
                           className="pl-10 h-8 text-sm"
                           placeholder="0.000"
+                        />
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">⚡</span>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={row.urgentPrice}
+                          onChange={(e) => updateRow(row.serviceId, { urgentPrice: e.target.value })}
+                          disabled={!row.enabled}
+                          className="pl-7 h-8 text-sm"
+                          placeholder="optional"
                         />
                       </div>
                     </div>
