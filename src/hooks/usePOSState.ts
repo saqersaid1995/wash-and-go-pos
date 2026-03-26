@@ -128,10 +128,10 @@ export function usePOSState() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  // Calculations
+  // Calculations — no global urgent multiplier; prices are per-item
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const urgentFee = orderType === "urgent" ? subtotal * (URGENT_MULTIPLIER - 1) : 0;
-  const total = Math.max(0, subtotal + urgentFee - discount);
+  const urgentFee = 0; // kept for API compatibility but no longer used
+  const total = Math.max(0, subtotal - discount);
   const remainingBalance = Math.max(0, total - paidAmount);
 
   const paymentStatus: PaymentStatus =
