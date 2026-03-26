@@ -646,6 +646,11 @@ function PricingRulesTab() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold">{formatOMR(rule.price)}</span>
+                        {rule.urgent_price != null ? (
+                          <span className="text-xs text-accent font-medium">⚡ {formatOMR(rule.urgent_price)}</span>
+                        ) : (
+                          <span className="text-[0.6rem] text-muted-foreground">No urgent</span>
+                        )}
                         <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.55rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
                           {rule.is_active ? "Active" : "Off"}
                         </Badge>
