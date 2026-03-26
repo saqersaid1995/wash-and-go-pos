@@ -148,7 +148,11 @@ export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Pr
                 {qi.nameAr && (
                   <span className="block text-[0.65rem] text-muted-foreground leading-tight truncate" dir="rtl">{qi.nameAr}</span>
                 )}
-                <span className="block text-[0.6rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+                <span className="block text-[0.6rem] text-muted-foreground">
+                  {orderType === "urgent" && qi.defaultUrgentPrice != null
+                    ? formatOMR(qi.defaultUrgentPrice)
+                    : formatOMR(qi.defaultPrice)}
+                </span>
               </div>
               {/* Count badge */}
               {count > 0 && (
