@@ -18,6 +18,8 @@ import type { WorkflowOrder } from "@/types/workflow";
 interface ScanOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-fill scanned code and auto-search on open */
+  initialCode?: string;
 }
 
 const PAYMENT_METHODS = [
@@ -29,7 +31,7 @@ const PAYMENT_METHODS = [
 
 type ModalView = "scan" | "payment" | "already-delivered" | "not-ready" | "already-paid";
 
-export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalProps) {
+export default function ScanOrderModal({ open, onOpenChange, initialCode }: ScanOrderModalProps) {
   const [value, setValue] = useState("");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +55,6 @@ export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalPro
     setSubmitting(false);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
-
-  useEffect(() => {
-    if (open) resetToScan();
-  }, [open, resetToScan]);
 
   const handleSearch = useCallback(async (code: string) => {
     const trimmed = code.trim();
@@ -99,6 +97,16 @@ export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalPro
       setSearching(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      resetToScan();
+      if (initialCode) {
+        setValue(initialCode);
+        setTimeout(() => handleSearch(initialCode), 50);
+      }
+    }
+  }, [open, resetToScan, initialCode, handleSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); handleSearch(value); }

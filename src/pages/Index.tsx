@@ -1,7 +1,8 @@
 // Laundry POS - Real Data Mode
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { usePOSState } from "@/hooks/usePOSState";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
 import GarmentTable from "@/components/pos/GarmentTable";
@@ -19,7 +20,15 @@ import { ScanBarcode } from "lucide-react";
 const Index = () => {
   const pos = usePOSState();
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanCode, setScanCode] = useState<string | undefined>();
   useOfflineCache();
+
+  // Global barcode scanner listener — auto-opens payment modal
+  const handleBarcodeScan = useCallback((code: string) => {
+    setScanCode(code);
+    setScanOpen(true);
+  }, []);
+  useBarcodeScanner(handleBarcodeScan, !scanOpen);
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
     // Check if item already exists with same service - increment quantity
@@ -189,7 +198,14 @@ const Index = () => {
         />
       )}
       {/* Scan Order Modal */}
-      <ScanOrderModal open={scanOpen} onOpenChange={setScanOpen} />
+      <ScanOrderModal
+        open={scanOpen}
+        onOpenChange={(open) => {
+          setScanOpen(open);
+          if (!open) setScanCode(undefined);
+        }}
+        initialCode={scanCode}
+      />
     </div>
   );
 };
