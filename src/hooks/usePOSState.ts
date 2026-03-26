@@ -1,14 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
 import { saveOfflineOrder, addToSyncQueue, generateLocalId, getCachedCustomerByPhone } from "@/lib/offline-db";
+import { supabase } from "@/integrations/supabase/client";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
 }
-
-const URGENT_MULTIPLIER = 1.5;
 
 
 export function usePOSState() {
