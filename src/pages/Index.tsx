@@ -18,6 +18,7 @@ import { ScanBarcode } from "lucide-react";
 
 const Index = () => {
   const pos = usePOSState();
+  const [scanOpen, setScanOpen] = useState(false);
   useOfflineCache();
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
