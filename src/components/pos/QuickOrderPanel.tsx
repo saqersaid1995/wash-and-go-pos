@@ -144,7 +144,7 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
               </div>
               {/* Count badge */}
               {count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[0.65rem] font-bold rounded-full h-5.5 w-5.5 min-w-[1.375rem] flex items-center justify-center shadow-md">
+                <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full min-w-[1.5rem] h-6 px-1.5 flex items-center justify-center shadow-lg ring-2 ring-background">
                   {count}
                 </span>
               )}
