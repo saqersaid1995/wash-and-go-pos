@@ -315,7 +315,7 @@ export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalPro
         {/* ── ALREADY DELIVERED ── */}
         {view === "already-delivered" && order && (
           <div className="space-y-4 text-center py-4">
-            <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
+            <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
             <p className="font-medium">This order has already been delivered</p>
             <p className="text-sm text-muted-foreground">{order.orderNumber} • {order.customerName}</p>
             <Button variant="outline" className="w-full" onClick={resetToScan}>
