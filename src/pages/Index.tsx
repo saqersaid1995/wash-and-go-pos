@@ -1,4 +1,5 @@
 // Laundry POS - Real Data Mode
+import { useState } from "react";
 import { usePOSState } from "@/hooks/usePOSState";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 import CustomerSection from "@/components/pos/CustomerSection";
@@ -8,12 +9,16 @@ import PricingSummary from "@/components/pos/PricingSummary";
 import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
+import ScanOrderModal from "@/components/pos/ScanOrderModal";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
+import { ScanBarcode } from "lucide-react";
 
 const Index = () => {
   const pos = usePOSState();
+  const [scanOpen, setScanOpen] = useState(false);
   useOfflineCache();
 
   const handleQuickAdd = (itemType: string, serviceId: string, price: number) => {
@@ -91,9 +96,15 @@ const Index = () => {
         title="New Order"
         subtitle={pos.orderNumber}
         actions={
-          <span className="text-sm text-muted-foreground">
-            {pos.items.length} Items • {formatOMR(pos.total)}
-          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setScanOpen(true)}>
+              <ScanBarcode className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Scan Order</span>
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {pos.items.length} Items • {formatOMR(pos.total)}
+            </span>
+          </div>
         }
       />
 
@@ -177,6 +188,8 @@ const Index = () => {
           }}
         />
       )}
+      {/* Scan Order Modal */}
+      <ScanOrderModal open={scanOpen} onOpenChange={setScanOpen} />
     </div>
   );
 };
