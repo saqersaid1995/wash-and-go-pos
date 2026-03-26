@@ -121,7 +121,10 @@ export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Pr
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.04, boxShadow: "0 8px 24px -8px hsl(var(--primary) / 0.18)" }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              onClick={() => onAddQuickItem(qi.name, qi.defaultService, qi.defaultPrice)}
+              onClick={() => {
+                const price = orderType === "urgent" && qi.defaultUrgentPrice != null ? qi.defaultUrgentPrice : qi.defaultPrice;
+                onAddQuickItem(qi.name, qi.defaultService, price);
+              }}
               className="relative flex flex-col items-center gap-1.5 rounded-xl border border-border bg-background hover:border-primary/40 transition-colors text-center overflow-hidden"
             >
               {/* Image area — dominant */}
