@@ -48,6 +48,7 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   currency: string;
   is_active: boolean;
   is_default_service: boolean;
