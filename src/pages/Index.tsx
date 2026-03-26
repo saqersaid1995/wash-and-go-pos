@@ -123,9 +123,10 @@ const Index = () => {
               onNotesChange={pos.setOrderNotes}
             />
           </div>
-          <QuickOrderPanel items={pos.items} onAddQuickItem={handleQuickAdd} />
+          <QuickOrderPanel items={pos.items} orderType={pos.orderType} onAddQuickItem={handleQuickAdd} />
           <GarmentTable
             items={pos.items}
+            orderType={pos.orderType}
             onAdd={pos.addItem}
             onUpdate={pos.updateItem}
             onRemove={pos.removeItem}
@@ -136,7 +137,6 @@ const Index = () => {
           <div className="lg:sticky lg:top-20 space-y-4">
             <PricingSummary
               subtotal={pos.subtotal}
-              urgentFee={pos.urgentFee}
               discount={pos.discount}
               total={pos.total}
               paidAmount={pos.paidAmount}

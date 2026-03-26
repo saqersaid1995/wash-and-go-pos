@@ -1,14 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
 import type { CustomerRecord } from "@/types/customer";
 import { saveOfflineOrder, addToSyncQueue, generateLocalId, getCachedCustomerByPhone } from "@/lib/offline-db";
+import { supabase } from "@/integrations/supabase/client";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
 }
-
-const URGENT_MULTIPLIER = 1.5;
 
 
 export function usePOSState() {
@@ -23,8 +22,11 @@ export function usePOSState() {
   const [orderNumber, setOrderNumber] = useState(generateOrderNumber);
   const [orderDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deliveryDate, setDeliveryDate] = useState("");
-  const [orderType, setOrderType] = useState<OrderType>("regular");
+  const [orderType, setOrderTypeRaw] = useState<OrderType>("regular");
   const [pickupMethod, setPickupMethod] = useState<PickupMethod>("walk-in");
+
+  // Keep a ref to pricing rules for order type switching
+  const pricingRulesRef = useRef<Array<{ item_type: string; service_type: string; price: number; urgent_price: number | null }>>([]);
   const [employeeId, setEmployeeId] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
 
@@ -126,10 +128,35 @@ export function usePOSState() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  // Calculations
+  // Recalculate all item prices when order type changes
+  const setOrderType = useCallback(async (newType: OrderType) => {
+    setOrderTypeRaw(newType);
+    // Fetch pricing rules if not cached
+    if (pricingRulesRef.current.length === 0 && navigator.onLine) {
+      const { data } = await supabase
+        .from("service_pricing")
+        .select("item_type, service_type, price, urgent_price")
+        .eq("is_active", true);
+      if (data) pricingRulesRef.current = data as typeof pricingRulesRef.current;
+    }
+    const rules = pricingRulesRef.current;
+    if (rules.length === 0) return;
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.isManualPriceOverride) return item; // Don't override manual prices
+        const rule = rules.find((r) => r.item_type === item.itemType && r.service_type === item.serviceId);
+        if (!rule) return item;
+        const effectivePrice = newType === "urgent" && rule.urgent_price != null ? rule.urgent_price : rule.price;
+        return { ...item, unitPrice: effectivePrice, defaultPrice: effectivePrice };
+      })
+    );
+  }, []);
+
+  // Calculations — no global urgent multiplier; prices are per-item
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const urgentFee = orderType === "urgent" ? subtotal * (URGENT_MULTIPLIER - 1) : 0;
-  const total = Math.max(0, subtotal + urgentFee - discount);
+  const urgentFee = 0; // kept for API compatibility but no longer used
+  const total = Math.max(0, subtotal - discount);
   const remainingBalance = Math.max(0, total - paidAmount);
 
   const paymentStatus: PaymentStatus =
@@ -225,7 +252,7 @@ export function usePOSState() {
     setMatchedCustomer(null);
     setMatchedCustomerId(null);
     setDeliveryDate("");
-    setOrderType("regular");
+    setOrderTypeRaw("regular");
     setPickupMethod("walk-in");
     setEmployeeId("");
     setOrderNotes("");

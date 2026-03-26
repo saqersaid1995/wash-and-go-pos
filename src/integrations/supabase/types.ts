@@ -509,6 +509,7 @@ export type Database = {
           service_id: string | null
           service_type: string
           updated_at: string
+          urgent_price: number | null
         }
         Insert: {
           created_at?: string
@@ -524,6 +525,7 @@ export type Database = {
           service_id?: string | null
           service_type: string
           updated_at?: string
+          urgent_price?: number | null
         }
         Update: {
           created_at?: string
@@ -539,6 +541,7 @@ export type Database = {
           service_id?: string | null
           service_type?: string
           updated_at?: string
+          urgent_price?: number | null
         }
         Relationships: [
           {

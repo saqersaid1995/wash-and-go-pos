@@ -10,6 +10,7 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   is_active: boolean;
   is_default_service: boolean;
 }
@@ -20,15 +21,17 @@ interface QuickItem {
   imageUrl: string;
   defaultService: string;
   defaultPrice: number;
+  defaultUrgentPrice: number | null;
   sortOrder: number;
 }
 
 interface Props {
   items: OrderItem[];
+  orderType: "regular" | "urgent";
   onAddQuickItem: (itemType: string, serviceId: string, price: number) => void;
 }
 
-export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
+export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Props) {
   const [quickItems, setQuickItems] = useState<QuickItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +43,7 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
       if (navigator.onLine) {
         const [itemsRes, pricingRes] = await Promise.all([
           supabase.from("items").select("item_name, item_name_ar, image_url, sort_order, show_in_quick_add").eq("is_active", true).eq("show_in_quick_add", true).order("sort_order").order("item_name"),
-          supabase.from("service_pricing").select("item_type, service_type, price, is_active, is_default_service").eq("is_active", true),
+          supabase.from("service_pricing").select("item_type, service_type, price, urgent_price, is_active, is_default_service").eq("is_active", true),
         ]);
         allItems = (itemsRes.data || []) as typeof allItems;
         rules = (pricingRes.data || []) as PricingRule[];
@@ -68,6 +71,7 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
             item_type: p.item_type,
             service_type: p.service_type,
             price: p.price,
+            urgent_price: (p as any).urgent_price ?? null,
             is_active: p.is_active,
             is_default_service: p.is_default_service,
           }));
@@ -83,6 +87,7 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
           imageUrl: i.image_url || "",
           defaultService: rule?.service_type || "",
           defaultPrice: rule?.price || 0,
+          defaultUrgentPrice: rule?.urgent_price ?? null,
           sortOrder: i.sort_order,
         };
       }).filter((q) => q.defaultService);
@@ -116,7 +121,10 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.04, boxShadow: "0 8px 24px -8px hsl(var(--primary) / 0.18)" }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              onClick={() => onAddQuickItem(qi.name, qi.defaultService, qi.defaultPrice)}
+              onClick={() => {
+                const price = orderType === "urgent" && qi.defaultUrgentPrice != null ? qi.defaultUrgentPrice : qi.defaultPrice;
+                onAddQuickItem(qi.name, qi.defaultService, price);
+              }}
               className="relative flex flex-col items-center gap-1.5 rounded-xl border border-border bg-background hover:border-primary/40 transition-colors text-center overflow-hidden"
             >
               {/* Image area — dominant */}
@@ -140,7 +148,11 @@ export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
                 {qi.nameAr && (
                   <span className="block text-[0.65rem] text-muted-foreground leading-tight truncate" dir="rtl">{qi.nameAr}</span>
                 )}
-                <span className="block text-[0.6rem] text-muted-foreground">{formatOMR(qi.defaultPrice)}</span>
+                <span className="block text-[0.6rem] text-muted-foreground">
+                  {orderType === "urgent" && qi.defaultUrgentPrice != null
+                    ? formatOMR(qi.defaultUrgentPrice)
+                    : formatOMR(qi.defaultPrice)}
+                </span>
               </div>
               {/* Count badge */}
               {count > 0 && (

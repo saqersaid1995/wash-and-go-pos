@@ -4,7 +4,6 @@ import { formatOMR } from "@/lib/currency";
 
 interface Props {
   subtotal: number;
-  urgentFee: number;
   discount: number;
   total: number;
   paidAmount: number;
@@ -32,7 +31,7 @@ const statusColors: Record<PaymentStatus, string> = {
 
 export default function PricingSummary(props: Props) {
   const {
-    subtotal, urgentFee, discount, total, paidAmount, remainingBalance,
+    subtotal, discount, total, paidAmount, remainingBalance,
     paymentStatus, paymentMethod,
     onDiscountChange, onPaidAmountChange, onPaymentMethodChange,
   } = props;
@@ -64,12 +63,6 @@ export default function PricingSummary(props: Props) {
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatOMR(subtotal)}</span>
         </div>
-        {urgentFee > 0 && (
-          <div className="flex justify-between text-accent">
-            <span>Urgent Fee (50%)</span>
-            <span>+{formatOMR(urgentFee)}</span>
-          </div>
-        )}
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Discount</span>
           <input

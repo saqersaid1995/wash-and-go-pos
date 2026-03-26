@@ -48,6 +48,7 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   currency: string;
   is_active: boolean;
   is_default_service: boolean;
@@ -418,6 +419,7 @@ interface ServicePriceRow {
   serviceName: string;
   enabled: boolean;
   price: string;
+  urgentPrice: string;
   existingRuleId?: string;
   isDefault: boolean;
 }
@@ -483,6 +485,7 @@ function PricingRulesTab() {
         serviceName: svc.service_name,
         enabled: !!existing && existing.is_active,
         price: existing ? String(existing.price) : "",
+        urgentPrice: existing?.urgent_price != null ? String(existing.urgent_price) : "",
         existingRuleId: existing?.id,
         isDefault: !!existing?.is_default_service,
       };
@@ -507,6 +510,7 @@ function PricingRulesTab() {
         serviceName: svc.service_name,
         enabled: !!existing && existing.is_active,
         price: existing ? String(existing.price) : "",
+        urgentPrice: existing?.urgent_price != null ? String(existing.urgent_price) : "",
         existingRuleId: existing?.id,
         isDefault: !!existing?.is_default_service,
       };
@@ -544,10 +548,12 @@ function PricingRulesTab() {
     // Upsert enabled rows, disable unchecked existing rows
     for (const row of serviceRows) {
       const price = parseFloat(row.price) || 0;
+      const urgentPrice = row.urgentPrice ? parseFloat(row.urgentPrice) : null;
       if (row.enabled) {
         if (row.existingRuleId) {
           await supabase.from("service_pricing").update({
             price,
+            urgent_price: urgentPrice,
             is_active: true,
             is_default_service: row.isDefault,
             item_type: selectedItem.item_name,
@@ -560,6 +566,7 @@ function PricingRulesTab() {
             item_type: selectedItem.item_name,
             service_type: row.serviceName,
             price,
+            urgent_price: urgentPrice,
             is_active: true,
             is_default_service: row.isDefault,
           });
@@ -639,6 +646,11 @@ function PricingRulesTab() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold">{formatOMR(rule.price)}</span>
+                        {rule.urgent_price != null ? (
+                          <span className="text-xs text-accent font-medium">⚡ {formatOMR(rule.urgent_price)}</span>
+                        ) : (
+                          <span className="text-[0.6rem] text-muted-foreground">No urgent</span>
+                        )}
                         <Badge variant={rule.is_active ? "default" : "secondary"} className={`text-[0.55rem] ${rule.is_active ? "bg-success/15 text-success" : ""}`}>
                           {rule.is_active ? "Active" : "Off"}
                         </Badge>
@@ -669,15 +681,16 @@ function PricingRulesTab() {
 
             {formItemId && serviceRows.length > 0 && (
               <div className="border border-border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="grid grid-cols-[1fr_50px_50px_120px_120px] gap-2 px-3 py-2 bg-muted/50 border-b border-border text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
                   <span>Service</span>
-                  <span className="text-center">Enabled</span>
-                  <span className="text-center">Default</span>
-                  <span className="text-right">Price (OMR)</span>
+                  <span className="text-center">On</span>
+                  <span className="text-center">Def</span>
+                  <span className="text-right">Regular (OMR)</span>
+                  <span className="text-right">Urgent (OMR)</span>
                 </div>
                 <div className="divide-y divide-border">
                   {serviceRows.map((row) => (
-                    <div key={row.serviceId} className={`grid grid-cols-[1fr_60px_60px_140px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
+                    <div key={row.serviceId} className={`grid grid-cols-[1fr_50px_50px_120px_120px] gap-2 px-3 py-2.5 items-center transition-opacity ${row.enabled ? "" : "opacity-50"}`}>
                       <span className="text-sm font-medium">{row.serviceName}</span>
                       <div className="flex justify-center">
                         <Checkbox
@@ -710,6 +723,19 @@ function PricingRulesTab() {
                           disabled={!row.enabled}
                           className="pl-10 h-8 text-sm"
                           placeholder="0.000"
+                        />
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">⚡</span>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={row.urgentPrice}
+                          onChange={(e) => updateRow(row.serviceId, { urgentPrice: e.target.value })}
+                          disabled={!row.enabled}
+                          className="pl-7 h-8 text-sm"
+                          placeholder="optional"
                         />
                       </div>
                     </div>

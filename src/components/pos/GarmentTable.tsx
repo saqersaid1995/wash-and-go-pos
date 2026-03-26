@@ -1,4 +1,4 @@
-import { Plus, Trash2, AlertCircle, PencilLine, Star } from "lucide-react";
+import { Plus, Trash2, AlertCircle, PencilLine, Star, AlertTriangle } from "lucide-react";
 import type { OrderItem } from "@/types/pos";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,12 +22,14 @@ interface PricingRule {
   item_type: string;
   service_type: string;
   price: number;
+  urgent_price: number | null;
   is_active: boolean;
   is_default_service: boolean;
 }
 
 interface Props {
   items: OrderItem[];
+  orderType: "regular" | "urgent";
   onAdd: () => void;
   onUpdate: (id: string, updates: Partial<OrderItem>) => void;
   onRemove: (id: string) => void;
@@ -60,13 +62,14 @@ function ConditionTags({ itemId, conditions, onUpdate }: { itemId: string; condi
   );
 }
 
-function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }: {
+function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, orderType }: {
   item: OrderItem;
   onUpdate: Props["onUpdate"];
   onRemove: Props["onRemove"];
   pricingRules: PricingRule[];
   dbItems: ItemRecord[];
   dbServices: ServiceRecord[];
+  orderType: "regular" | "urgent";
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -74,6 +77,9 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
     (r) => r.item_type === item.itemType && r.service_type === item.serviceId && r.is_active
   );
   const hasWarning = item.itemType && item.serviceId && !matchingRule;
+
+  // Determine if urgent price is missing for urgent orders
+  const urgentPriceMissing = orderType === "urgent" && matchingRule && matchingRule.urgent_price == null;
 
   const availableServiceNames = item.itemType
     ? [...new Set(pricingRules.filter((r) => r.item_type === item.itemType && r.is_active).map((r) => r.service_type))]
@@ -130,7 +136,6 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
           value={item.itemType}
           onChange={(e) => {
             const newItemType = e.target.value;
-            // Find default service for this item
             const defaultRule = pricingRules.find((r) => r.item_type === newItemType && r.is_default_service && r.is_active);
             const updates: Partial<OrderItem> = {
               itemType: newItemType,
@@ -138,17 +143,18 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
               isDefaultServiceSelected: false,
             };
             if (defaultRule) {
+              const effectivePrice = orderType === "urgent" && defaultRule.urgent_price != null ? defaultRule.urgent_price : defaultRule.price;
               updates.serviceId = defaultRule.service_type;
-              updates.unitPrice = defaultRule.price;
-              updates.defaultPrice = defaultRule.price;
+              updates.unitPrice = effectivePrice;
+              updates.defaultPrice = effectivePrice;
               updates.isDefaultServiceSelected = true;
             } else {
-              // Fallback: try first active rule for this item
               const firstRule = pricingRules.find((r) => r.item_type === newItemType && r.is_active);
               if (firstRule) {
+                const effectivePrice = orderType === "urgent" && firstRule.urgent_price != null ? firstRule.urgent_price : firstRule.price;
                 updates.serviceId = firstRule.service_type;
-                updates.unitPrice = firstRule.price;
-                updates.defaultPrice = firstRule.price;
+                updates.unitPrice = effectivePrice;
+                updates.defaultPrice = effectivePrice;
               } else {
                 updates.serviceId = "";
                 updates.unitPrice = 0;
@@ -173,8 +179,9 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
               isDefaultServiceSelected: false,
             };
             if (rule) {
-              updates.unitPrice = rule.price;
-              updates.defaultPrice = rule.price;
+              const effectivePrice = orderType === "urgent" && rule.urgent_price != null ? rule.urgent_price : rule.price;
+              updates.unitPrice = effectivePrice;
+              updates.defaultPrice = effectivePrice;
             }
             onUpdate(item.id, updates);
           }}
@@ -244,6 +251,13 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
         </div>
       )}
 
+      {urgentPriceMissing && (
+        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Urgent price not set — using regular price
+        </div>
+      )}
+
       {hasWarning && (
         <div className="flex items-center gap-1.5 mt-2 text-xs text-destructive">
           <AlertCircle className="h-3.5 w-3.5" />
@@ -271,7 +285,7 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices }
   );
 }
 
-export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props) {
+export default function GarmentTable({ items, orderType, onAdd, onUpdate, onRemove }: Props) {
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [dbItems, setDbItems] = useState<ItemRecord[]>([]);
   const [dbServices, setDbServices] = useState<ServiceRecord[]>([]);
@@ -284,7 +298,7 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
 
       if (navigator.onLine) {
         const [prRes, itRes, svRes] = await Promise.all([
-          supabase.from("service_pricing").select("id, item_type, service_type, price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
+          supabase.from("service_pricing").select("id, item_type, service_type, price, urgent_price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
           supabase.from("items").select("id, item_name").eq("is_active", true).order("item_name"),
           supabase.from("services").select("id, service_name").eq("is_active", true).order("service_name"),
         ]);
@@ -298,7 +312,7 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
         const cached = await getCachedPricing();
         prData = cached.filter((p) => p.is_active).map((p) => ({
           id: p.id, item_type: p.item_type, service_type: p.service_type,
-          price: p.price, is_active: p.is_active, is_default_service: p.is_default_service,
+          price: p.price, urgent_price: (p as any).urgent_price ?? null, is_active: p.is_active, is_default_service: p.is_default_service,
         }));
       }
       if (itData.length === 0) {
@@ -339,7 +353,7 @@ export default function GarmentTable({ items, onAdd, onUpdate, onRemove }: Props
       <div className="space-y-2">
         <AnimatePresence mode="popLayout">
           {items.map((item) => (
-            <ItemRow key={item.id} item={item} onUpdate={onUpdate} onRemove={onRemove} pricingRules={pricingRules} dbItems={dbItems} dbServices={dbServices} />
+            <ItemRow key={item.id} item={item} onUpdate={onUpdate} onRemove={onRemove} pricingRules={pricingRules} dbItems={dbItems} dbServices={dbServices} orderType={orderType} />
           ))}
         </AnimatePresence>
       </div>
