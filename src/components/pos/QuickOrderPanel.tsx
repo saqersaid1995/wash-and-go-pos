@@ -31,7 +31,7 @@ interface Props {
   onAddQuickItem: (itemType: string, serviceId: string, price: number) => void;
 }
 
-export default function QuickOrderPanel({ items, onAddQuickItem }: Props) {
+export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Props) {
   const [quickItems, setQuickItems] = useState<QuickItem[]>([]);
   const [loading, setLoading] = useState(true);
 
