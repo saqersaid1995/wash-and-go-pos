@@ -1,4 +1,4 @@
-import { Plus, Trash2, AlertCircle, PencilLine, Star } from "lucide-react";
+import { Plus, Trash2, AlertCircle, PencilLine, Star, AlertTriangle } from "lucide-react";
 import type { OrderItem } from "@/types/pos";
 import { GARMENT_CONDITIONS } from "@/types/pos";
 import { motion, AnimatePresence } from "framer-motion";
