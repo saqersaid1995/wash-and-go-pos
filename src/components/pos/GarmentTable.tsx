@@ -179,8 +179,9 @@ function ItemRow({ item, onUpdate, onRemove, pricingRules, dbItems, dbServices, 
               isDefaultServiceSelected: false,
             };
             if (rule) {
-              updates.unitPrice = rule.price;
-              updates.defaultPrice = rule.price;
+              const effectivePrice = orderType === "urgent" && rule.urgent_price != null ? rule.urgent_price : rule.price;
+              updates.unitPrice = effectivePrice;
+              updates.defaultPrice = effectivePrice;
             }
             onUpdate(item.id, updates);
           }}
