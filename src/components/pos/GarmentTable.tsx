@@ -298,7 +298,7 @@ export default function GarmentTable({ items, orderType, onAdd, onUpdate, onRemo
 
       if (navigator.onLine) {
         const [prRes, itRes, svRes] = await Promise.all([
-          supabase.from("service_pricing").select("id, item_type, service_type, price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
+          supabase.from("service_pricing").select("id, item_type, service_type, price, urgent_price, is_active, is_default_service").eq("is_active", true).order("item_type").order("service_type"),
           supabase.from("items").select("id, item_name").eq("is_active", true).order("item_name"),
           supabase.from("services").select("id, service_name").eq("is_active", true).order("service_name"),
         ]);
