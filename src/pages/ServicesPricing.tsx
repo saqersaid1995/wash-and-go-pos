@@ -419,6 +419,7 @@ interface ServicePriceRow {
   serviceName: string;
   enabled: boolean;
   price: string;
+  urgentPrice: string;
   existingRuleId?: string;
   isDefault: boolean;
 }
