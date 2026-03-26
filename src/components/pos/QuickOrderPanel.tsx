@@ -87,6 +87,7 @@ export default function QuickOrderPanel({ items, orderType, onAddQuickItem }: Pr
           imageUrl: i.image_url || "",
           defaultService: rule?.service_type || "",
           defaultPrice: rule?.price || 0,
+          defaultUrgentPrice: rule?.urgent_price ?? null,
           sortOrder: i.sort_order,
         };
       }).filter((q) => q.defaultService);
