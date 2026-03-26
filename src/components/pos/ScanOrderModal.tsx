@@ -31,7 +31,7 @@ const PAYMENT_METHODS = [
 
 type ModalView = "scan" | "payment" | "already-delivered" | "not-ready" | "already-paid";
 
-export default function ScanOrderModal({ open, onOpenChange }: ScanOrderModalProps) {
+export default function ScanOrderModal({ open, onOpenChange, initialCode }: ScanOrderModalProps) {
   const [value, setValue] = useState("");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
