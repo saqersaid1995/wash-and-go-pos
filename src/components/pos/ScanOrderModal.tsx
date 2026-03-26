@@ -18,6 +18,8 @@ import type { WorkflowOrder } from "@/types/workflow";
 interface ScanOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-fill scanned code and auto-search on open */
+  initialCode?: string;
 }
 
 const PAYMENT_METHODS = [
