@@ -485,6 +485,7 @@ function PricingRulesTab() {
         serviceName: svc.service_name,
         enabled: !!existing && existing.is_active,
         price: existing ? String(existing.price) : "",
+        urgentPrice: existing?.urgent_price != null ? String(existing.urgent_price) : "",
         existingRuleId: existing?.id,
         isDefault: !!existing?.is_default_service,
       };
@@ -509,6 +510,7 @@ function PricingRulesTab() {
         serviceName: svc.service_name,
         enabled: !!existing && existing.is_active,
         price: existing ? String(existing.price) : "",
+        urgentPrice: existing?.urgent_price != null ? String(existing.urgent_price) : "",
         existingRuleId: existing?.id,
         isDefault: !!existing?.is_default_service,
       };
