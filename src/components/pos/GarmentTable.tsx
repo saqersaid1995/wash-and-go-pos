@@ -353,7 +353,7 @@ export default function GarmentTable({ items, orderType, onAdd, onUpdate, onRemo
       <div className="space-y-2">
         <AnimatePresence mode="popLayout">
           {items.map((item) => (
-            <ItemRow key={item.id} item={item} onUpdate={onUpdate} onRemove={onRemove} pricingRules={pricingRules} dbItems={dbItems} dbServices={dbServices} />
+            <ItemRow key={item.id} item={item} onUpdate={onUpdate} onRemove={onRemove} pricingRules={pricingRules} dbItems={dbItems} dbServices={dbServices} orderType={orderType} />
           ))}
         </AnimatePresence>
       </div>
