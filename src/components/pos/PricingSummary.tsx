@@ -31,7 +31,7 @@ const statusColors: Record<PaymentStatus, string> = {
 
 export default function PricingSummary(props: Props) {
   const {
-    subtotal, urgentFee, discount, total, paidAmount, remainingBalance,
+    subtotal, discount, total, paidAmount, remainingBalance,
     paymentStatus, paymentMethod,
     onDiscountChange, onPaidAmountChange, onPaymentMethodChange,
   } = props;
