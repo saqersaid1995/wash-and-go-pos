@@ -35,6 +35,7 @@ export default function PricingSummary(props: Props) {
     subtotal, discount, total, paidAmount, remainingBalance,
     paymentStatus, paymentMethod,
     onDiscountChange, onPaidAmountChange, onPaymentMethodChange,
+    loyaltySlot,
   } = props;
 
   return (
