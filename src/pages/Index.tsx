@@ -21,6 +21,8 @@ import { ScanBarcode } from "lucide-react";
 
 const Index = () => {
   const pos = usePOSState();
+  const { settings: loyaltySettings } = useLoyaltySettings();
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState<string | undefined>();
   useOfflineCache();
