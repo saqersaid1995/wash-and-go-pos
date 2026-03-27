@@ -217,7 +217,7 @@ export function usePOSState() {
 
       const result = await createOrder({
         customerId: matchedCustomerId,
-        customerName: customerName.trim(),
+        customerName: effectiveName,
         customerPhone: customerPhone.trim(),
         orderNumber,
         orderDate,
