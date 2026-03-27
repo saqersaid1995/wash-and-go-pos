@@ -119,7 +119,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {item.label}
+                {getLabel(item)}
               </NavLink>
             );
           })}
