@@ -341,8 +341,8 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               onClick={handlePayment}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              {numericAmount >= effectiveRemaining && order.currentStatus === "ready-for-pickup"
-                ? `Collect & Deliver — ${formatOMR(numericAmount)}`
+              {numericAmount >= effectiveRemaining
+                ? `Collect Payment & Deliver — ${formatOMR(numericAmount)}`
                 : `Collect Payment — ${formatOMR(numericAmount)}`}
             </Button>
 
