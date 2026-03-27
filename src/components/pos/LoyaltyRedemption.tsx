@@ -82,7 +82,7 @@ export default function LoyaltyRedemption({
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Using {Math.round(pointsUsed)} pts • Max {formatOMR(maxDiscount)} ({loyaltySettings.max_redemption_percent}%)
+            Using {pointsUsed.toFixed(2)} pts • Max {formatOMR(maxDiscount)} ({loyaltySettings.max_redemption_percent}%)
           </p>
         </div>
       ) : (
