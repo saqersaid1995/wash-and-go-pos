@@ -14,6 +14,9 @@ import {
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import type { WorkflowOrder } from "@/types/workflow";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
+import LoyaltyRedemption from "@/components/pos/LoyaltyRedemption";
+import { redeemLoyaltyPoints, awardLoyaltyPoints } from "@/lib/loyalty";
 
 interface ScanOrderModalProps {
   open: boolean;
