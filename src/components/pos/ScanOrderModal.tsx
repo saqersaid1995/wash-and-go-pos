@@ -106,15 +106,17 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     }
   }, []);
 
+  // Refetch loyalty settings when modal opens
   useEffect(() => {
     if (open) {
+      refetchLoyalty();
       resetToScan();
       if (initialCode) {
         setValue(initialCode);
         setTimeout(() => handleSearch(initialCode), 50);
       }
     }
-  }, [open, resetToScan, initialCode, handleSearch]);
+  }, [open, resetToScan, initialCode, handleSearch, refetchLoyalty]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); handleSearch(value); }
