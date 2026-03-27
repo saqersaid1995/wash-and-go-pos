@@ -47,6 +47,7 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
 
   return {
     id: row.id,
+    customerId: row.customer_id || undefined,
     orderNumber: row.order_number,
     customerName: row.customers?.full_name || "Walk-in",
     customerPhone: row.customers?.phone_number || "",

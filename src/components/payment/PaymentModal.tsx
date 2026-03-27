@@ -9,6 +9,7 @@ import { CreditCard, Banknote, Building, Shuffle, Loader2, Printer } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
+import { awardLoyaltyPoints } from "@/lib/loyalty";
 import type { WorkflowOrder } from "@/types/workflow";
 
 const PAYMENT_METHODS = [
@@ -74,6 +75,11 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
     if (newRemainingFinal <= 0 && order.currentStatus === "ready-for-pickup") {
       const { updateOrderStatus } = await import("@/lib/supabase-queries");
       await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
+    }
+
+    // Award loyalty points for this payment
+    if (order.customerId) {
+      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
     setSubmitting(false);
