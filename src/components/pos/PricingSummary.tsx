@@ -13,6 +13,7 @@ interface Props {
   onDiscountChange: (v: number) => void;
   onPaidAmountChange: (v: number) => void;
   onPaymentMethodChange: (v: PaymentMethod) => void;
+  loyaltySlot?: React.ReactNode;
 }
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
@@ -34,6 +35,7 @@ export default function PricingSummary(props: Props) {
     subtotal, discount, total, paidAmount, remainingBalance,
     paymentStatus, paymentMethod,
     onDiscountChange, onPaidAmountChange, onPaymentMethodChange,
+    loyaltySlot,
   } = props;
 
   return (
@@ -75,6 +77,7 @@ export default function PricingSummary(props: Props) {
             className="pos-input w-24 text-right text-sm h-8"
           />
         </div>
+        {loyaltySlot}
         <div className="h-px bg-border" />
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total</span>

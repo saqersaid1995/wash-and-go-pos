@@ -19,6 +19,7 @@ import ServicesPricing from "./pages/ServicesPricing.tsx";
 import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
 import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
+import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/whatsapp" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppSettings /></ProtectedRoute>} />
             <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
+            <Route path="/loyalty" element={<ProtectedRoute allowedRoles={["admin"]}><LoyaltySettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>

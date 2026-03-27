@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Crown, Phone, Calendar, ShoppingBag, DollarSign, Clock, AlertCircle,
-  FileText, Plus, Edit, Package, ExternalLink, Loader2
+  FileText, Plus, Edit, Package, ExternalLink, Loader2, Gift
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchCustomerById, fetchOrdersByCustomerId, addCustomerNote, updateCustomerRecord } from "@/lib/supabase-queries";
@@ -10,6 +10,8 @@ import type { CustomerRecord, CustomerWithStats } from "@/types/customer";
 import type { WorkflowOrder } from "@/types/workflow";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
@@ -50,7 +52,9 @@ function buildStats(customer: CustomerRecord, orders: WorkflowOrder[]): Customer
 export default function CustomerProfile() {
   const { customerId } = useParams();
   const nav = useNavigate();
+  const { settings: loyaltySettings } = useLoyaltySettings();
   const [customer, setCustomer] = useState<CustomerWithStats | null>(null);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
@@ -68,6 +72,13 @@ export default function CustomerProfile() {
     ]);
     if (cust) {
       setCustomer(buildStats(cust, orders));
+      // Fetch loyalty balance
+      const { data: loyaltyData } = await supabase
+        .from("customer_loyalty")
+        .select("points_balance")
+        .eq("customer_id", customerId)
+        .maybeSingle();
+      setLoyaltyBalance((loyaltyData as any)?.points_balance ?? 0);
     }
     setLoading(false);
   }, [customerId]);
@@ -183,6 +194,9 @@ export default function CustomerProfile() {
             <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={formatOMR(customer.outstandingBalance)} warning={customer.outstandingBalance > 0} />
             <MiniCard icon={<FileText className="w-4 h-4" />} label="Unpaid Orders" value={customer.unpaidOrderCount} warning={customer.unpaidOrderCount > 0} />
             <MiniCard icon={<Clock className="w-4 h-4" />} label="Last Order" value={customer.lastOrderDate ?? "—"} />
+            {loyaltySettings?.is_enabled && (
+              <MiniCard icon={<Gift className="w-4 h-4" />} label="Loyalty Points" value={loyaltyBalance} accent={loyaltyBalance > 0} />
+            )}
           </div>
         </div>
 

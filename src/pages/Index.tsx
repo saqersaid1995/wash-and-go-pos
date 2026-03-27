@@ -3,10 +3,12 @@ import { useState, useCallback } from "react";
 import { usePOSState } from "@/hooks/usePOSState";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import CustomerSection from "@/components/pos/CustomerSection";
 import OrderDetailsSection from "@/components/pos/OrderDetailsSection";
 import GarmentTable from "@/components/pos/GarmentTable";
 import PricingSummary from "@/components/pos/PricingSummary";
+import LoyaltyRedemption from "@/components/pos/LoyaltyRedemption";
 import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
@@ -16,9 +18,12 @@ import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { ScanBarcode } from "lucide-react";
+import { awardLoyaltyPoints, redeemLoyaltyPoints } from "@/lib/loyalty";
 
 const Index = () => {
   const pos = usePOSState();
+  const { settings: loyaltySettings } = useLoyaltySettings();
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState<string | undefined>();
   useOfflineCache();
@@ -42,6 +47,21 @@ const Index = () => {
     }
   };
 
+  const processLoyaltyAfterSave = async (orderId: string) => {
+    const custId = pos.matchedCustomer?.id;
+    if (!custId || !loyaltySettings?.is_enabled) return;
+    // Redeem points if discount applied
+    if (loyaltyDiscount > 0) {
+      const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
+      await redeemLoyaltyPoints(custId, orderId, pointsUsed, loyaltyDiscount);
+    }
+    // Award points if paid
+    if (pos.paidAmount > 0) {
+      await awardLoyaltyPoints(custId, orderId, pos.paidAmount);
+    }
+    setLoyaltyDiscount(0);
+  };
+
   const handleSave = async () => {
     if (pos.items.length === 0) {
       toast.error("Add at least one item to the order.");
@@ -53,6 +73,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       pos.clearForm();
@@ -72,6 +93,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       if (navigator.onLine) {
@@ -92,6 +114,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       toast.success(`Order ${pos.orderNumber} saved and sent to processing!`);
       pos.clearForm();
     } else {
@@ -158,14 +181,25 @@ const Index = () => {
             <PricingSummary
               subtotal={pos.subtotal}
               discount={pos.discount}
-              total={pos.total}
+              total={Math.max(0, pos.total - loyaltyDiscount)}
               paidAmount={pos.paidAmount}
-              remainingBalance={pos.remainingBalance}
+              remainingBalance={Math.max(0, pos.total - loyaltyDiscount - pos.paidAmount)}
               paymentStatus={pos.paymentStatus}
               paymentMethod={pos.paymentMethod}
               onDiscountChange={pos.setDiscount}
               onPaidAmountChange={pos.setPaidAmount}
               onPaymentMethodChange={pos.setPaymentMethod}
+              loyaltySlot={
+                loyaltySettings?.is_enabled ? (
+                  <LoyaltyRedemption
+                    customerId={pos.matchedCustomer?.id ?? null}
+                    orderTotal={pos.total}
+                    loyaltySettings={loyaltySettings}
+                    loyaltyDiscount={loyaltyDiscount}
+                    onLoyaltyDiscountChange={setLoyaltyDiscount}
+                  />
+                ) : undefined
+              }
             />
             <ActionButtons
               onSave={handleSave}
