@@ -93,6 +93,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       if (navigator.onLine) {
