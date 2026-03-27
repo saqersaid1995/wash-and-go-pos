@@ -550,6 +550,17 @@ Deno.serve(async (req) => {
       provider_response: JSON.stringify(waData),
     } as any);
 
+    // Also save to whatsapp_messages for inbox display
+    await supabase.from("whatsapp_messages").insert({
+      phone: normalizedPhone,
+      message: `[Template: ${template_name}] Order ${orderNum} - Total: OMR ${total}`,
+      type: "outgoing",
+      customer_id: customer_id || null,
+      order_id: order_id || null,
+      wa_message_id: messageId,
+      message_timestamp: new Date().toISOString(),
+    });
+
     if (order_id) {
       await supabase.from("orders").update({ ready_pickup_whatsapp_sent: true }).eq("id", order_id);
     }

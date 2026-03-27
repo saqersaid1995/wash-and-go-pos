@@ -17,6 +17,7 @@ import Expenses from "./pages/Expenses.tsx";
 import Scanner from "./pages/Scanner.tsx";
 import ServicesPricing from "./pages/ServicesPricing.tsx";
 import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
+import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/expenses" element={<ProtectedRoute allowedRoles={["admin"]}><Expenses /></ProtectedRoute>} />
             <Route path="/services" element={<ProtectedRoute allowedRoles={["admin"]}><ServicesPricing /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppSettings /></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
