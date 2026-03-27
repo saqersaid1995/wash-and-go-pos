@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import { awardLoyaltyPoints } from "@/lib/loyalty";
+import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
 import type { WorkflowOrder } from "@/types/workflow";
 
 const PAYMENT_METHODS = [
@@ -80,6 +81,11 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
     // Award loyalty points for this payment
     if (order.customerId) {
       await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
+    }
+
+    // Send loyalty WhatsApp when fully paid
+    if (newPaymentStatus === "paid" && order.customerId && order.customerPhone) {
+      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, numericAmount);
     }
 
     setSubmitting(false);

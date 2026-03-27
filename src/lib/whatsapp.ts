@@ -45,6 +45,48 @@ export async function sendReadyForPickupWhatsApp(params: SendWhatsAppParams): Pr
   }
 }
 
+interface SendLoyaltyWhatsAppParams {
+  orderId: string;
+  customerId: string;
+  customerPhone: string;
+  pointsEarned: number;
+  totalPoints: number;
+  minRedeemPoints: number;
+  remainingToRedeem: number;
+  maxRedemptionPct: number;
+}
+
+export async function sendLoyaltyWhatsApp(params: SendLoyaltyWhatsAppParams): Promise<{
+  success: boolean;
+  status: "sent" | "failed" | "skipped";
+  error?: string;
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-loyalty", {
+      body: {
+        order_id: params.orderId,
+        customer_id: params.customerId,
+        customer_phone: params.customerPhone,
+        points_earned: params.pointsEarned,
+        total_points: params.totalPoints,
+        min_redeem_points: params.minRedeemPoints,
+        remaining_to_redeem: params.remainingToRedeem,
+        max_redemption_pct: params.maxRedemptionPct,
+      },
+    });
+
+    if (error) {
+      console.error("Loyalty WhatsApp invoke error:", error);
+      return { success: false, status: "failed", error: error.message };
+    }
+
+    return data as { success: boolean; status: "sent" | "failed" | "skipped"; error?: string };
+  } catch (err) {
+    console.error("Loyalty WhatsApp send error:", err);
+    return { success: false, status: "failed", error: String(err) };
+  }
+}
+
 export async function fetchNotificationLogs(orderId: string) {
   const { data, error } = await supabase
     .from("notification_logs" as any)

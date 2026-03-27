@@ -460,6 +460,7 @@ export type Database = {
           id: string
           is_deleted: boolean
           is_draft: boolean
+          loyalty_whatsapp_sent: boolean
           order_date: string
           order_number: string
           order_type: string
@@ -487,6 +488,7 @@ export type Database = {
           id?: string
           is_deleted?: boolean
           is_draft?: boolean
+          loyalty_whatsapp_sent?: boolean
           order_date?: string
           order_number: string
           order_type?: string
@@ -514,6 +516,7 @@ export type Database = {
           id?: string
           is_deleted?: boolean
           is_draft?: boolean
+          loyalty_whatsapp_sent?: boolean
           order_date?: string
           order_number?: string
           order_type?: string

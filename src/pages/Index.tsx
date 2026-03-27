@@ -19,6 +19,7 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { ScanBarcode } from "lucide-react";
 import { awardLoyaltyPoints, redeemLoyaltyPoints } from "@/lib/loyalty";
+import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
 
 const Index = () => {
   const pos = usePOSState();
@@ -74,6 +75,10 @@ const Index = () => {
     const result = await pos.saveOrder();
     if (result.success) {
       await processLoyaltyAfterSave(result.orderId!);
+      // Send loyalty WhatsApp if fully paid at creation
+      if (pos.paymentStatus === "paid" && pos.matchedCustomer?.id && pos.customerPhone) {
+        triggerLoyaltyWhatsApp(result.orderId!, pos.matchedCustomer.id, pos.customerPhone, pos.paidAmount);
+      }
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       pos.clearForm();
@@ -94,6 +99,9 @@ const Index = () => {
     const result = await pos.saveOrder();
     if (result.success) {
       await processLoyaltyAfterSave(result.orderId!);
+      if (pos.paymentStatus === "paid" && pos.matchedCustomer?.id && pos.customerPhone) {
+        triggerLoyaltyWhatsApp(result.orderId!, pos.matchedCustomer.id, pos.customerPhone, pos.paidAmount);
+      }
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       if (navigator.onLine) {
@@ -115,6 +123,9 @@ const Index = () => {
     const result = await pos.saveOrder();
     if (result.success) {
       await processLoyaltyAfterSave(result.orderId!);
+      if (pos.paymentStatus === "paid" && pos.matchedCustomer?.id && pos.customerPhone) {
+        triggerLoyaltyWhatsApp(result.orderId!, pos.matchedCustomer.id, pos.customerPhone, pos.paidAmount);
+      }
       toast.success(`Order ${pos.orderNumber} saved and sent to processing!`);
       pos.clearForm();
     } else {
