@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface LoyaltySettings {
@@ -13,7 +13,7 @@ export function useLoyaltySettings() {
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     const { data } = await supabase
       .from("loyalty_settings")
       .select("*")
@@ -21,9 +21,9 @@ export function useLoyaltySettings() {
       .single();
     if (data) setSettings(data as unknown as LoyaltySettings);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [fetch]);
 
   const update = async (updates: Partial<Omit<LoyaltySettings, "id">>) => {
     if (!settings) return;
