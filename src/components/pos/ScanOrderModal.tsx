@@ -33,7 +33,7 @@ const PAYMENT_METHODS = [
   { id: "mixed", label: "Mixed", icon: Shuffle },
 ] as const;
 
-type ModalView = "scan" | "payment" | "already-delivered" | "not-ready" | "already-paid";
+type ModalView = "scan" | "payment" | "already-delivered" | "already-paid";
 
 export default function ScanOrderModal({ open, onOpenChange, initialCode }: ScanOrderModalProps) {
   const [value, setValue] = useState("");
@@ -87,12 +87,10 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
       if (found.currentStatus === "delivered") {
         setView("already-delivered");
-      } else if (found.currentStatus !== "ready-for-pickup" && found.currentStatus !== "received") {
-        setView("not-ready");
       } else if (found.remainingBalance > 0) {
         setAmount(found.remainingBalance.toFixed(3));
         setView("payment");
-      } else if (found.remainingBalance <= 0 && found.currentStatus === "ready-for-pickup") {
+      } else if (found.remainingBalance <= 0) {
         setView("already-paid");
       } else {
         setAmount(found.remainingBalance.toFixed(3));
@@ -180,9 +178,9 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
-    // Auto-deliver if fully paid and ready-for-pickup
-    if (newRemaining <= 0 && order.currentStatus === "ready-for-pickup") {
-      await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
+    // Auto-deliver if fully paid (direct handover — skips ready-for-pickup, no WhatsApp)
+    if (newRemaining <= 0 && order.currentStatus !== "delivered") {
+      await updateOrderStatus(order.id, order.currentStatus, "delivered");
       toast.success(`Payment collected & order ${order.orderNumber} delivered!`);
     } else {
       toast.success(`Payment of ${formatOMR(numericAmount)} recorded for ${order.orderNumber}`);
@@ -269,7 +267,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               <InfoRow label="Order" value={order.orderNumber} />
               <InfoRow label="Customer" value={order.customerName} />
               <InfoRow label="Phone" value={order.customerPhone || "—"} />
-              <InfoRow label="Status" value={order.currentStatus === "ready-for-pickup" ? "Ready for Pickup" : "Received"} icon={order.currentStatus === "ready-for-pickup" ? <PackageCheck className="h-3.5 w-3.5 text-primary" /> : <Clock className="h-3.5 w-3.5 text-warning" />} />
+              <InfoRow label="Status" value={order.currentStatus === "ready-for-pickup" ? "Ready for Pickup" : order.currentStatus === "received" ? "Received" : order.currentStatus} icon={order.currentStatus === "ready-for-pickup" ? <PackageCheck className="h-3.5 w-3.5 text-primary" /> : <Clock className="h-3.5 w-3.5 text-warning" />} />
               <InfoRow label="Items" value={String(order.itemCount)} />
               <Separator className="my-2" />
               <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
@@ -343,8 +341,8 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               onClick={handlePayment}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              {numericAmount >= effectiveRemaining && order.currentStatus === "ready-for-pickup"
-                ? `Collect & Deliver — ${formatOMR(numericAmount)}`
+              {numericAmount >= effectiveRemaining
+                ? `Collect Payment & Deliver — ${formatOMR(numericAmount)}`
                 : `Collect Payment — ${formatOMR(numericAmount)}`}
             </Button>
 
@@ -389,17 +387,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
           </div>
         )}
 
-        {/* ── NOT READY ── */}
-        {view === "not-ready" && order && (
-          <div className="space-y-4 text-center py-4">
-            <Clock className="h-10 w-10 text-warning mx-auto" />
-            <p className="font-medium">This order is not ready for pickup yet</p>
-            <p className="text-sm text-muted-foreground">{order.orderNumber} • Status: {order.currentStatus}</p>
-            <Button variant="outline" className="w-full" onClick={resetToScan}>
-              Scan Another Order
-            </Button>
-          </div>
-        )}
+        
       </DialogContent>
     </Dialog>
   );
