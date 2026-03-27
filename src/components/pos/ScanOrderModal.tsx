@@ -124,10 +124,19 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
   const handlePayment = async () => {
     if (!order) return;
+    const effectiveRemaining = Math.max(0, order.remainingBalance - loyaltyDiscount);
     const numericAmount = parseFloat(amount) || 0;
-    if (numericAmount <= 0 || numericAmount > order.remainingBalance) return;
+    if (numericAmount <= 0 || numericAmount > effectiveRemaining) return;
 
     setSubmitting(true);
+
+    // Process loyalty redemption first
+    if (loyaltyDiscount > 0 && order.customerId && loyaltySettings) {
+      const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
+      await redeemLoyaltyPoints(order.customerId, order.id, pointsUsed, loyaltyDiscount);
+    }
+
+    const loyaltyAdjustedTotal = order.totalAmount - loyaltyDiscount;
 
     const { error: payError } = await supabase.from("payments").insert({
       order_id: order.id,
@@ -141,7 +150,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       return;
     }
 
-    const newPaid = order.paidAmount + numericAmount;
+    const newPaid = order.paidAmount + numericAmount + loyaltyDiscount;
     const newRemaining = Math.max(0, order.totalAmount - newPaid);
     const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
 
@@ -158,6 +167,11 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       toast.error("Order update failed: " + updateError.message);
       setSubmitting(false);
       return;
+    }
+
+    // Award loyalty points on the cash amount paid
+    if (numericAmount > 0 && order.customerId && loyaltySettings?.is_enabled) {
+      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
     // Auto-deliver if fully paid and ready-for-pickup
@@ -181,8 +195,9 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     resetToScan();
   };
 
+  const effectiveRemaining = order ? Math.max(0, order.remainingBalance - loyaltyDiscount) : 0;
   const numericAmount = parseFloat(amount) || 0;
-  const isValidPayment = order && numericAmount > 0 && numericAmount <= order.remainingBalance;
+  const isValidPayment = order && numericAmount > 0 && numericAmount <= effectiveRemaining;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
