@@ -38,6 +38,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) {
   const location = useLocation();
+  const unreadCount = useUnreadWhatsApp();
 
   // Safely try to use auth context - may not be available in all render paths
   let profile: any = null;
@@ -54,6 +55,13 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
   }
 
   const visibleItems = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
+
+  const getLabel = (item: NavItem) => {
+    if (item.to === "/inbox" && unreadCount > 0) {
+      return `${item.label} (${unreadCount})`;
+    }
+    return item.label;
+  };
 
   return (
     <>
