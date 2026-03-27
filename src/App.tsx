@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/expenses" element={<ProtectedRoute allowedRoles={["admin"]}><Expenses /></ProtectedRoute>} />
             <Route path="/services" element={<ProtectedRoute allowedRoles={["admin"]}><ServicesPricing /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppSettings /></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

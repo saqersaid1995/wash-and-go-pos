@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/reports", label: "Reports", roles: ["admin"] },
   { to: "/expenses", label: "Expenses", roles: ["admin"] },
   { to: "/services", label: "Pricing", roles: ["admin"] },
+  { to: "/inbox", label: "Inbox", roles: ["admin", "cashier"] },
   { to: "/whatsapp", label: "WhatsApp", roles: ["admin"] },
   { to: "/staff", label: "Staff", roles: ["admin"] },
 ];
