@@ -29,11 +29,12 @@ export function useBarcodeScanner(onScan: (code: string) => void, enabled = true
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
 
-      // Skip if user is focused on a form field
+      // Skip if user is focused on a form field, dialog, or any area that explicitly opts out
       if (
         IGNORED_TAGS.has(target.tagName) ||
         target.isContentEditable ||
-        target.closest("[contenteditable]")
+        target.closest("[contenteditable]") ||
+        target.closest("[data-disable-global-barcode='true']")
       ) {
         return;
       }
