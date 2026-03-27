@@ -9,17 +9,84 @@ const corsHeaders = {
 const VERIFY_TOKEN = "lavinderia_whatsapp_verify_2024";
 const GRAPH_API_VERSION = "v18.0";
 
-async function fetchMediaUrl(mediaId: string, accessToken: string): Promise<{ url: string | null; mime_type: string | null }> {
+async function downloadAndStoreMedia(
+  mediaId: string,
+  accessToken: string,
+  supabase: any,
+  fileExtension: string
+): Promise<string | null> {
   try {
-    const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${mediaId}`, {
+    // Step 1: Get download URL from Meta
+    const metaRes = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${mediaId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) return { url: null, mime_type: null };
-    const data = await res.json();
-    return { url: data.url || null, mime_type: data.mime_type || null };
+    if (!metaRes.ok) {
+      console.error("Meta media lookup failed:", metaRes.status);
+      return null;
+    }
+    const metaData = await metaRes.json();
+    const downloadUrl = metaData.url;
+    if (!downloadUrl) return null;
+
+    // Step 2: Download the actual binary from WhatsApp CDN
+    const mediaRes = await fetch(downloadUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!mediaRes.ok) {
+      console.error("Media download failed:", mediaRes.status);
+      return null;
+    }
+    const blob = await mediaRes.blob();
+    const mimeType = metaData.mime_type || mediaRes.headers.get("content-type") || "application/octet-stream";
+
+    // Step 3: Upload to Supabase Storage
+    const fileName = `${mediaId}.${fileExtension}`;
+    const filePath = `media/${fileName}`;
+    
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+
+    const { error: uploadError } = await supabase.storage
+      .from("whatsapp-media")
+      .upload(filePath, uint8, {
+        contentType: mimeType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return null;
+    }
+
+    // Step 4: Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from("whatsapp-media")
+      .getPublicUrl(filePath);
+
+    console.log(`Media stored: ${filePath}`);
+    return publicUrlData?.publicUrl || null;
   } catch (e) {
-    console.error("fetchMediaUrl error:", e);
-    return { url: null, mime_type: null };
+    console.error("downloadAndStoreMedia error:", e);
+    return null;
+  }
+}
+
+function getExtensionForType(msgType: string, mimeType?: string): string {
+  if (mimeType) {
+    if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
+    if (mimeType.includes("png")) return "png";
+    if (mimeType.includes("webp")) return "webp";
+    if (mimeType.includes("ogg")) return "ogg";
+    if (mimeType.includes("mp4")) return "mp4";
+    if (mimeType.includes("pdf")) return "pdf";
+  }
+  switch (msgType) {
+    case "image": return "jpg";
+    case "audio": return "ogg";
+    case "video": return "mp4";
+    case "document": return "pdf";
+    case "sticker": return "webp";
+    default: return "bin";
   }
 }
 
@@ -83,16 +150,16 @@ Deno.serve(async (req) => {
               mediaId = msg.image?.id || null;
               messageText = msg.image?.caption || "[Image]";
               if (mediaId && accessToken) {
-                const media = await fetchMediaUrl(mediaId, accessToken);
-                mediaUrl = media.url;
+                const ext = getExtensionForType("image", msg.image?.mime_type);
+                mediaUrl = await downloadAndStoreMedia(mediaId, accessToken, supabase, ext);
               }
             } else if (msg.type === "audio") {
               messageType = "audio";
               mediaId = msg.audio?.id || null;
               messageText = "[Voice note]";
               if (mediaId && accessToken) {
-                const media = await fetchMediaUrl(mediaId, accessToken);
-                mediaUrl = media.url;
+                const ext = getExtensionForType("audio", msg.audio?.mime_type);
+                mediaUrl = await downloadAndStoreMedia(mediaId, accessToken, supabase, ext);
               }
             } else if (msg.type === "document") {
               messageType = "document";
@@ -100,21 +167,25 @@ Deno.serve(async (req) => {
               filename = msg.document?.filename || null;
               messageText = filename ? `[Document] ${filename}` : "[Document]";
               if (mediaId && accessToken) {
-                const media = await fetchMediaUrl(mediaId, accessToken);
-                mediaUrl = media.url;
+                const ext = getExtensionForType("document", msg.document?.mime_type);
+                mediaUrl = await downloadAndStoreMedia(mediaId, accessToken, supabase, ext);
               }
             } else if (msg.type === "video") {
               messageType = "video";
               mediaId = msg.video?.id || null;
               messageText = "[Video]";
               if (mediaId && accessToken) {
-                const media = await fetchMediaUrl(mediaId, accessToken);
-                mediaUrl = media.url;
+                const ext = getExtensionForType("video", msg.video?.mime_type);
+                mediaUrl = await downloadAndStoreMedia(mediaId, accessToken, supabase, ext);
               }
             } else if (msg.type === "sticker") {
               messageType = "sticker";
               mediaId = msg.sticker?.id || null;
               messageText = "[Sticker]";
+              if (mediaId && accessToken) {
+                const ext = getExtensionForType("sticker", msg.sticker?.mime_type);
+                mediaUrl = await downloadAndStoreMedia(mediaId, accessToken, supabase, ext);
+              }
             } else if (msg.type === "location") {
               messageType = "location";
               messageText = "[Location]";
@@ -164,12 +235,13 @@ Deno.serve(async (req) => {
                 wa_message_id: waMessageId,
                 message_timestamp: timestamp,
                 send_status: "sent",
+                is_read: false,
               });
 
             if (insertError) {
               console.error("Insert error:", insertError);
             } else {
-              console.log(`Saved ${messageType} message from ${phoneDigits}`);
+              console.log(`Saved ${messageType} message from ${phoneDigits}, media: ${mediaUrl ? 'stored' : 'none'}`);
             }
           }
         }

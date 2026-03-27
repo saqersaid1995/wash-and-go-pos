@@ -40,6 +40,7 @@ interface WaMessage {
   created_at: string;
   is_deleted: boolean;
   send_status: string;
+  is_read: boolean;
 }
 
 interface Conversation {
@@ -49,6 +50,7 @@ interface Conversation {
   lastMessage: string;
   lastTime: string;
   messages: WaMessage[];
+  unreadCount: number;
 }
 
 export default function WhatsAppInbox() {
@@ -128,12 +130,16 @@ export default function WhatsAppInbox() {
           lastMessage: msg.message,
           lastTime: msg.created_at,
           messages: [],
+          unreadCount: 0,
         });
       }
       const conv = map.get(phone)!;
       conv.messages.push(msg);
       conv.lastMessage = msg.message;
       conv.lastTime = msg.created_at;
+      if (msg.type === "incoming" && !msg.is_read) {
+        conv.unreadCount++;
+      }
     }
 
     const arr = Array.from(map.values());
@@ -153,6 +159,29 @@ export default function WhatsAppInbox() {
   }, [conversations, search]);
 
   const selectedConversation = conversations.find((c) => c.phone === selectedPhone);
+
+  // Mark messages as read when conversation is selected
+  useEffect(() => {
+    if (!selectedConversation) return;
+    const unreadIds = selectedConversation.messages
+      .filter((m) => m.type === "incoming" && !m.is_read)
+      .map((m) => m.id);
+    if (unreadIds.length === 0) return;
+
+    // Update locally immediately
+    setMessages((prev) =>
+      prev.map((m) => (unreadIds.includes(m.id) ? { ...m, is_read: true } : m))
+    );
+
+    // Update in database
+    supabase
+      .from("whatsapp_messages")
+      .update({ is_read: true } as any)
+      .in("id", unreadIds)
+      .then(({ error }) => {
+        if (error) console.error("Mark read error:", error);
+      });
+  }, [selectedPhone, selectedConversation?.messages.length]);
 
   // Fetch latest order for selected conversation
   useEffect(() => {
@@ -259,9 +288,20 @@ export default function WhatsAppInbox() {
           {msg.media_url ? (
             <button onClick={() => setPreviewImage(msg.media_url)} className="block">
               <div className="rounded overflow-hidden mb-1 max-w-[200px]">
-                <div className="bg-muted/50 flex items-center justify-center p-4 gap-2 text-xs text-muted-foreground">
+                <img
+                  src={msg.media_url}
+                  alt="Shared image"
+                  className="w-full h-auto rounded object-cover max-h-[200px]"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = "flex";
+                  }}
+                />
+                <div className="hidden items-center justify-center p-4 gap-2 text-xs text-muted-foreground bg-muted/50">
                   <ImageIcon className="h-5 w-5" />
-                  <span>Image</span>
+                  <span>Image failed to load</span>
                 </div>
               </div>
             </button>
@@ -348,29 +388,51 @@ export default function WhatsAppInbox() {
                     onClick={() => { setSelectedPhone(conv.phone); setReplyText(""); }}
                     className={cn(
                       "w-full text-left px-4 py-3 border-b border-border/50 hover:bg-accent/50 transition-colors",
-                      selectedPhone === conv.phone && "bg-accent"
+                      selectedPhone === conv.phone && "bg-accent",
+                      conv.unreadCount > 0 && selectedPhone !== conv.phone && "bg-primary/5"
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <User className="h-4 w-4 text-primary" />
+                      <div className={cn(
+                        "h-9 w-9 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                        conv.unreadCount > 0 ? "bg-primary/20" : "bg-primary/10"
+                      )}>
+                        <User className={cn("h-4 w-4", conv.unreadCount > 0 ? "text-primary" : "text-primary")} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium truncate">
+                          <span className={cn(
+                            "text-sm truncate",
+                            conv.unreadCount > 0 ? "font-bold" : "font-medium"
+                          )}>
                             {conv.customerName || formatPhone(conv.phone)}
                           </span>
-                          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                            {formatDistanceToNow(new Date(conv.lastTime), { addSuffix: true })}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <span className={cn(
+                              "text-[10px]",
+                              conv.unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+                            )}>
+                              {formatDistanceToNow(new Date(conv.lastTime), { addSuffix: true })}
+                            </span>
+                          </div>
                         </div>
                         {conv.customerName && (
                           <span className="text-[11px] text-muted-foreground">{formatPhone(conv.phone)}</span>
                         )}
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {msgTypeIcon(conv.messages[conv.messages.length - 1])}
-                          {conv.lastMessage}
-                        </p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className={cn(
+                            "text-xs truncate",
+                            conv.unreadCount > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+                          )}>
+                            {msgTypeIcon(conv.messages[conv.messages.length - 1])}
+                            {conv.lastMessage}
+                          </p>
+                          {conv.unreadCount > 0 && (
+                            <Badge className="ml-2 h-5 min-w-[20px] px-1.5 text-[10px] bg-primary text-primary-foreground shrink-0">
+                              {conv.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </button>

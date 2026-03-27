@@ -609,6 +609,7 @@ export type Database = {
           filename: string | null
           id: string
           is_deleted: boolean
+          is_read: boolean
           media_id: string | null
           media_url: string | null
           message: string
@@ -626,6 +627,7 @@ export type Database = {
           filename?: string | null
           id?: string
           is_deleted?: boolean
+          is_read?: boolean
           media_id?: string | null
           media_url?: string | null
           message: string
@@ -643,6 +645,7 @@ export type Database = {
           filename?: string | null
           id?: string
           is_deleted?: boolean
+          is_read?: boolean
           media_id?: string | null
           media_url?: string | null
           message?: string
