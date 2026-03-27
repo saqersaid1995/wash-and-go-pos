@@ -87,12 +87,10 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
       if (found.currentStatus === "delivered") {
         setView("already-delivered");
-      } else if (found.currentStatus !== "ready-for-pickup" && found.currentStatus !== "received") {
-        setView("not-ready");
       } else if (found.remainingBalance > 0) {
         setAmount(found.remainingBalance.toFixed(3));
         setView("payment");
-      } else if (found.remainingBalance <= 0 && found.currentStatus === "ready-for-pickup") {
+      } else if (found.remainingBalance <= 0) {
         setView("already-paid");
       } else {
         setAmount(found.remainingBalance.toFixed(3));
