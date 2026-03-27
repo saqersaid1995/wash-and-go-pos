@@ -2,12 +2,13 @@ import { useEffect, useRef, useCallback } from "react";
 
 const BARCODE_PATTERN = /^(ORDER:)?ORD-\d{6}-\d{4}$/;
 const MAX_INPUT_DURATION_MS = 300; // Scanner types full code in <300ms
-const IGNORED_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
 /**
  * Global barcode scanner listener.
- * Detects rapid keyboard input matching order barcode format,
- * ignores input when user is typing in form fields.
+ * Detects rapid keyboard input matching order barcode format.
+ * Works even when an input field is focused — scanner speed distinguishes
+ * hardware scanners from human typing. When a scan is detected in an input,
+ * the input value is cleared to remove junk characters.
  */
 export function useBarcodeScanner(onScan: (code: string) => void, enabled = true) {
   const bufferRef = useRef("");
@@ -29,9 +30,8 @@ export function useBarcodeScanner(onScan: (code: string) => void, enabled = true
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
 
-      // Skip if user is focused on a form field, dialog, or any area that explicitly opts out
+      // Skip areas that explicitly opt out (e.g. ScanOrderModal's own input)
       if (
-        IGNORED_TAGS.has(target.tagName) ||
         target.isContentEditable ||
         target.closest("[contenteditable]") ||
         target.closest("[data-disable-global-barcode='true']")
@@ -51,6 +51,20 @@ export function useBarcodeScanner(onScan: (code: string) => void, enabled = true
           e.preventDefault();
           e.stopPropagation();
           const code = buffer.startsWith("ORDER:") ? buffer.slice(6) : buffer;
+
+          // Clear junk characters from focused input field
+          const inputEl = target as HTMLInputElement;
+          if (inputEl.tagName === "INPUT" || inputEl.tagName === "TEXTAREA") {
+            // Use native setter to trigger React's onChange
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              window.HTMLInputElement.prototype, "value"
+            )?.set;
+            if (nativeInputValueSetter) {
+              nativeInputValueSetter.call(inputEl, "");
+              inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }
+
           onScan(code);
         }
         resetBuffer();
