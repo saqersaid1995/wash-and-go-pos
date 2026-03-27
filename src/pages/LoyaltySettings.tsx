@@ -121,6 +121,21 @@ export default function LoyaltySettings() {
             </div>
 
             <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Minimum Points to Redeem</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={currentMinRedeem}
+                  onChange={(e) => setMinRedeem(Number(e.target.value))}
+                  className="pos-input w-24 text-center"
+                />
+                <span className="text-sm text-muted-foreground">points required before redemption</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                 <Percent className="w-3 h-3" /> Max Redemption per Order
               </label>

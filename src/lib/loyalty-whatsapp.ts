@@ -51,7 +51,7 @@ export async function triggerLoyaltyWhatsApp(
     const totalPoints = parseFloat(((loyalty as any)?.points_balance ?? pointsEarned).toFixed(2));
 
     // 5. Determine which template to send
-    const minRedeemPoints = redeemRate;
+    const minRedeemPoints = minRedeemPts;
     const isEligibleToRedeem = totalPoints >= minRedeemPoints;
 
     if (isEligibleToRedeem) {

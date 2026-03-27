@@ -87,7 +87,11 @@ export default function LoyaltyRedemption({
           </p>
         </div>
       ) : (
-        <p className="text-[10px] text-muted-foreground">No points available for redemption</p>
+        <p className="text-[10px] text-muted-foreground">
+          {balance > 0 && !meetsMinimum
+            ? `Not enough points yet (need ${loyaltySettings.min_redeem_points} pts)`
+            : "No points available for redemption"}
+        </p>
       )}
     </div>
   );
