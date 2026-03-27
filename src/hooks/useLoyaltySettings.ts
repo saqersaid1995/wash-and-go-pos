@@ -7,6 +7,7 @@ export interface LoyaltySettings {
   earn_points_rate: number;
   redeem_points_rate: number;
   max_redemption_percent: number;
+  min_redeem_points: number;
 }
 
 export function useLoyaltySettings() {

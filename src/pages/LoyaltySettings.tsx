@@ -12,6 +12,7 @@ export default function LoyaltySettings() {
   const [earnRate, setEarnRate] = useState<number | null>(null);
   const [redeemRate, setRedeemRate] = useState<number | null>(null);
   const [maxPercent, setMaxPercent] = useState<number | null>(null);
+  const [minRedeem, setMinRedeem] = useState<number | null>(null);
 
   if (loading || !settings) {
     return (
@@ -27,6 +28,7 @@ export default function LoyaltySettings() {
   const currentEarn = earnRate ?? settings.earn_points_rate;
   const currentRedeem = redeemRate ?? settings.redeem_points_rate;
   const currentMax = maxPercent ?? settings.max_redemption_percent;
+  const currentMinRedeem = minRedeem ?? settings.min_redeem_points;
 
   const handleToggle = async (enabled: boolean) => {
     setSaving(true);
@@ -45,6 +47,7 @@ export default function LoyaltySettings() {
       earn_points_rate: currentEarn,
       redeem_points_rate: currentRedeem,
       max_redemption_percent: currentMax,
+      min_redeem_points: currentMinRedeem,
     });
     setSaving(false);
     if (res?.error) {
@@ -53,6 +56,7 @@ export default function LoyaltySettings() {
       setEarnRate(null);
       setRedeemRate(null);
       setMaxPercent(null);
+      setMinRedeem(null);
       toast.success("Loyalty rules updated");
     }
   };
@@ -113,6 +117,21 @@ export default function LoyaltySettings() {
                   className="pos-input w-24 text-center"
                 />
                 <span className="text-sm text-muted-foreground">points = 1 OMR discount</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Minimum Points to Redeem</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={currentMinRedeem}
+                  onChange={(e) => setMinRedeem(Number(e.target.value))}
+                  className="pos-input w-24 text-center"
+                />
+                <span className="text-sm text-muted-foreground">points required before redemption</span>
               </div>
             </div>
 

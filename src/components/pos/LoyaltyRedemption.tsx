@@ -42,9 +42,10 @@ export default function LoyaltyRedemption({
 
   if (!loyaltySettings.is_enabled || !customerId) return null;
 
+  const meetsMinimum = balance >= loyaltySettings.min_redeem_points;
   const maxRedeemOMR = (orderTotal * loyaltySettings.max_redemption_percent) / 100;
   const maxRedeemFromPoints = balance / loyaltySettings.redeem_points_rate;
-  const maxDiscount = Math.min(maxRedeemOMR, maxRedeemFromPoints);
+  const maxDiscount = meetsMinimum ? Math.min(maxRedeemOMR, maxRedeemFromPoints) : 0;
   const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
 
   if (loading) {
@@ -65,7 +66,7 @@ export default function LoyaltyRedemption({
         <span className="text-xs font-bold text-foreground">{Number(balance).toFixed(2)} pts</span>
       </div>
 
-      {balance > 0 && maxDiscount > 0 ? (
+      {balance > 0 && meetsMinimum && maxDiscount > 0 ? (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <input
@@ -86,7 +87,11 @@ export default function LoyaltyRedemption({
           </p>
         </div>
       ) : (
-        <p className="text-[10px] text-muted-foreground">No points available for redemption</p>
+        <p className="text-[10px] text-muted-foreground">
+          {balance > 0 && !meetsMinimum
+            ? `Not enough points yet (need ${loyaltySettings.min_redeem_points} pts)`
+            : "No points available for redemption"}
+        </p>
       )}
     </div>
   );
