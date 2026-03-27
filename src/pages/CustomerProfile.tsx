@@ -72,6 +72,13 @@ export default function CustomerProfile() {
     ]);
     if (cust) {
       setCustomer(buildStats(cust, orders));
+      // Fetch loyalty balance
+      const { data: loyaltyData } = await supabase
+        .from("customer_loyalty")
+        .select("points_balance")
+        .eq("customer_id", customerId)
+        .maybeSingle();
+      setLoyaltyBalance((loyaltyData as any)?.points_balance ?? 0);
     }
     setLoading(false);
   }, [customerId]);
