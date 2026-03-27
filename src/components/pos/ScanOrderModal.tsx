@@ -387,17 +387,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
           </div>
         )}
 
-        {/* ── NOT READY ── */}
-        {view === "not-ready" && order && (
-          <div className="space-y-4 text-center py-4">
-            <Clock className="h-10 w-10 text-warning mx-auto" />
-            <p className="font-medium">This order is not ready for pickup yet</p>
-            <p className="text-sm text-muted-foreground">{order.orderNumber} • Status: {order.currentStatus}</p>
-            <Button variant="outline" className="w-full" onClick={resetToScan}>
-              Scan Another Order
-            </Button>
-          </div>
-        )}
+        
       </DialogContent>
     </Dialog>
   );
