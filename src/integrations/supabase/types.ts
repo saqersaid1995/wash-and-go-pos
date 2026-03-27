@@ -228,6 +228,7 @@ export type Database = {
           id: string
           is_enabled: boolean
           max_redemption_percent: number
+          min_redeem_points: number
           redeem_points_rate: number
           updated_at: string
         }
@@ -237,6 +238,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           max_redemption_percent?: number
+          min_redeem_points?: number
           redeem_points_rate?: number
           updated_at?: string
         }
@@ -246,6 +248,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           max_redemption_percent?: number
+          min_redeem_points?: number
           redeem_points_rate?: number
           updated_at?: string
         }
