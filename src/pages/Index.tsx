@@ -47,6 +47,21 @@ const Index = () => {
     }
   };
 
+  const processLoyaltyAfterSave = async (orderId: string) => {
+    const custId = pos.matchedCustomer?.id;
+    if (!custId || !loyaltySettings?.is_enabled) return;
+    // Redeem points if discount applied
+    if (loyaltyDiscount > 0) {
+      const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
+      await redeemLoyaltyPoints(custId, orderId, pointsUsed, loyaltyDiscount);
+    }
+    // Award points if paid
+    if (pos.paidAmount > 0) {
+      await awardLoyaltyPoints(custId, orderId, pos.paidAmount);
+    }
+    setLoyaltyDiscount(0);
+  };
+
   const handleSave = async () => {
     if (pos.items.length === 0) {
       toast.error("Add at least one item to the order.");
@@ -58,6 +73,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       const offlineTag = !navigator.onLine ? " (saved offline)" : "";
       toast.success(`Order ${pos.orderNumber} saved!${offlineTag}`);
       pos.clearForm();
