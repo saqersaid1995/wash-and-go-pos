@@ -267,7 +267,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               <InfoRow label="Order" value={order.orderNumber} />
               <InfoRow label="Customer" value={order.customerName} />
               <InfoRow label="Phone" value={order.customerPhone || "—"} />
-              <InfoRow label="Status" value={order.currentStatus === "ready-for-pickup" ? "Ready for Pickup" : "Received"} icon={order.currentStatus === "ready-for-pickup" ? <PackageCheck className="h-3.5 w-3.5 text-primary" /> : <Clock className="h-3.5 w-3.5 text-warning" />} />
+              <InfoRow label="Status" value={order.currentStatus === "ready-for-pickup" ? "Ready for Pickup" : order.currentStatus === "received" ? "Received" : order.currentStatus} icon={order.currentStatus === "ready-for-pickup" ? <PackageCheck className="h-3.5 w-3.5 text-primary" /> : <Clock className="h-3.5 w-3.5 text-warning" />} />
               <InfoRow label="Items" value={String(order.itemCount)} />
               <Separator className="my-2" />
               <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
