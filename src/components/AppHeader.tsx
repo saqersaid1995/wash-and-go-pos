@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import OfflineStatusBar from "@/components/OfflineStatusBar";
+import { useUnreadWhatsApp } from "@/hooks/useUnreadWhatsApp";
 
 type AppRole = "admin" | "cashier";
 
