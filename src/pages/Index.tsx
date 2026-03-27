@@ -68,8 +68,8 @@ const Index = () => {
       toast.error("Add at least one item to the order.");
       return;
     }
-    if (!pos.customerName.trim() && !pos.customerPhone.trim()) {
-      toast.error("Customer name or phone is required.");
+    if (!pos.customerPhone.trim()) {
+      toast.error("Customer phone number is required.");
       return;
     }
     const result = await pos.saveOrder();
@@ -92,8 +92,8 @@ const Index = () => {
       toast.error("Add at least one item to the order.");
       return;
     }
-    if (!pos.customerName.trim() && !pos.customerPhone.trim()) {
-      toast.error("Customer name or phone is required.");
+    if (!pos.customerPhone.trim()) {
+      toast.error("Customer phone number is required.");
       return;
     }
     const result = await pos.saveOrder();

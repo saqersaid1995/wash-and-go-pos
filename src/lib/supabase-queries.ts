@@ -406,7 +406,7 @@ export async function createOrder(params: {
       const { data: newCust, error: custErr } = await supabase
         .from("customers")
         .insert({
-          full_name: params.customerName || "Walk-in",
+          full_name: params.customerName || params.customerPhone || "Walk-in",
           phone_number: params.customerPhone,
         })
         .select("id")

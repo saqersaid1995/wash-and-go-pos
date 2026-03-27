@@ -165,9 +165,12 @@ export function usePOSState() {
   // Save to Supabase (or offline)
   const saveOrder = useCallback(async () => {
     if (items.length === 0) return { success: false, error: "No items" };
-    if (!customerName.trim() && !customerPhone.trim()) {
-      return { success: false, error: "Customer name or phone required" };
+    if (!customerPhone.trim()) {
+      return { success: false, error: "Customer phone number is required" };
     }
+
+    // Default customer name to phone number if empty
+    const effectiveName = customerName.trim() || customerPhone.trim();
 
     setSaving(true);
     try {
@@ -188,7 +191,7 @@ export function usePOSState() {
         await saveOfflineOrder({
           localId,
           orderNumber,
-          customerName: customerName.trim(),
+          customerName: effectiveName,
           customerPhone: customerPhone.trim(),
           orderDate,
           deliveryDate,
@@ -214,7 +217,7 @@ export function usePOSState() {
 
       const result = await createOrder({
         customerId: matchedCustomerId,
-        customerName: customerName.trim(),
+        customerName: effectiveName,
         customerPhone: customerPhone.trim(),
         orderNumber,
         orderDate,
