@@ -52,7 +52,9 @@ function buildStats(customer: CustomerRecord, orders: WorkflowOrder[]): Customer
 export default function CustomerProfile() {
   const { customerId } = useParams();
   const nav = useNavigate();
+  const { settings: loyaltySettings } = useLoyaltySettings();
   const [customer, setCustomer] = useState<CustomerWithStats | null>(null);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
