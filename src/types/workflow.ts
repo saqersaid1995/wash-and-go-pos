@@ -28,6 +28,7 @@ export interface InternalNote {
 
 export interface WorkflowOrder {
   id: string;
+  customerId?: string;
   orderNumber: string;
   customerName: string;
   customerPhone: string;
