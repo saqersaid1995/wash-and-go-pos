@@ -19,7 +19,7 @@ export async function awardLoyaltyPoints(
   if (!(settings as any)?.is_enabled) return;
 
   const earnRate = (settings as any).earn_points_rate ?? 1;
-  const pointsToEarn = Math.floor(paidAmount * earnRate);
+  const pointsToEarn = parseFloat((paidAmount * earnRate).toFixed(2));
   if (pointsToEarn <= 0) return;
 
   // Upsert customer_loyalty

@@ -62,7 +62,7 @@ export default function LoyaltyRedemption({
           <Gift className="w-3.5 h-3.5" />
           Loyalty Points
         </div>
-        <span className="text-xs font-bold text-foreground">{balance} pts</span>
+        <span className="text-xs font-bold text-foreground">{Number(balance).toFixed(2)} pts</span>
       </div>
 
       {balance > 0 && maxDiscount > 0 ? (
@@ -82,7 +82,7 @@ export default function LoyaltyRedemption({
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Using {Math.round(pointsUsed)} pts • Max {formatOMR(maxDiscount)} ({loyaltySettings.max_redemption_percent}%)
+            Using {pointsUsed.toFixed(2)} pts • Max {formatOMR(maxDiscount)} ({loyaltySettings.max_redemption_percent}%)
           </p>
         </div>
       ) : (
