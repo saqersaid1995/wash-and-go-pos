@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { ScanBarcode } from "lucide-react";
+import { awardLoyaltyPoints, redeemLoyaltyPoints } from "@/lib/loyalty";
 
 const Index = () => {
   const pos = usePOSState();
