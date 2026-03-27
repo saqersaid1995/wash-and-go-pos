@@ -7,9 +7,23 @@ const corsHeaders = {
 };
 
 const VERIFY_TOKEN = "lavinderia_whatsapp_verify_2024";
+const GRAPH_API_VERSION = "v18.0";
+
+async function fetchMediaUrl(mediaId: string, accessToken: string): Promise<{ url: string | null; mime_type: string | null }> {
+  try {
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${mediaId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return { url: null, mime_type: null };
+    const data = await res.json();
+    return { url: data.url || null, mime_type: data.mime_type || null };
+  } catch (e) {
+    console.error("fetchMediaUrl error:", e);
+    return { url: null, mime_type: null };
+  }
+}
 
 Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -36,9 +50,9 @@ Deno.serve(async (req) => {
 
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN") || "";
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Parse WhatsApp Cloud API payload
       const entries = body.entry || [];
       for (const entry of entries) {
         const changes = entry.changes || [];
@@ -47,9 +61,7 @@ Deno.serve(async (req) => {
           if (!value || value.messaging_product !== "whatsapp") continue;
 
           const messages = value.messages || [];
-          const contacts = value.contacts || [];
 
-          // Also capture outgoing message statuses if needed later
           for (const msg of messages) {
             const phone = msg.from || "";
             const waMessageId = msg.id || null;
@@ -58,32 +70,66 @@ Deno.serve(async (req) => {
               : new Date().toISOString();
 
             let messageText = "";
+            let messageType = "text";
+            let mediaId: string | null = null;
+            let mediaUrl: string | null = null;
+            let filename: string | null = null;
+
             if (msg.type === "text" && msg.text?.body) {
               messageText = msg.text.body;
+              messageType = "text";
             } else if (msg.type === "image") {
-              messageText = "[Image]" + (msg.image?.caption ? ` ${msg.image.caption}` : "");
-            } else if (msg.type === "document") {
-              messageText = "[Document]" + (msg.document?.filename ? ` ${msg.document.filename}` : "");
+              messageType = "image";
+              mediaId = msg.image?.id || null;
+              messageText = msg.image?.caption || "[Image]";
+              if (mediaId && accessToken) {
+                const media = await fetchMediaUrl(mediaId, accessToken);
+                mediaUrl = media.url;
+              }
             } else if (msg.type === "audio") {
-              messageText = "[Audio message]";
+              messageType = "audio";
+              mediaId = msg.audio?.id || null;
+              messageText = "[Voice note]";
+              if (mediaId && accessToken) {
+                const media = await fetchMediaUrl(mediaId, accessToken);
+                mediaUrl = media.url;
+              }
+            } else if (msg.type === "document") {
+              messageType = "document";
+              mediaId = msg.document?.id || null;
+              filename = msg.document?.filename || null;
+              messageText = filename ? `[Document] ${filename}` : "[Document]";
+              if (mediaId && accessToken) {
+                const media = await fetchMediaUrl(mediaId, accessToken);
+                mediaUrl = media.url;
+              }
             } else if (msg.type === "video") {
+              messageType = "video";
+              mediaId = msg.video?.id || null;
               messageText = "[Video]";
-            } else if (msg.type === "location") {
-              messageText = "[Location]";
+              if (mediaId && accessToken) {
+                const media = await fetchMediaUrl(mediaId, accessToken);
+                mediaUrl = media.url;
+              }
             } else if (msg.type === "sticker") {
+              messageType = "sticker";
+              mediaId = msg.sticker?.id || null;
               messageText = "[Sticker]";
+            } else if (msg.type === "location") {
+              messageType = "location";
+              messageText = "[Location]";
             } else if (msg.type === "reaction") {
+              messageType = "reaction";
               messageText = `[Reaction: ${msg.reaction?.emoji || ""}]`;
             } else {
+              messageType = msg.type || "unknown";
               messageText = `[${msg.type || "unknown"}]`;
             }
 
-            // Try to match customer by phone
-            // Normalize: strip leading country code variations
-            let customerId: string | null = null;
+            // Match customer by phone
             const phoneDigits = phone.replace(/\D/g, "");
+            let customerId: string | null = null;
 
-            // Try exact match and partial match
             const { data: customer } = await supabase
               .from("customers")
               .select("id, phone_number")
@@ -92,7 +138,6 @@ Deno.serve(async (req) => {
               .maybeSingle();
 
             if (!customer) {
-              // Try matching last 8 digits
               const last8 = phoneDigits.slice(-8);
               const { data: customer2 } = await supabase
                 .from("customers")
@@ -105,22 +150,26 @@ Deno.serve(async (req) => {
               customerId = customer.id;
             }
 
-            // Insert message
             const { error: insertError } = await supabase
               .from("whatsapp_messages")
               .insert({
                 phone: phoneDigits,
                 message: messageText,
                 type: "incoming",
+                message_type: messageType,
+                media_id: mediaId,
+                media_url: mediaUrl,
+                filename,
                 customer_id: customerId,
                 wa_message_id: waMessageId,
                 message_timestamp: timestamp,
+                send_status: "sent",
               });
 
             if (insertError) {
               console.error("Insert error:", insertError);
             } else {
-              console.log(`Saved message from ${phoneDigits}`);
+              console.log(`Saved ${messageType} message from ${phoneDigits}`);
             }
           }
         }

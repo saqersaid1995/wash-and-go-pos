@@ -606,33 +606,51 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string | null
+          filename: string | null
           id: string
+          is_deleted: boolean
+          media_id: string | null
+          media_url: string | null
           message: string
           message_timestamp: string | null
+          message_type: string
           order_id: string | null
           phone: string
+          send_status: string
           type: string
           wa_message_id: string | null
         }
         Insert: {
           created_at?: string
           customer_id?: string | null
+          filename?: string | null
           id?: string
+          is_deleted?: boolean
+          media_id?: string | null
+          media_url?: string | null
           message: string
           message_timestamp?: string | null
+          message_type?: string
           order_id?: string | null
           phone: string
+          send_status?: string
           type?: string
           wa_message_id?: string | null
         }
         Update: {
           created_at?: string
           customer_id?: string | null
+          filename?: string | null
           id?: string
+          is_deleted?: boolean
+          media_id?: string | null
+          media_url?: string | null
           message?: string
           message_timestamp?: string | null
+          message_type?: string
           order_id?: string | null
           phone?: string
+          send_status?: string
           type?: string
           wa_message_id?: string | null
         }
