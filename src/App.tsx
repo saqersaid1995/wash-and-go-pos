@@ -19,6 +19,7 @@ import ServicesPricing from "./pages/ServicesPricing.tsx";
 import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
 import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
+import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
