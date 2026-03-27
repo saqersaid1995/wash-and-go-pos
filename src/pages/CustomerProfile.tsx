@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Crown, Phone, Calendar, ShoppingBag, DollarSign, Clock, AlertCircle,
-  FileText, Plus, Edit, Package, ExternalLink, Loader2
+  FileText, Plus, Edit, Package, ExternalLink, Loader2, Gift
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchCustomerById, fetchOrdersByCustomerId, addCustomerNote, updateCustomerRecord } from "@/lib/supabase-queries";
@@ -10,6 +10,8 @@ import type { CustomerRecord, CustomerWithStats } from "@/types/customer";
 import type { WorkflowOrder } from "@/types/workflow";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
