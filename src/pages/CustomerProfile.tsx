@@ -194,6 +194,9 @@ export default function CustomerProfile() {
             <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={formatOMR(customer.outstandingBalance)} warning={customer.outstandingBalance > 0} />
             <MiniCard icon={<FileText className="w-4 h-4" />} label="Unpaid Orders" value={customer.unpaidOrderCount} warning={customer.unpaidOrderCount > 0} />
             <MiniCard icon={<Clock className="w-4 h-4" />} label="Last Order" value={customer.lastOrderDate ?? "—"} />
+            {loyaltySettings?.is_enabled && (
+              <MiniCard icon={<Gift className="w-4 h-4" />} label="Loyalty Points" value={loyaltyBalance} accent={loyaltyBalance > 0} />
+            )}
           </div>
         </div>
 
