@@ -28,6 +28,7 @@ export default function LoyaltySettings() {
   const currentEarn = earnRate ?? settings.earn_points_rate;
   const currentRedeem = redeemRate ?? settings.redeem_points_rate;
   const currentMax = maxPercent ?? settings.max_redemption_percent;
+  const currentMinRedeem = minRedeem ?? settings.min_redeem_points;
 
   const handleToggle = async (enabled: boolean) => {
     setSaving(true);
