@@ -178,9 +178,9 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
-    // Auto-deliver if fully paid and ready-for-pickup
-    if (newRemaining <= 0 && order.currentStatus === "ready-for-pickup") {
-      await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
+    // Auto-deliver if fully paid (direct handover — skips ready-for-pickup, no WhatsApp)
+    if (newRemaining <= 0 && order.currentStatus !== "delivered") {
+      await updateOrderStatus(order.id, order.currentStatus, "delivered");
       toast.success(`Payment collected & order ${order.orderNumber} delivered!`);
     } else {
       toast.success(`Payment of ${formatOMR(numericAmount)} recorded for ${order.orderNumber}`);
