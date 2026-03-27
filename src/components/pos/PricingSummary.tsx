@@ -77,6 +77,7 @@ export default function PricingSummary(props: Props) {
             className="pos-input w-24 text-right text-sm h-8"
           />
         </div>
+        {loyaltySlot}
         <div className="h-px bg-border" />
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total</span>

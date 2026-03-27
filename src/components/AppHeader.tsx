@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/inbox", label: "Inbox", roles: ["admin", "cashier"] },
   { to: "/whatsapp", label: "WhatsApp", roles: ["admin"] },
   { to: "/staff", label: "Staff", roles: ["admin"] },
+  { to: "/loyalty", label: "Loyalty", roles: ["admin"] },
 ];
 
 interface AppHeaderProps {
