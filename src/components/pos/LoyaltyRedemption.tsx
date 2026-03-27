@@ -66,7 +66,7 @@ export default function LoyaltyRedemption({
         <span className="text-xs font-bold text-foreground">{Number(balance).toFixed(2)} pts</span>
       </div>
 
-      {balance > 0 && maxDiscount > 0 ? (
+      {balance > 0 && meetsMinimum && maxDiscount > 0 ? (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <input
