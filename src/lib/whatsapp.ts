@@ -54,6 +54,7 @@ interface SendLoyaltyWhatsAppParams {
   minRedeemPoints: number;
   remainingToRedeem: number;
   maxRedemptionPct: number;
+  templateType: "progress" | "ready_to_redeem";
 }
 
 export async function sendLoyaltyWhatsApp(params: SendLoyaltyWhatsAppParams): Promise<{
@@ -72,6 +73,7 @@ export async function sendLoyaltyWhatsApp(params: SendLoyaltyWhatsAppParams): Pr
         min_redeem_points: params.minRedeemPoints,
         remaining_to_redeem: params.remainingToRedeem,
         max_redemption_pct: params.maxRedemptionPct,
+        template_type: params.templateType,
       },
     });
 

@@ -2,11 +2,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendLoyaltyWhatsApp } from "@/lib/whatsapp";
 
 /**
- * Send loyalty progress WhatsApp after a payment is confirmed as "paid".
- * Checks:
- *  - loyalty is enabled
- *  - customer has a phone
- *  - loyalty_whatsapp_sent is false (prevent duplicates)
+ * Send loyalty WhatsApp after a payment is confirmed as "paid".
+ * Decides which template to send:
+ *  - loyalty_ready_to_redeem_ar  → if balance >= min redeem threshold
+ *  - loyalty_progress_update_ar  → if balance < min redeem threshold
+ * Only ONE template is sent per payment event.
  */
 export async function triggerLoyaltyWhatsApp(
   orderId: string,
@@ -50,28 +50,50 @@ export async function triggerLoyaltyWhatsApp(
 
     const totalPoints = parseFloat(((loyalty as any)?.points_balance ?? pointsEarned).toFixed(2));
 
-    // 5. Calculate remaining to redeem
-    const minRedeemPoints = redeemRate; // e.g. 30 points = 1 OMR
-    const remainingToRedeem = totalPoints >= minRedeemPoints
-      ? 0
-      : parseFloat((minRedeemPoints - totalPoints).toFixed(2));
+    // 5. Determine which template to send
+    const minRedeemPoints = redeemRate;
+    const isEligibleToRedeem = totalPoints >= minRedeemPoints;
 
-    // 6. Send WhatsApp
-    const result = await sendLoyaltyWhatsApp({
-      orderId,
-      customerId,
-      customerPhone,
-      pointsEarned,
-      totalPoints,
-      minRedeemPoints,
-      remainingToRedeem,
-      maxRedemptionPct: maxPct,
-    });
+    if (isEligibleToRedeem) {
+      // Send ready-to-redeem template (2 params: total_points, max_pct)
+      const result = await sendLoyaltyWhatsApp({
+        orderId,
+        customerId,
+        customerPhone,
+        pointsEarned,
+        totalPoints,
+        minRedeemPoints,
+        remainingToRedeem: 0,
+        maxRedemptionPct: maxPct,
+        templateType: "ready_to_redeem",
+      });
 
-    if (result.success) {
-      console.log("Loyalty WhatsApp sent successfully for order", orderId);
+      if (result.success) {
+        console.log("Loyalty ready-to-redeem WhatsApp sent for order", orderId);
+      } else {
+        console.warn("Loyalty ready-to-redeem WhatsApp failed for order", orderId, result.error);
+      }
     } else {
-      console.warn("Loyalty WhatsApp failed for order", orderId, result.error);
+      // Send progress template (5 params)
+      const remainingToRedeem = parseFloat((minRedeemPoints - totalPoints).toFixed(2));
+
+      const result = await sendLoyaltyWhatsApp({
+        orderId,
+        customerId,
+        customerPhone,
+        pointsEarned,
+        totalPoints,
+        minRedeemPoints,
+        remainingToRedeem,
+        maxRedemptionPct: maxPct,
+        templateType: "progress",
+      });
+
+      if (result.success) {
+        console.log("Loyalty progress WhatsApp sent for order", orderId);
+      } else {
+        console.warn("Loyalty progress WhatsApp failed for order", orderId, result.error);
+      }
     }
   } catch (err) {
     console.error("triggerLoyaltyWhatsApp error:", err);
