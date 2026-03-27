@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_loyalty: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          points_balance: number
+          total_earned: number
+          total_redeemed: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          points_balance?: number
+          total_earned?: number
+          total_redeemed?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          points_balance?: number
+          total_earned?: number
+          total_redeemed?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_loyalty_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_notes: {
         Row: {
           created_at: string
@@ -182,6 +220,81 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      loyalty_settings: {
+        Row: {
+          created_at: string
+          earn_points_rate: number
+          id: string
+          is_enabled: boolean
+          max_redemption_percent: number
+          redeem_points_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          earn_points_rate?: number
+          id?: string
+          is_enabled?: boolean
+          max_redemption_percent?: number
+          redeem_points_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          earn_points_rate?: number
+          id?: string
+          is_enabled?: boolean
+          max_redemption_percent?: number
+          redeem_points_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          order_id: string | null
+          points: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points?: number
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_logs: {
         Row: {
