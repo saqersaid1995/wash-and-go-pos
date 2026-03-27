@@ -42,9 +42,10 @@ export default function LoyaltyRedemption({
 
   if (!loyaltySettings.is_enabled || !customerId) return null;
 
+  const meetsMinimum = balance >= loyaltySettings.min_redeem_points;
   const maxRedeemOMR = (orderTotal * loyaltySettings.max_redemption_percent) / 100;
   const maxRedeemFromPoints = balance / loyaltySettings.redeem_points_rate;
-  const maxDiscount = Math.min(maxRedeemOMR, maxRedeemFromPoints);
+  const maxDiscount = meetsMinimum ? Math.min(maxRedeemOMR, maxRedeemFromPoints) : 0;
   const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
 
   if (loading) {
