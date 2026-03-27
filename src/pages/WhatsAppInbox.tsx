@@ -65,7 +65,7 @@ export default function WhatsAppInbox() {
   const replyInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { userRole } = useAuth();
+  const { role: userRole } = useAuth();
 
   // Fetch messages and customers
   useEffect(() => {
