@@ -9,6 +9,7 @@ import { CreditCard, Banknote, Building, Shuffle, Loader2, Printer } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
+import { awardLoyaltyPoints } from "@/lib/loyalty";
 import type { WorkflowOrder } from "@/types/workflow";
 
 const PAYMENT_METHODS = [
