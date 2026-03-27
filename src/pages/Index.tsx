@@ -162,14 +162,25 @@ const Index = () => {
             <PricingSummary
               subtotal={pos.subtotal}
               discount={pos.discount}
-              total={pos.total}
+              total={Math.max(0, pos.total - loyaltyDiscount)}
               paidAmount={pos.paidAmount}
-              remainingBalance={pos.remainingBalance}
+              remainingBalance={Math.max(0, pos.total - loyaltyDiscount - pos.paidAmount)}
               paymentStatus={pos.paymentStatus}
               paymentMethod={pos.paymentMethod}
               onDiscountChange={pos.setDiscount}
               onPaidAmountChange={pos.setPaidAmount}
               onPaymentMethodChange={pos.setPaymentMethod}
+              loyaltySlot={
+                loyaltySettings?.is_enabled ? (
+                  <LoyaltyRedemption
+                    customerId={pos.matchedCustomer?.id ?? null}
+                    orderTotal={pos.total}
+                    loyaltySettings={loyaltySettings}
+                    loyaltyDiscount={loyaltyDiscount}
+                    onLoyaltyDiscountChange={setLoyaltyDiscount}
+                  />
+                ) : undefined
+              }
             />
             <ActionButtons
               onSave={handleSave}
