@@ -33,7 +33,7 @@ const PAYMENT_METHODS = [
   { id: "mixed", label: "Mixed", icon: Shuffle },
 ] as const;
 
-type ModalView = "scan" | "payment" | "already-delivered" | "not-ready" | "already-paid";
+type ModalView = "scan" | "payment" | "already-delivered" | "already-paid";
 
 export default function ScanOrderModal({ open, onOpenChange, initialCode }: ScanOrderModalProps) {
   const [value, setValue] = useState("");
