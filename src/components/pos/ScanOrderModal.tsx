@@ -46,6 +46,10 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
   const [method, setMethod] = useState("cash");
   const [submitting, setSubmitting] = useState(false);
 
+  // Loyalty state
+  const { settings: loyaltySettings, refetch: refetchLoyalty } = useLoyaltySettings();
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const resetToScan = useCallback(() => {
@@ -56,6 +60,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     setAmount("");
     setMethod("cash");
     setSubmitting(false);
+    setLoyaltyDiscount(0);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
