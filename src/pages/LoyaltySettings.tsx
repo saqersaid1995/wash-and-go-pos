@@ -12,6 +12,7 @@ export default function LoyaltySettings() {
   const [earnRate, setEarnRate] = useState<number | null>(null);
   const [redeemRate, setRedeemRate] = useState<number | null>(null);
   const [maxPercent, setMaxPercent] = useState<number | null>(null);
+  const [minRedeem, setMinRedeem] = useState<number | null>(null);
 
   if (loading || !settings) {
     return (
