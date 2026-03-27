@@ -77,6 +77,11 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
     }
 
+    // Award loyalty points for this payment
+    if (order.customerId) {
+      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
+    }
+
     setSubmitting(false);
     setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString() });
     toast.success("Payment recorded successfully");
