@@ -14,6 +14,9 @@ import {
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import type { WorkflowOrder } from "@/types/workflow";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
+import LoyaltyRedemption from "@/components/pos/LoyaltyRedemption";
+import { redeemLoyaltyPoints, awardLoyaltyPoints } from "@/lib/loyalty";
 
 interface ScanOrderModalProps {
   open: boolean;
@@ -43,6 +46,10 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
   const [method, setMethod] = useState("cash");
   const [submitting, setSubmitting] = useState(false);
 
+  // Loyalty state
+  const { settings: loyaltySettings, refetch: refetchLoyalty } = useLoyaltySettings();
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const resetToScan = useCallback(() => {
@@ -53,6 +60,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     setAmount("");
     setMethod("cash");
     setSubmitting(false);
+    setLoyaltyDiscount(0);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
@@ -98,15 +106,17 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     }
   }, []);
 
+  // Refetch loyalty settings when modal opens
   useEffect(() => {
     if (open) {
+      refetchLoyalty();
       resetToScan();
       if (initialCode) {
         setValue(initialCode);
         setTimeout(() => handleSearch(initialCode), 50);
       }
     }
-  }, [open, resetToScan, initialCode, handleSearch]);
+  }, [open, resetToScan, initialCode, handleSearch, refetchLoyalty]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); handleSearch(value); }
@@ -114,10 +124,19 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
   const handlePayment = async () => {
     if (!order) return;
+    const effectiveRemaining = Math.max(0, order.remainingBalance - loyaltyDiscount);
     const numericAmount = parseFloat(amount) || 0;
-    if (numericAmount <= 0 || numericAmount > order.remainingBalance) return;
+    if (numericAmount <= 0 || numericAmount > effectiveRemaining) return;
 
     setSubmitting(true);
+
+    // Process loyalty redemption first
+    if (loyaltyDiscount > 0 && order.customerId && loyaltySettings) {
+      const pointsUsed = loyaltyDiscount * loyaltySettings.redeem_points_rate;
+      await redeemLoyaltyPoints(order.customerId, order.id, pointsUsed, loyaltyDiscount);
+    }
+
+    const loyaltyAdjustedTotal = order.totalAmount - loyaltyDiscount;
 
     const { error: payError } = await supabase.from("payments").insert({
       order_id: order.id,
@@ -131,7 +150,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       return;
     }
 
-    const newPaid = order.paidAmount + numericAmount;
+    const newPaid = order.paidAmount + numericAmount + loyaltyDiscount;
     const newRemaining = Math.max(0, order.totalAmount - newPaid);
     const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
 
@@ -148,6 +167,11 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       toast.error("Order update failed: " + updateError.message);
       setSubmitting(false);
       return;
+    }
+
+    // Award loyalty points on the cash amount paid
+    if (numericAmount > 0 && order.customerId && loyaltySettings?.is_enabled) {
+      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
     // Auto-deliver if fully paid and ready-for-pickup
@@ -171,8 +195,9 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     resetToScan();
   };
 
+  const effectiveRemaining = order ? Math.max(0, order.remainingBalance - loyaltyDiscount) : 0;
   const numericAmount = parseFloat(amount) || 0;
-  const isValidPayment = order && numericAmount > 0 && numericAmount <= order.remainingBalance;
+  const isValidPayment = order && numericAmount > 0 && numericAmount <= effectiveRemaining;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,11 +263,32 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               <Separator className="my-2" />
               <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
               <InfoRow label="Paid" value={formatOMR(order.paidAmount)} />
+              {loyaltyDiscount > 0 && (
+                <div className="flex justify-between text-primary text-sm">
+                  <span>Loyalty Discount</span>
+                  <span>-{formatOMR(loyaltyDiscount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-destructive">
                 <span>Remaining</span>
-                <span>{formatOMR(order.remainingBalance)}</span>
+                <span>{formatOMR(effectiveRemaining)}</span>
               </div>
             </div>
+
+            {/* Loyalty Redemption */}
+            {loyaltySettings?.is_enabled && order.customerId && (
+              <LoyaltyRedemption
+                customerId={order.customerId}
+                orderTotal={order.remainingBalance}
+                loyaltySettings={loyaltySettings}
+                loyaltyDiscount={loyaltyDiscount}
+                onLoyaltyDiscountChange={(val) => {
+                  setLoyaltyDiscount(val);
+                  const newEffective = Math.max(0, order.remainingBalance - val);
+                  setAmount(newEffective.toFixed(3));
+                }}
+              />
+            )}
 
             {/* Payment method */}
             <div className="grid grid-cols-4 gap-1.5">
@@ -272,7 +318,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
                 type="number"
                 step="0.001"
                 min="0.001"
-                max={order.remainingBalance}
+                max={effectiveRemaining}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="pl-12 text-lg font-semibold"
@@ -286,7 +332,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               onClick={handlePayment}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              {numericAmount >= order.remainingBalance && order.currentStatus === "ready-for-pickup"
+              {numericAmount >= effectiveRemaining && order.currentStatus === "ready-for-pickup"
                 ? `Collect & Deliver — ${formatOMR(numericAmount)}`
                 : `Collect Payment — ${formatOMR(numericAmount)}`}
             </Button>
