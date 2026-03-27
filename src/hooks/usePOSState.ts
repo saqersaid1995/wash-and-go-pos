@@ -191,7 +191,7 @@ export function usePOSState() {
         await saveOfflineOrder({
           localId,
           orderNumber,
-          customerName: customerName.trim(),
+          customerName: effectiveName,
           customerPhone: customerPhone.trim(),
           orderDate,
           deliveryDate,
