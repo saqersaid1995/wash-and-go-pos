@@ -83,6 +83,11 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
     }
 
+    // Send loyalty WhatsApp when fully paid
+    if (newPaymentStatus === "paid" && order.customerId && order.customerPhone) {
+      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, numericAmount);
+    }
+
     setSubmitting(false);
     setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString() });
     toast.success("Payment recorded successfully");

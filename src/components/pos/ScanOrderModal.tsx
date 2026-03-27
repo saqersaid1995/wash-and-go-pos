@@ -183,6 +183,11 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       toast.success(`Payment of ${formatOMR(numericAmount)} recorded for ${order.orderNumber}`);
     }
 
+    // Send loyalty WhatsApp when fully paid
+    if (newPaymentStatus === "paid" && order.customerId && order.customerPhone) {
+      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, numericAmount);
+    }
+
     setSubmitting(false);
     resetToScan();
   };
