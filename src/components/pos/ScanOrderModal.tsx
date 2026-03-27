@@ -17,6 +17,7 @@ import type { WorkflowOrder } from "@/types/workflow";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import LoyaltyRedemption from "@/components/pos/LoyaltyRedemption";
 import { redeemLoyaltyPoints, awardLoyaltyPoints } from "@/lib/loyalty";
+import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
 
 interface ScanOrderModalProps {
   open: boolean;
