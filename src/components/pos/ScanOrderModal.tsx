@@ -201,7 +201,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" data-disable-global-barcode="true">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanBarcode className="h-5 w-5 text-primary" />
