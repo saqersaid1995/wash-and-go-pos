@@ -120,7 +120,12 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
   }, [open, resetToScan, initialCode, handleSearch, refetchLoyalty]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") { e.preventDefault(); handleSearch(value); }
+    if (e.key !== "Enter") return;
+
+    e.preventDefault();
+    // Use the live DOM value so hardware scanners don't submit a stale
+    // React state snapshot before the final characters flush.
+    handleSearch(e.currentTarget.value);
   };
 
   const handlePayment = async () => {
