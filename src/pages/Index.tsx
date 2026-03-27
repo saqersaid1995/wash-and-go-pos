@@ -114,6 +114,7 @@ const Index = () => {
     }
     const result = await pos.saveOrder();
     if (result.success) {
+      await processLoyaltyAfterSave(result.orderId!);
       toast.success(`Order ${pos.orderNumber} saved and sent to processing!`);
       pos.clearForm();
     } else {
