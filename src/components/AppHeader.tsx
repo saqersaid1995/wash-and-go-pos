@@ -95,7 +95,7 @@ export default function AppHeader({ title, subtitle, actions }: AppHeaderProps) 
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
-                {item.label}
+                {getLabel(item)}
               </NavLink>
             );
           })}
