@@ -38,11 +38,12 @@ Deno.serve(async (req) => {
       order_id,
       customer_id,
       customer_phone,
-      points_earned,      // {{1}}
-      total_points,        // {{2}}
-      min_redeem_points,   // {{3}}
-      remaining_to_redeem, // {{4}}
-      max_redemption_pct,  // {{5}}
+      points_earned,
+      total_points,
+      min_redeem_points,
+      remaining_to_redeem,
+      max_redemption_pct,
+      template_type,       // "progress" | "ready_to_redeem"
     } = body;
 
     if (!customer_phone) {
@@ -70,30 +71,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build template message with 5 body parameters
+    // Determine template and parameters based on template_type
+    const isReadyToRedeem = template_type === "ready_to_redeem";
+    const templateName = isReadyToRedeem
+      ? "loyalty_ready_to_redeem_ar"
+      : "loyalty_progress_update_ar";
+
+    const templateParameters = isReadyToRedeem
+      ? [
+          { type: "text", text: String(total_points) },
+          { type: "text", text: String(max_redemption_pct) },
+        ]
+      : [
+          { type: "text", text: String(points_earned) },
+          { type: "text", text: String(total_points) },
+          { type: "text", text: String(min_redeem_points) },
+          { type: "text", text: String(remaining_to_redeem) },
+          { type: "text", text: String(max_redemption_pct) },
+        ];
+
     const requestBody = {
       messaging_product: "whatsapp",
       to: normalizedPhone,
       type: "template",
       template: {
-        name: "loyalty_progress_update_ar",
+        name: templateName,
         language: { code: "ar" },
         components: [
           {
             type: "body",
-            parameters: [
-              { type: "text", text: String(points_earned) },
-              { type: "text", text: String(total_points) },
-              { type: "text", text: String(min_redeem_points) },
-              { type: "text", text: String(remaining_to_redeem) },
-              { type: "text", text: String(max_redemption_pct) },
-            ],
+            parameters: templateParameters,
           },
         ],
       },
     };
 
-    const messageDescription = `Template: loyalty_progress_update_ar | To: ${normalizedPhone} | Earned: ${points_earned} | Total: ${total_points}`;
+    const messageDescription = `Template: ${templateName} | To: ${normalizedPhone} | Earned: ${points_earned} | Total: ${total_points}`;
     console.log("Sending loyalty WhatsApp:", messageDescription);
 
     const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
@@ -110,6 +123,8 @@ Deno.serve(async (req) => {
     const waData = await waResponse.json();
     console.log("WhatsApp API response:", JSON.stringify(waData, null, 2));
 
+    const messageType = isReadyToRedeem ? "loyalty_ready_to_redeem" : "loyalty_update";
+
     if (!waResponse.ok) {
       const errorMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
 
@@ -118,14 +133,13 @@ Deno.serve(async (req) => {
         customer_id: customer_id || null,
         channel: "whatsapp",
         recipient_phone: normalizedPhone,
-        message_type: "loyalty_update",
+        message_type: messageType,
         message_body: messageDescription,
         send_status: "failed",
         provider_response: JSON.stringify(waData),
         error_message: errorMsg,
       });
 
-      // Still mark as sent to prevent retries
       if (order_id) {
         await supabase.from("orders").update({ loyalty_whatsapp_sent: true }).eq("id", order_id);
       }
@@ -143,7 +157,7 @@ Deno.serve(async (req) => {
       customer_id: customer_id || null,
       channel: "whatsapp",
       recipient_phone: normalizedPhone,
-      message_type: "loyalty_update",
+      message_type: messageType,
       message_body: messageDescription,
       send_status: "sent",
       provider_message_id: messageId,
@@ -151,9 +165,13 @@ Deno.serve(async (req) => {
     });
 
     // Save to whatsapp_messages for inbox display
+    const inboxMessage = isReadyToRedeem
+      ? `[Template: loyalty_ready_to_redeem_ar] رصيدك: ${total_points} نقطة | يمكنك الاستبدال الآن (حد أقصى ${max_redemption_pct}%)`
+      : `[Template: loyalty_progress_update_ar] نقاط مكتسبة: ${points_earned} | الرصيد: ${total_points}`;
+
     await supabase.from("whatsapp_messages").insert({
       phone: normalizedPhone,
-      message: `[Template: loyalty_progress_update_ar] نقاط مكتسبة: ${points_earned} | الرصيد: ${total_points}`,
+      message: inboxMessage,
       type: "outgoing",
       customer_id: customer_id || null,
       order_id: order_id || null,
@@ -167,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, status: "sent", message_id: messageId }),
+      JSON.stringify({ success: true, status: "sent", message_id: messageId, template: templateName }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
