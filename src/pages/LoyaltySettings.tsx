@@ -97,7 +97,7 @@ export default function LoyaltySettings() {
                   onChange={(e) => setEarnRate(Number(e.target.value))}
                   className="pos-input w-24 text-center"
                 />
-                <span className="text-sm text-muted-foreground">point(s) per 1 OMR spent</span>
+                <span className="text-sm text-muted-foreground">point(s) per OMR</span>
               </div>
             </div>
 
