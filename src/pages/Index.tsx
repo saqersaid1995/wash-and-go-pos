@@ -123,6 +123,9 @@ const Index = () => {
     const result = await pos.saveOrder();
     if (result.success) {
       await processLoyaltyAfterSave(result.orderId!);
+      if (pos.paymentStatus === "paid" && pos.matchedCustomer?.id && pos.customerPhone) {
+        triggerLoyaltyWhatsApp(result.orderId!, pos.matchedCustomer.id, pos.customerPhone, pos.paidAmount);
+      }
       toast.success(`Order ${pos.orderNumber} saved and sent to processing!`);
       pos.clearForm();
     } else {
