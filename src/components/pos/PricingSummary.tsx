@@ -13,6 +13,7 @@ interface Props {
   onDiscountChange: (v: number) => void;
   onPaidAmountChange: (v: number) => void;
   onPaymentMethodChange: (v: PaymentMethod) => void;
+  loyaltySlot?: React.ReactNode;
 }
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
