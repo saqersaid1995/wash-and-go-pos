@@ -263,11 +263,32 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               <Separator className="my-2" />
               <InfoRow label="Total" value={formatOMR(order.totalAmount)} />
               <InfoRow label="Paid" value={formatOMR(order.paidAmount)} />
+              {loyaltyDiscount > 0 && (
+                <div className="flex justify-between text-primary text-sm">
+                  <span>Loyalty Discount</span>
+                  <span>-{formatOMR(loyaltyDiscount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-destructive">
                 <span>Remaining</span>
-                <span>{formatOMR(order.remainingBalance)}</span>
+                <span>{formatOMR(effectiveRemaining)}</span>
               </div>
             </div>
+
+            {/* Loyalty Redemption */}
+            {loyaltySettings?.is_enabled && order.customerId && (
+              <LoyaltyRedemption
+                customerId={order.customerId}
+                orderTotal={order.remainingBalance}
+                loyaltySettings={loyaltySettings}
+                loyaltyDiscount={loyaltyDiscount}
+                onLoyaltyDiscountChange={(val) => {
+                  setLoyaltyDiscount(val);
+                  const newEffective = Math.max(0, order.remainingBalance - val);
+                  setAmount(newEffective.toFixed(3));
+                }}
+              />
+            )}
 
             {/* Payment method */}
             <div className="grid grid-cols-4 gap-1.5">
@@ -297,7 +318,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
                 type="number"
                 step="0.001"
                 min="0.001"
-                max={order.remainingBalance}
+                max={effectiveRemaining}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="pl-12 text-lg font-semibold"
