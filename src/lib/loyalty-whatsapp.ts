@@ -18,14 +18,14 @@ export async function triggerLoyaltyWhatsApp(
     // 1. Check loyalty settings
     const { data: settings } = await supabase
       .from("loyalty_settings")
-      .select("is_enabled, earn_points_rate, redeem_points_rate, max_redemption_percent")
+      .select("is_enabled, earn_points_rate, redeem_points_rate, max_redemption_percent, min_redeem_points")
       .limit(1)
       .single();
 
     if (!(settings as any)?.is_enabled) return;
 
     const earnRate = (settings as any).earn_points_rate ?? 1;
-    const redeemRate = (settings as any).redeem_points_rate ?? 50;
+    const minRedeemPts = (settings as any).min_redeem_points ?? 50;
     const maxPct = (settings as any).max_redemption_percent ?? 20;
 
     // 2. Check if already sent for this order
