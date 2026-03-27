@@ -1,27 +1,45 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow, format } from "date-fns";
-import { MessageCircle, User, Phone, Package, Search, ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  MessageCircle, User, Phone, Package, Search, ArrowLeft, ExternalLink,
+  Send, Loader2, Trash2, Image as ImageIcon, FileText, Mic, AlertCircle, X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent,
+} from "@/components/ui/dialog";
 
 interface WaMessage {
   id: string;
   phone: string;
   message: string;
   type: string;
+  message_type: string;
+  media_id: string | null;
+  media_url: string | null;
+  filename: string | null;
   customer_id: string | null;
   order_id: string | null;
   wa_message_id: string | null;
   message_timestamp: string | null;
   created_at: string;
+  is_deleted: boolean;
+  send_status: string;
 }
 
 interface Conversation {
@@ -30,7 +48,6 @@ interface Conversation {
   customerId: string | null;
   lastMessage: string;
   lastTime: string;
-  unreadCount: number;
   messages: WaMessage[];
 }
 
@@ -41,9 +58,14 @@ export default function WhatsAppInbox() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [latestOrder, setLatestOrder] = useState<any>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const replyInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { userRole } = useAuth();
 
   // Fetch messages and customers
   useEffect(() => {
@@ -53,6 +75,7 @@ export default function WhatsAppInbox() {
         supabase
           .from("whatsapp_messages")
           .select("*")
+          .eq("is_deleted", false)
           .order("created_at", { ascending: true }),
         supabase.from("customers").select("id, full_name, phone_number").eq("is_active", true),
       ]);
@@ -64,7 +87,6 @@ export default function WhatsAppInbox() {
         for (const c of custRes.data) {
           const digits = c.phone_number.replace(/\D/g, "");
           map[digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
-          // Also map with country code
           if (digits.length === 8) {
             map["968" + digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
           }
@@ -105,7 +127,6 @@ export default function WhatsAppInbox() {
           customerId: cust?.id || msg.customer_id || null,
           lastMessage: msg.message,
           lastTime: msg.created_at,
-          unreadCount: 0,
           messages: [],
         });
       }
@@ -155,6 +176,13 @@ export default function WhatsAppInbox() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedConversation?.messages.length]);
 
+  // Focus reply input when conversation selected
+  useEffect(() => {
+    if (selectedPhone) {
+      setTimeout(() => replyInputRef.current?.focus(), 100);
+    }
+  }, [selectedPhone]);
+
   const formatPhone = (phone: string) => {
     if (phone.length === 11 && phone.startsWith("968")) {
       return `+${phone.slice(0, 3)} ${phone.slice(3)}`;
@@ -162,8 +190,128 @@ export default function WhatsAppInbox() {
     return phone;
   };
 
+  // Send manual text message
+  const handleSend = async () => {
+    if (!replyText.trim() || !selectedPhone || sending) return;
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-text", {
+        body: {
+          phone: selectedPhone,
+          message: replyText.trim(),
+          customer_id: selectedConversation?.customerId || null,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setReplyText("");
+        toast.success("Message sent");
+      } else {
+        toast.error(data?.error || "Failed to send");
+      }
+    } catch (err) {
+      console.error("Send error:", err);
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Delete conversation (soft delete)
+  const handleDeleteConversation = async (phone: string) => {
+    const convMsgs = messages.filter((m) => m.phone === phone);
+    const ids = convMsgs.map((m) => m.id);
+    if (!ids.length) return;
+
+    const { error } = await supabase
+      .from("whatsapp_messages")
+      .update({ is_deleted: true } as any)
+      .in("id", ids);
+
+    if (error) {
+      toast.error("Failed to delete conversation");
+      return;
+    }
+
+    setMessages((prev) => prev.filter((m) => m.phone !== phone));
+    if (selectedPhone === phone) setSelectedPhone(null);
+    toast.success("Conversation deleted");
+  };
+
   const showConversationList = !isMobile || !selectedPhone;
   const showChatView = !isMobile || !!selectedPhone;
+
+  // Message type icon
+  const msgTypeIcon = (msg: WaMessage) => {
+    switch (msg.message_type) {
+      case "image": return <ImageIcon className="h-3 w-3 inline mr-1" />;
+      case "audio": return <Mic className="h-3 w-3 inline mr-1" />;
+      case "document": return <FileText className="h-3 w-3 inline mr-1" />;
+      default: return null;
+    }
+  };
+
+  // Render message bubble content
+  const renderMessageContent = (msg: WaMessage) => {
+    if (msg.message_type === "image") {
+      return (
+        <div>
+          {msg.media_url ? (
+            <button onClick={() => setPreviewImage(msg.media_url)} className="block">
+              <div className="rounded overflow-hidden mb-1 max-w-[200px]">
+                <div className="bg-muted/50 flex items-center justify-center p-4 gap-2 text-xs text-muted-foreground">
+                  <ImageIcon className="h-5 w-5" />
+                  <span>Image</span>
+                </div>
+              </div>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-xs opacity-70 p-2 bg-muted/30 rounded mb-1">
+              <ImageIcon className="h-4 w-4" />
+              <span>Image (media expired)</span>
+            </div>
+          )}
+          {msg.message && msg.message !== "[Image]" && (
+            <p className="whitespace-pre-wrap break-words text-sm">{msg.message}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (msg.message_type === "audio") {
+      return (
+        <div className="flex items-center gap-2 py-1">
+          <Mic className="h-4 w-4 shrink-0" />
+          {msg.media_url ? (
+            <audio controls preload="none" className="h-8 max-w-[200px]">
+              <source src={msg.media_url} />
+            </audio>
+          ) : (
+            <span className="text-xs opacity-70">Voice note (media expired)</span>
+          )}
+        </div>
+      );
+    }
+
+    if (msg.message_type === "document") {
+      return (
+        <div className="flex items-center gap-2 py-1">
+          <FileText className="h-4 w-4 shrink-0" />
+          {msg.media_url ? (
+            <a href={msg.media_url} target="_blank" rel="noopener noreferrer"
+              className="text-sm underline truncate max-w-[180px]">
+              {msg.filename || "Document"}
+            </a>
+          ) : (
+            <span className="text-sm">{msg.filename || "Document"} <span className="text-xs opacity-70">(expired)</span></span>
+          )}
+        </div>
+      );
+    }
+
+    // Default text
+    return <p className="whitespace-pre-wrap break-words text-sm">{msg.message}</p>;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -197,7 +345,7 @@ export default function WhatsAppInbox() {
                 filteredConversations.map((conv) => (
                   <button
                     key={conv.phone}
-                    onClick={() => setSelectedPhone(conv.phone)}
+                    onClick={() => { setSelectedPhone(conv.phone); setReplyText(""); }}
                     className={cn(
                       "w-full text-left px-4 py-3 border-b border-border/50 hover:bg-accent/50 transition-colors",
                       selectedPhone === conv.phone && "bg-accent"
@@ -219,7 +367,10 @@ export default function WhatsAppInbox() {
                         {conv.customerName && (
                           <span className="text-[11px] text-muted-foreground">{formatPhone(conv.phone)}</span>
                         )}
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {msgTypeIcon(conv.messages[conv.messages.length - 1])}
+                          {conv.lastMessage}
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -250,17 +401,45 @@ export default function WhatsAppInbox() {
                     </p>
                     <p className="text-[11px] text-muted-foreground">{formatPhone(selectedConversation.phone)}</p>
                   </div>
-                  {selectedConversation.customerId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => navigate(`/customer/${selectedConversation.customerId}`)}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Profile
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {selectedConversation.customerId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => navigate(`/customer/${selectedConversation.customerId}`)}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Profile
+                      </Button>
+                    )}
+                    {userRole === "admin" && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove this conversation from the inbox. Messages can be recovered later.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteConversation(selectedConversation.phone)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
 
                 {/* Messages */}
@@ -276,19 +455,24 @@ export default function WhatsAppInbox() {
                       >
                         <div
                           className={cn(
-                            "max-w-[75%] rounded-lg px-3 py-2 text-sm",
+                            "max-w-[75%] rounded-lg px-3 py-2",
                             msg.type === "outgoing"
                               ? "bg-primary text-primary-foreground rounded-br-sm"
                               : "bg-muted rounded-bl-sm"
                           )}
                         >
-                          <p className="whitespace-pre-wrap break-words">{msg.message}</p>
-                          <p className={cn(
-                            "text-[10px] mt-1",
-                            msg.type === "outgoing" ? "text-primary-foreground/70" : "text-muted-foreground"
-                          )}>
-                            {format(new Date(msg.message_timestamp || msg.created_at), "HH:mm")}
-                          </p>
+                          {renderMessageContent(msg)}
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className={cn(
+                              "text-[10px]",
+                              msg.type === "outgoing" ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}>
+                              {format(new Date(msg.message_timestamp || msg.created_at), "HH:mm")}
+                            </span>
+                            {msg.type === "outgoing" && msg.send_status === "failed" && (
+                              <AlertCircle className="h-3 w-3 text-destructive" />
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -296,25 +480,19 @@ export default function WhatsAppInbox() {
                   </div>
                 </ScrollArea>
 
-                {/* Bottom info panel */}
-                <div className="border-t border-border p-3 bg-card">
-                  <div className="flex items-center gap-4 flex-wrap">
+                {/* Order info bar */}
+                {(selectedConversation.customerId || latestOrder) && (
+                  <div className="border-t border-border px-3 py-2 bg-card flex items-center gap-4 flex-wrap text-xs text-muted-foreground">
                     {selectedConversation.customerId && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5" />
                         <span>{selectedConversation.customerName || "Customer"}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{formatPhone(selectedConversation.phone)}</span>
-                    </div>
                     {latestOrder && (
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Package className="h-3.5 w-3.5" />
-                          <span>{latestOrder.order_number}</span>
-                        </div>
+                        <Package className="h-3.5 w-3.5" />
+                        <span>{latestOrder.order_number}</span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {latestOrder.current_status}
                         </Badge>
@@ -330,6 +508,31 @@ export default function WhatsAppInbox() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Reply input */}
+                <div className="border-t border-border p-3 bg-card">
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                    className="flex items-center gap-2"
+                  >
+                    <Input
+                      ref={replyInputRef}
+                      placeholder="Type a message..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      className="flex-1 h-9"
+                      disabled={sending}
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      disabled={!replyText.trim() || sending}
+                    >
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </form>
                 </div>
               </>
             ) : (
@@ -343,6 +546,15 @@ export default function WhatsAppInbox() {
           </div>
         )}
       </div>
+
+      {/* Image preview dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+          {previewImage && (
+            <img src={previewImage} alt="Media" className="w-full h-full object-contain rounded" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
