@@ -47,6 +47,7 @@ export default function LoyaltySettings() {
       earn_points_rate: currentEarn,
       redeem_points_rate: currentRedeem,
       max_redemption_percent: currentMax,
+      min_redeem_points: currentMinRedeem,
     });
     setSaving(false);
     if (res?.error) {
@@ -55,6 +56,7 @@ export default function LoyaltySettings() {
       setEarnRate(null);
       setRedeemRate(null);
       setMaxPercent(null);
+      setMinRedeem(null);
       toast.success("Loyalty rules updated");
     }
   };
