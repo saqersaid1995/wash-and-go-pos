@@ -62,7 +62,7 @@ export default function LoyaltyRedemption({
           <Gift className="w-3.5 h-3.5" />
           Loyalty Points
         </div>
-        <span className="text-xs font-bold text-foreground">{balance} pts</span>
+        <span className="text-xs font-bold text-foreground">{Number(balance).toFixed(2)} pts</span>
       </div>
 
       {balance > 0 && maxDiscount > 0 ? (
