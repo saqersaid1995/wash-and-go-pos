@@ -1,12 +1,9 @@
-import { useNavigate } from "react-router-dom";
 import { ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppHeader from "@/components/AppHeader";
 import OfflineModePanel from "@/components/OfflineModePanel";
 
 export default function OfflineMode() {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-background">
       <AppHeader title="Lavinderia POS" subtitle="Offline Mode" />
@@ -14,7 +11,7 @@ export default function OfflineMode() {
         <Button
           size="lg"
           className="w-full h-14 text-base gap-2 mb-6"
-          onClick={() => navigate("/scan-lite")}
+          onClick={() => window.location.assign("/scan-lite")}
         >
           <ScanLine className="h-5 w-5" />
           Open Scan Lite

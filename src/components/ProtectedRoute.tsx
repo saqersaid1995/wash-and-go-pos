@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  const RETURN_TO_STORAGE_KEY = "lavinderia:returnTo";
   const { user, role, loading, profile } = useAuth();
   const location = useLocation();
 
@@ -23,6 +24,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   if (!user) {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(RETURN_TO_STORAGE_KEY, returnTo);
+    }
+
     return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 

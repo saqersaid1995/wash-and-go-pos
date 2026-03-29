@@ -111,5 +111,14 @@ export function useStandaloneAppMeta(options: StandaloneAppMetaOptions | null) {
       document.title = previousTitle;
       cleanups.reverse().forEach((cleanup) => cleanup());
     };
-  }, [options]);
+  }, [
+    options?.title,
+    options?.description,
+    options?.applicationName,
+    options?.appleMobileWebAppTitle,
+    options?.themeColor,
+    options?.manifestHref,
+    options?.faviconHref,
+    options?.appleTouchIconHref,
+  ]);
 }

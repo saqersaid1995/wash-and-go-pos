@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Loader2, LogIn } from "lucide-react";
 import { useStandaloneAppMeta } from "@/hooks/useStandaloneAppMeta";
 
 export default function Login() {
+  const RETURN_TO_STORAGE_KEY = "lavinderia:returnTo";
   const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -19,9 +20,35 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || "/";
+  const returnTo = searchParams.get("returnTo")
+    ?? (typeof window !== "undefined" ? window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY) : null)
+    ?? "/";
   const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/";
   const isScanLiteFlow = safeReturnTo === "/scan-lite" || safeReturnTo.startsWith("/scan-lite?");
+
+  const redirectToTarget = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(RETURN_TO_STORAGE_KEY);
+    }
+
+    if (isScanLiteFlow) {
+      window.location.replace(safeReturnTo);
+      return;
+    }
+
+    navigate(safeReturnTo, { replace: true });
+  }, [isScanLiteFlow, navigate, safeReturnTo]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(RETURN_TO_STORAGE_KEY, safeReturnTo);
+  }, [safeReturnTo]);
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      redirectToTarget();
+    }
+  }, [authLoading, redirectToTarget, user]);
 
   useStandaloneAppMeta(
     isScanLiteFlow
@@ -50,14 +77,14 @@ export default function Login() {
     if (result.error) {
       setError(result.error);
     } else {
-      navigate(safeReturnTo, { replace: true });
+      redirectToTarget();
     }
     setLoading(false);
   };
 
   // Redirect if already authenticated
   if (user && !authLoading) {
-    return <Navigate to={safeReturnTo} replace />;
+    return null;
   }
 
   return (

@@ -4,7 +4,7 @@
   "short_name": "Quick Scan",
   "description": "Lavinderia Scan - Quick Order Lookup",
   "start_url": "/scan-lite",
-  "scope": "/",
+  "scope": "/scan-lite",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
