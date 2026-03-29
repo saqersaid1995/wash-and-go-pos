@@ -47,7 +47,11 @@ export default function ScanLite() {
   const [phoneNotFound, setPhoneNotFound] = useState(false);
 
   const vibrate = () => {
-    try { navigator.vibrate?.(100); } catch {}
+    try {
+      navigator.vibrate?.(100);
+    } catch {
+      return undefined;
+    }
   };
 
   const lookupOrder = useCallback(async (code: string) => {
