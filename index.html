@@ -5,11 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lavinderia POS</title>
     <meta name="description" content="Lavinderia POS - Professional Laundry Management System">
+    <meta name="application-name" content="Lavinderia POS" />
     <meta name="author" content="Lavinderia" />
     <link rel="icon" href="/favicon.jpeg" type="image/jpeg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Lavinderia POS" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0f172a" />
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = params.get("returnTo") || "";
+        const isScanLite = window.location.pathname.startsWith("/scan-lite")
+          || (window.location.pathname === "/login" && returnTo.startsWith("/scan-lite"));
+
+        if (!isScanLite) return;
+
+        document.title = "Quick Scan";
+
+        const setMeta = (name, content) => {
+          let element = document.head.querySelector(`meta[name='${name}']`);
+          if (!element) {
+            element = document.createElement("meta");
+            element.setAttribute("name", name);
+            document.head.appendChild(element);
+          }
+          element.setAttribute("content", content);
+        };
+
+        const setLink = (rel, href, extra = {}) => {
+          let element = document.head.querySelector(`link[rel='${rel}']`);
+          if (!element) {
+            element = document.createElement("link");
+            element.setAttribute("rel", rel);
+            document.head.appendChild(element);
+          }
+          Object.entries(extra).forEach(([key, value]) => element.setAttribute(key, value));
+          element.setAttribute("href", href);
+        };
+
+        setMeta("description", "Lavinderia Scan - Quick Order Lookup");
+        setMeta("application-name", "Quick Scan");
+        setMeta("apple-mobile-web-app-title", "Quick Scan");
+        setMeta("theme-color", "#0f172a");
+        setLink("icon", "/scan-favicon.png", { type: "image/png" });
+        setLink("apple-touch-icon", "/scan-apple-touch-icon.png");
+        setLink("manifest", "/scan-lite-manifest.json");
+      })();
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Lavinderia POS">

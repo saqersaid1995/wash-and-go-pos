@@ -1,12 +1,17 @@
-const CACHE_NAME = "lavinderia-v2";
+const CACHE_NAME = "lavinderia-v3";
 const OFFLINE_URL = "/";
 
 // Assets to pre-cache during install
 const PRE_CACHE = [
   "/",
   "/manifest.json",
+  "/scan-lite-manifest.json",
   "/icon-192.png",
   "/icon-512.png",
+  "/scan-favicon.png",
+  "/scan-apple-touch-icon.png",
+  "/scan-icon-192.png",
+  "/scan-icon-512.png",
   "/favicon.jpeg",
 ];
 
@@ -48,7 +53,10 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => caches.match(OFFLINE_URL).then((r) => r || caches.match(event.request)))
+        .catch(async () => {
+          const cachedRequest = await caches.match(event.request);
+          return cachedRequest || caches.match(OFFLINE_URL);
+        })
     );
     return;
   }

@@ -17,7 +17,7 @@ export default function OfflineMode() {
           onClick={() => navigate("/scan-lite")}
         >
           <ScanLine className="h-5 w-5" />
-          Open Scan
+          Open Scan Lite
         </Button>
 
         <h2 className="text-lg font-semibold mb-1">Install & Offline Setup</h2>

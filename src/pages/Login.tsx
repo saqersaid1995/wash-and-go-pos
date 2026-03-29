@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,36 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, LogIn } from "lucide-react";
+import { useStandaloneAppMeta } from "@/hooks/useStandaloneAppMeta";
 
 export default function Login() {
   const { signIn, user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/";
+  const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/";
+  const isScanLiteFlow = safeReturnTo === "/scan-lite" || safeReturnTo.startsWith("/scan-lite?");
+
+  useStandaloneAppMeta(
+    isScanLiteFlow
+      ? {
+          title: "Quick Scan",
+          description: "Lavinderia Scan - Quick Order Lookup",
+          applicationName: "Quick Scan",
+          appleMobileWebAppTitle: "Quick Scan",
+          themeColor: "#0f172a",
+          manifestHref: "/scan-lite-manifest.json",
+          faviconHref: "/scan-favicon.png",
+          appleTouchIconHref: "/scan-apple-touch-icon.png",
+        }
+      : null,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,16 +49,15 @@ export default function Login() {
     const result = await signIn(username.trim(), password);
     if (result.error) {
       setError(result.error);
+    } else {
+      navigate(safeReturnTo, { replace: true });
     }
     setLoading(false);
   };
 
-  const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || "/";
-
   // Redirect if already authenticated
   if (user && !authLoading) {
-    return <Navigate to={returnTo} replace />;
+    return <Navigate to={safeReturnTo} replace />;
   }
 
   return (
