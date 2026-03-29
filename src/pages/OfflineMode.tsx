@@ -17,6 +17,14 @@ export default function OfflineMode() {
           Open Scan Lite
         </Button>
 
+        <Button
+          size="lg"
+          className="w-full h-14 text-base gap-2 mb-6"
+          onClick={() => window.location.assign("/support-lite")}
+        >
+          <HeadsetIcon className="h-5 w-5" />
+          Open Support
+        </Button>
         <h2 className="text-lg font-semibold mb-1">Install & Offline Setup</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Install Lavinderia POS on this device for faster access and offline use. Once installed, open it from your desktop shortcut or apps list — no browser tab needed.
