@@ -721,6 +721,138 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_auto_reply_settings: {
+        Row: {
+          created_at: string
+          fallback_message: string
+          greeting_message: string
+          id: string
+          production_mode: boolean
+          test_mode: boolean
+          test_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fallback_message?: string
+          greeting_message?: string
+          id?: string
+          production_mode?: boolean
+          test_mode?: boolean
+          test_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fallback_message?: string
+          greeting_message?: string
+          id?: string
+          production_mode?: boolean
+          test_mode?: boolean
+          test_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_complaints: {
+        Row: {
+          attachment_url: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          internal_notes: string | null
+          message: string
+          phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          message?: string
+          phone: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          message?: string
+          phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_conversation_state: {
+        Row: {
+          id: string
+          menu_sent: boolean
+          phone: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          menu_sent?: boolean
+          phone: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          menu_sent?: boolean
+          phone?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_menu_items: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          is_enabled: boolean
+          label_ar: string
+          label_en: string
+          menu_number: number
+          reply_key: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          label_ar?: string
+          label_en?: string
+          menu_number: number
+          reply_key?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          label_ar?: string
+          label_en?: string
+          menu_number?: number
+          reply_key?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_messages: {
         Row: {
           created_at: string
@@ -792,6 +924,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_static_replies: {
+        Row: {
+          created_at: string
+          id: string
+          message_text: string
+          reply_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_text?: string
+          reply_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_text?: string
+          reply_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

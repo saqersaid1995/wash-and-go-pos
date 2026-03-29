@@ -21,6 +21,8 @@ import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
 import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
+import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
+import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,8 @@ const App = () => (
             <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="/loyalty" element={<ProtectedRoute allowedRoles={["admin"]}><LoyaltySettings /></ProtectedRoute>} />
+            <Route path="/wa-menu" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppMenuBuilder /></ProtectedRoute>} />
+            <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>
