@@ -25,6 +25,7 @@ import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
 import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import Cashflow from "./pages/Cashflow.tsx";
 import ScanLite from "./pages/ScanLite.tsx";
+import SupportLite from "./pages/SupportLite.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
