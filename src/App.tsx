@@ -51,6 +51,8 @@ const App = () => (
             <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="/loyalty" element={<ProtectedRoute allowedRoles={["admin"]}><LoyaltySettings /></ProtectedRoute>} />
+            <Route path="/wa-menu" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppMenuBuilder /></ProtectedRoute>} />
+            <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>
