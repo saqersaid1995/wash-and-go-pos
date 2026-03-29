@@ -18,11 +18,11 @@ import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import LoyaltyRedemption from "@/components/pos/LoyaltyRedemption";
 import { redeemLoyaltyPoints, awardLoyaltyPoints } from "@/lib/loyalty";
 import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
+import MixedPaymentInput, { getMixedTotal, getMixedPayments } from "@/components/payment/MixedPaymentInput";
 
 interface ScanOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Pre-fill scanned code and auto-search on open */
   initialCode?: string;
 }
 
@@ -47,6 +47,11 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
   const [method, setMethod] = useState("cash");
   const [submitting, setSubmitting] = useState(false);
 
+  // Mixed payment state
+  const [mixedCash, setMixedCash] = useState("");
+  const [mixedCard, setMixedCard] = useState("");
+  const [mixedTransfer, setMixedTransfer] = useState("");
+
   // Loyalty state
   const { settings: loyaltySettings, refetch: refetchLoyalty } = useLoyaltySettings();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
@@ -62,6 +67,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     setMethod("cash");
     setSubmitting(false);
     setLoyaltyDiscount(0);
+    setMixedCash(""); setMixedCard(""); setMixedTransfer("");
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
@@ -105,7 +111,6 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     }
   }, []);
 
-  // Refetch loyalty settings when modal opens
   useEffect(() => {
     if (open) {
       refetchLoyalty();
@@ -119,19 +124,18 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
-
     e.preventDefault();
-    // Use the live DOM value so hardware scanners don't submit a stale
-    // React state snapshot before the final characters flush.
     handleSearch(e.currentTarget.value);
   };
 
-  const handlePayment = async () => {
-    if (!order) return;
-    const effectiveRemaining = Math.max(0, order.remainingBalance - loyaltyDiscount);
-    const numericAmount = parseFloat(amount) || 0;
-    if (numericAmount <= 0 || numericAmount > effectiveRemaining) return;
+  const isMixed = method === "mixed";
+  const effectiveRemaining = order ? Math.max(0, order.remainingBalance - loyaltyDiscount) : 0;
+  const mixedTotal = getMixedTotal(mixedCash, mixedCard, mixedTransfer);
+  const numericAmount = isMixed ? mixedTotal : (parseFloat(amount) || 0);
+  const isValidPayment = order && numericAmount > 0 && numericAmount <= effectiveRemaining + 0.0005;
 
+  const handlePayment = async () => {
+    if (!order || !isValidPayment) return;
     setSubmitting(true);
 
     // Process loyalty redemption first
@@ -140,21 +144,27 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       await redeemLoyaltyPoints(order.customerId, order.id, pointsUsed, loyaltyDiscount);
     }
 
-    const loyaltyAdjustedTotal = order.totalAmount - loyaltyDiscount;
+    const payments = isMixed
+      ? getMixedPayments(mixedCash, mixedCard, mixedTransfer)
+      : [{ method, amount: numericAmount }];
 
-    const { error: payError } = await supabase.from("payments").insert({
-      order_id: order.id,
-      payment_method: method,
-      amount: numericAmount,
-    });
+    const totalPaying = payments.reduce((s, p) => s + p.amount, 0);
 
-    if (payError) {
-      toast.error("Payment failed: " + payError.message);
-      setSubmitting(false);
-      return;
+    // Insert all payment records
+    for (const p of payments) {
+      const { error } = await supabase.from("payments").insert({
+        order_id: order.id,
+        payment_method: p.method,
+        amount: p.amount,
+      });
+      if (error) {
+        toast.error("Payment failed: " + error.message);
+        setSubmitting(false);
+        return;
+      }
     }
 
-    const newPaid = order.paidAmount + numericAmount + loyaltyDiscount;
+    const newPaid = order.paidAmount + totalPaying + loyaltyDiscount;
     const newRemaining = Math.max(0, order.totalAmount - newPaid);
     const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
 
@@ -173,22 +183,22 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
       return;
     }
 
-    // Award loyalty points on the cash amount paid
-    if (numericAmount > 0 && order.customerId && loyaltySettings?.is_enabled) {
-      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
+    // Award loyalty points
+    if (totalPaying > 0 && order.customerId && loyaltySettings?.is_enabled) {
+      await awardLoyaltyPoints(order.customerId, order.id, totalPaying);
     }
 
-    // Auto-deliver if fully paid (direct handover — skips ready-for-pickup, no WhatsApp)
+    // Auto-deliver if fully paid
     if (newRemaining <= 0 && order.currentStatus !== "delivered") {
       await updateOrderStatus(order.id, order.currentStatus, "delivered");
       toast.success(`Payment collected & order ${order.orderNumber} delivered!`);
     } else {
-      toast.success(`Payment of ${formatOMR(numericAmount)} recorded for ${order.orderNumber}`);
+      toast.success(`Payment of ${formatOMR(totalPaying)} recorded for ${order.orderNumber}`);
     }
 
     // Send loyalty WhatsApp when fully paid
     if (newPaymentStatus === "paid" && order.customerId && order.customerPhone) {
-      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, numericAmount);
+      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, totalPaying);
     }
 
     setSubmitting(false);
@@ -204,13 +214,9 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
     resetToScan();
   };
 
-  const effectiveRemaining = order ? Math.max(0, order.remainingBalance - loyaltyDiscount) : 0;
-  const numericAmount = parseFloat(amount) || 0;
-  const isValidPayment = order && numericAmount > 0 && numericAmount <= effectiveRemaining;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm" data-disable-global-barcode="true">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto" data-disable-global-barcode="true">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanBarcode className="h-5 w-5 text-primary" />
@@ -262,7 +268,6 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
         {/* ── PAYMENT VIEW ── */}
         {view === "payment" && order && (
           <div className="space-y-4">
-            {/* Order summary */}
             <div className="bg-secondary/50 rounded-lg p-3 space-y-1 text-sm">
               <InfoRow label="Order" value={order.orderNumber} />
               <InfoRow label="Customer" value={order.customerName} />
@@ -320,19 +325,23 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
               })}
             </div>
 
-            {/* Amount */}
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
-              <Input
-                type="number"
-                step="0.001"
-                min="0.001"
-                max={effectiveRemaining}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pl-12 text-lg font-semibold"
+            {/* Payment input */}
+            {isMixed ? (
+              <MixedPaymentInput
+                cashAmount={mixedCash} cardAmount={mixedCard} transferAmount={mixedTransfer}
+                onCashChange={setMixedCash} onCardChange={setMixedCard} onTransferChange={setMixedTransfer}
+                remainingBalance={effectiveRemaining}
               />
-            </div>
+            ) : (
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
+                <Input
+                  type="number" step="0.001" min="0.001" max={effectiveRemaining}
+                  value={amount} onChange={(e) => setAmount(e.target.value)}
+                  className="pl-12 text-lg font-semibold"
+                />
+              </div>
+            )}
 
             {/* Action */}
             <Button
@@ -352,7 +361,7 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
           </div>
         )}
 
-        {/* ── ALREADY PAID (ready for pickup, balance = 0) ── */}
+        {/* ── ALREADY PAID ── */}
         {view === "already-paid" && order && (
           <div className="space-y-4">
             <div className="bg-secondary/50 rounded-lg p-3 space-y-1 text-sm">
@@ -386,8 +395,6 @@ export default function ScanOrderModal({ open, onOpenChange, initialCode }: Scan
             </Button>
           </div>
         )}
-
-        
       </DialogContent>
     </Dialog>
   );

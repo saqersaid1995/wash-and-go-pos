@@ -12,6 +12,7 @@ import { formatOMR } from "@/lib/currency";
 import { awardLoyaltyPoints } from "@/lib/loyalty";
 import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
 import type { WorkflowOrder } from "@/types/workflow";
+import MixedPaymentInput, { getMixedTotal, getMixedPayments } from "./MixedPaymentInput";
 
 const PAYMENT_METHODS = [
   { id: "cash", label: "Cash", icon: Banknote },
@@ -33,34 +34,49 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string } | null>(null);
 
-  const numericAmount = parseFloat(amount) || 0;
-  const isValid = numericAmount > 0 && numericAmount <= order.remainingBalance;
+  // Mixed payment state
+  const [mixedCash, setMixedCash] = useState("");
+  const [mixedCard, setMixedCard] = useState("");
+  const [mixedTransfer, setMixedTransfer] = useState("");
+
+  const isMixed = method === "mixed";
+  const mixedTotal = getMixedTotal(mixedCash, mixedCard, mixedTransfer);
+  const numericAmount = isMixed ? mixedTotal : (parseFloat(amount) || 0);
+  const isValid = numericAmount > 0 && numericAmount <= order.remainingBalance + 0.0005;
 
   const handleConfirm = async () => {
     if (!isValid) return;
     setSubmitting(true);
 
-    const { error: payError } = await supabase.from("payments").insert({
-      order_id: order.id,
-      payment_method: method,
-      amount: numericAmount,
-    });
+    const payments = isMixed
+      ? getMixedPayments(mixedCash, mixedCard, mixedTransfer)
+      : [{ method, amount: numericAmount }];
 
-    if (payError) {
-      toast.error("Payment failed: " + payError.message);
-      setSubmitting(false);
-      return;
+    const totalPaying = payments.reduce((s, p) => s + p.amount, 0);
+
+    // Insert all payment records
+    for (const p of payments) {
+      const { error } = await supabase.from("payments").insert({
+        order_id: order.id,
+        payment_method: p.method,
+        amount: p.amount,
+      });
+      if (error) {
+        toast.error("Payment failed: " + error.message);
+        setSubmitting(false);
+        return;
+      }
     }
 
-    const newPaid = order.paidAmount + numericAmount;
-    const newRemaining = order.totalAmount - newPaid;
+    const newPaid = order.paidAmount + totalPaying;
+    const newRemaining = Math.max(0, order.totalAmount - newPaid);
     const newPaymentStatus = newRemaining <= 0 ? "paid" : "partially-paid";
 
     const { error: updateError } = await supabase
       .from("orders")
       .update({
         paid_amount: newPaid,
-        remaining_amount: Math.max(0, newRemaining),
+        remaining_amount: newRemaining,
         payment_status: newPaymentStatus,
       })
       .eq("id", order.id);
@@ -71,25 +87,22 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       return;
     }
 
-    // Auto-deliver if fully paid and ready-for-pickup
-    const newRemainingFinal = Math.max(0, order.totalAmount - newPaid);
-    if (newRemainingFinal <= 0 && order.currentStatus === "ready-for-pickup") {
+    if (newRemaining <= 0 && order.currentStatus === "ready-for-pickup") {
       const { updateOrderStatus } = await import("@/lib/supabase-queries");
       await updateOrderStatus(order.id, "ready-for-pickup", "delivered");
     }
 
-    // Award loyalty points for this payment
     if (order.customerId) {
-      await awardLoyaltyPoints(order.customerId, order.id, numericAmount);
+      await awardLoyaltyPoints(order.customerId, order.id, totalPaying);
     }
 
-    // Send loyalty WhatsApp when fully paid
     if (newPaymentStatus === "paid" && order.customerId && order.customerPhone) {
-      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, numericAmount);
+      triggerLoyaltyWhatsApp(order.id, order.customerId, order.customerPhone, totalPaying);
     }
 
     setSubmitting(false);
-    setReceipt({ amount: numericAmount, method, date: new Date().toLocaleString() });
+    const methodLabel = isMixed ? "Mixed" : method;
+    setReceipt({ amount: totalPaying, method: methodLabel, date: new Date().toLocaleString() });
     toast.success("Payment recorded successfully");
     onPaymentComplete();
   };
@@ -98,11 +111,8 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
     setReceipt(null);
     setAmount(String(order.remainingBalance.toFixed(3)));
     setMethod("cash");
+    setMixedCash(""); setMixedCard(""); setMixedTransfer("");
     onOpenChange(false);
-  };
-
-  const handlePrintReceipt = () => {
-    window.print();
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -110,13 +120,14 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
       setAmount(String(order.remainingBalance.toFixed(3)));
       setMethod("cash");
       setReceipt(null);
+      setMixedCash(""); setMixedCard(""); setMixedTransfer("");
     }
     onOpenChange(v);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" /> Pickup Payment
@@ -138,12 +149,10 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
               <p className="text-center text-xs text-muted-foreground">Thank you!</p>
             </div>
             <div className="flex gap-2 print:hidden">
-              <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={handlePrintReceipt}>
+              <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => window.print()}>
                 <Printer className="h-3.5 w-3.5" /> Print Receipt
               </Button>
-              <Button size="sm" className="flex-1" onClick={handleClose}>
-                Done
-              </Button>
+              <Button size="sm" className="flex-1" onClick={handleClose}>Done</Button>
             </div>
           </div>
         ) : (
@@ -172,40 +181,41 @@ export default function PaymentModal({ open, onOpenChange, order, onPaymentCompl
                       type="button"
                       onClick={() => setMethod(pm.id)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-                        isActive
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-background text-muted-foreground hover:bg-accent"
+                        isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:bg-accent"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
-                      {pm.label}
+                      <Icon className="h-4 w-4" /> {pm.label}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Amount</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
-                <Input
-                  type="number"
-                  step="0.001"
-                  min="0.001"
-                  max={order.remainingBalance}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pl-12 text-lg font-semibold"
-                />
+            {isMixed ? (
+              <MixedPaymentInput
+                cashAmount={mixedCash} cardAmount={mixedCard} transferAmount={mixedTransfer}
+                onCashChange={setMixedCash} onCardChange={setMixedCard} onTransferChange={setMixedTransfer}
+                remainingBalance={order.remainingBalance}
+              />
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Amount</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">OMR</span>
+                  <Input
+                    type="number" step="0.001" min="0.001" max={order.remainingBalance}
+                    value={amount} onChange={(e) => setAmount(e.target.value)}
+                    className="pl-12 text-lg font-semibold"
+                  />
+                </div>
+                {numericAmount > order.remainingBalance && (
+                  <p className="text-xs text-destructive">Amount exceeds remaining balance</p>
+                )}
+                {numericAmount > 0 && numericAmount < order.remainingBalance && (
+                  <p className="text-xs text-warning">Partial payment — balance will remain</p>
+                )}
               </div>
-              {numericAmount > order.remainingBalance && (
-                <p className="text-xs text-destructive">Amount exceeds remaining balance</p>
-              )}
-              {numericAmount > 0 && numericAmount < order.remainingBalance && (
-                <p className="text-xs text-warning">Partial payment — balance will remain</p>
-              )}
-            </div>
+            )}
 
             <Button
               className="w-full h-11 text-sm font-semibold gap-2"
