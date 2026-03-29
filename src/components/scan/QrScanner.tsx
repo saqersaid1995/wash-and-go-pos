@@ -10,10 +10,11 @@ interface QrScannerProps {
 
 /**
  * Native camera QR/barcode scanner using getUserMedia + BarcodeDetector.
- * Avoids html5-qrcode library which has known iOS PWA bugs.
+ * Includes workarounds for iOS standalone/PWA mode video rendering bugs.
  */
 export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +29,12 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-    if (videoRef.current) {
+    // Remove video element entirely — iOS standalone mode can cache stale state
+    if (videoRef.current && videoRef.current.parentNode) {
       videoRef.current.srcObject = null;
+      videoRef.current.load();
+      videoRef.current.parentNode.removeChild(videoRef.current);
+      videoRef.current = null;
     }
   }, []);
 
@@ -45,7 +50,6 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
     let cancelled = false;
 
     const startCamera = async () => {
-      // Check for BarcodeDetector support
       const hasBarcodeDetector = "BarcodeDetector" in window;
 
       try {
@@ -65,25 +69,60 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
 
         streamRef.current = stream;
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute("playsinline", "true");
-          videoRef.current.setAttribute("autoplay", "true");
-          await videoRef.current.play();
+        // Create a fresh video element each time — avoids iOS standalone caching bug
+        const video = document.createElement("video");
+        video.setAttribute("autoplay", "");
+        video.setAttribute("playsinline", "");
+        video.setAttribute("muted", "");
+        video.setAttribute("webkit-playsinline", "");
+        video.muted = true;
+        video.playsInline = true;
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.objectFit = "cover";
+        video.style.display = "block";
+
+        videoRef.current = video;
+
+        if (containerRef.current) {
+          containerRef.current.appendChild(video);
         }
+
+        // Set srcObject AFTER element is in the DOM
+        video.srcObject = stream;
+
+        // Wait for metadata before playing — critical for iOS standalone
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("Video load timeout")), 8000);
+          video.onloadedmetadata = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          video.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error("Video element error"));
+          };
+        });
+
+        if (cancelled) return;
+
+        await video.play();
 
         if (!hasBarcodeDetector) {
           setError("QR scanning not supported on this device. Use manual entry below.");
           return;
         }
 
-        // Use native BarcodeDetector
         const detector = new (window as any).BarcodeDetector({
           formats: ["qr_code", "code_128", "code_39", "ean_13", "ean_8"],
         });
 
         const scanFrame = async () => {
           if (cancelled || scannedRef.current || !videoRef.current) return;
+          if (videoRef.current.readyState < 2) {
+            animFrameRef.current = requestAnimationFrame(scanFrame);
+            return;
+          }
 
           try {
             const barcodes = await detector.detect(videoRef.current);
@@ -96,7 +135,7 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
               return;
             }
           } catch {
-            // detect() can fail on some frames, just continue
+            // detect() can fail on some frames, continue
           }
 
           animFrameRef.current = requestAnimationFrame(scanFrame);
@@ -132,16 +171,9 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
       </Button>
 
       <div
-        className={`rounded-lg overflow-hidden bg-secondary ${scanning ? "min-h-[280px]" : "h-0"}`}
-      >
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          playsInline
-          muted
-          style={{ display: scanning ? "block" : "none" }}
-        />
-      </div>
+        ref={containerRef}
+        className={`rounded-lg overflow-hidden bg-secondary ${scanning ? "h-[280px]" : "h-0"}`}
+      />
 
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>
