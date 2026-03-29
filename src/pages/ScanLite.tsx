@@ -14,11 +14,24 @@ import QrScanner from "@/components/scan/QrScanner";
 import ScanResultCard from "@/components/scan/ScanResultCard";
 import PhoneSearchResults from "@/components/scan/PhoneSearchResults";
 import { BUSINESS } from "@/lib/business-config";
+import { useStandaloneAppMeta } from "@/hooks/useStandaloneAppMeta";
 
 type SearchMode = "barcode" | "order" | "phone";
 
 export default function ScanLite() {
   const navigate = useNavigate();
+
+  useStandaloneAppMeta({
+    title: "Quick Scan",
+    description: "Lavinderia Scan - Quick Order Lookup",
+    applicationName: "Quick Scan",
+    appleMobileWebAppTitle: "Quick Scan",
+    themeColor: "#0f172a",
+    manifestHref: "/scan-lite-manifest.json",
+    faviconHref: "/scan-favicon.png",
+    appleTouchIconHref: "/scan-apple-touch-icon.png",
+  });
+
   const [mode, setMode] = useState<SearchMode>("barcode");
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
