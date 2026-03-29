@@ -31,9 +31,12 @@ export default function Login() {
     setLoading(false);
   };
 
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/";
+
   // Redirect if already authenticated
   if (user && !authLoading) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={returnTo} replace />;
   }
 
   return (

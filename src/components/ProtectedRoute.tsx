@@ -21,7 +21,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const returnTo = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   // Wait for profile/role to load
