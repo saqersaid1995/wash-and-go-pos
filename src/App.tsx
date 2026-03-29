@@ -21,6 +21,8 @@ import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
 import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
+import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
+import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
