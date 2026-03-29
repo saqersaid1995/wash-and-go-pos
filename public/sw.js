@@ -14,6 +14,12 @@ const PRE_CACHE = [
   "/scan-icon-192.png",
   "/scan-icon-512.png",
   "/favicon.jpeg",
+  "/support-lite",
+  "/support-lite-manifest.json",
+  "/support-icon-192.png",
+  "/support-icon-512.png",
+  "/support-favicon.png",
+  "/support-apple-touch-icon.png",
 ];
 
 // Install: pre-cache shell
