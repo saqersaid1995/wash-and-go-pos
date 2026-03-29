@@ -1,4 +1,4 @@
-import { ScanLine } from "lucide-react";
+import { ScanLine, HeadsetIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppHeader from "@/components/AppHeader";
 import OfflineModePanel from "@/components/OfflineModePanel";
