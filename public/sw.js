@@ -4,6 +4,7 @@ const OFFLINE_URL = "/";
 // Assets to pre-cache during install
 const PRE_CACHE = [
   "/",
+  "/scan-lite",
   "/manifest.json",
   "/scan-lite-manifest.json",
   "/icon-192.png",
@@ -55,7 +56,8 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cachedRequest = await caches.match(event.request);
-          return cachedRequest || caches.match(OFFLINE_URL);
+          const routeFallback = url.pathname.startsWith("/scan-lite") ? "/scan-lite" : OFFLINE_URL;
+          return cachedRequest || caches.match(routeFallback) || caches.match(OFFLINE_URL);
         })
     );
     return;
