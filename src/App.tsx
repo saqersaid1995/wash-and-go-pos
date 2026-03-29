@@ -56,6 +56,7 @@ const App = () => (
             <Route path="/wa-menu" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppMenuBuilder /></ProtectedRoute>} />
             <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="/cashflow" element={<ProtectedRoute allowedRoles={["admin"]}><Cashflow /></ProtectedRoute>} />
+            <Route path="/scan-lite" element={<ProtectedRoute><ScanLite /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>
