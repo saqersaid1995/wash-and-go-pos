@@ -65,6 +65,17 @@ export default function Login() {
           faviconHref: "/scan-favicon.png",
           appleTouchIconHref: "/scan-apple-touch-icon.png",
         }
+      : isSupportLiteFlow
+      ? {
+          title: "Lavinderia Support",
+          description: "Lavinderia Support - Customer Messages & Complaints",
+          applicationName: "Lavinderia Support",
+          appleMobileWebAppTitle: "Lavinderia Support",
+          themeColor: "#0f172a",
+          manifestHref: "/support-lite-manifest.json",
+          faviconHref: "/support-favicon.png",
+          appleTouchIconHref: "/support-apple-touch-icon.png",
+        }
       : null,
   );
 

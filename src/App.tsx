@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="/cashflow" element={<ProtectedRoute allowedRoles={["admin"]}><Cashflow /></ProtectedRoute>} />
             <Route path="/scan-lite" element={<ProtectedRoute><ScanLite /></ProtectedRoute>} />
+            <Route path="/support-lite" element={<ProtectedRoute><SupportLite /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>

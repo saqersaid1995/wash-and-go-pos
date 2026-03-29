@@ -62,7 +62,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cachedRequest = await caches.match(event.request);
-          const routeFallback = url.pathname.startsWith("/scan-lite") ? "/scan-lite" : OFFLINE_URL;
+          const routeFallback = url.pathname.startsWith("/scan-lite") ? "/scan-lite" : url.pathname.startsWith("/support-lite") ? "/support-lite" : OFFLINE_URL;
           return cachedRequest || caches.match(routeFallback) || caches.match(OFFLINE_URL);
         })
     );
