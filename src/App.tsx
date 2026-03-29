@@ -23,6 +23,7 @@ import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
 import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
 import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
+import Cashflow from "./pages/Cashflow.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
