@@ -25,6 +25,7 @@ import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
 import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import Cashflow from "./pages/Cashflow.tsx";
 import ScanLite from "./pages/ScanLite.tsx";
+import SupportLite from "./pages/SupportLite.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="/cashflow" element={<ProtectedRoute allowedRoles={["admin"]}><Cashflow /></ProtectedRoute>} />
             <Route path="/scan-lite" element={<ProtectedRoute><ScanLite /></ProtectedRoute>} />
+            <Route path="/support-lite" element={<ProtectedRoute><SupportLite /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>

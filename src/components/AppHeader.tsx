@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/complaints", label: "Complaints", roles: ["admin"] },
   { to: "/staff", label: "Staff", roles: ["admin"] },
   { to: "/loyalty", label: "Loyalty", roles: ["admin"] },
+  { to: "/support-lite", label: "Support", roles: ["admin", "cashier"] },
 ];
 
 interface AppHeaderProps {

@@ -25,6 +25,8 @@ export default function Login() {
     ?? "/";
   const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/";
   const isScanLiteFlow = safeReturnTo === "/scan-lite" || safeReturnTo.startsWith("/scan-lite?");
+  const isSupportLiteFlow = safeReturnTo === "/support-lite" || safeReturnTo.startsWith("/support-lite?");
+  const isStandaloneFlow = isScanLiteFlow || isSupportLiteFlow;
   const hasRedirectedRef = useRef(false);
 
   const redirectToTarget = useCallback(() => {
@@ -62,6 +64,17 @@ export default function Login() {
           manifestHref: "/scan-lite-manifest.json",
           faviconHref: "/scan-favicon.png",
           appleTouchIconHref: "/scan-apple-touch-icon.png",
+        }
+      : isSupportLiteFlow
+      ? {
+          title: "Lavinderia Support",
+          description: "Lavinderia Support - Customer Messages & Complaints",
+          applicationName: "Lavinderia Support",
+          appleMobileWebAppTitle: "Lavinderia Support",
+          themeColor: "#0f172a",
+          manifestHref: "/support-lite-manifest.json",
+          faviconHref: "/support-favicon.png",
+          appleTouchIconHref: "/support-apple-touch-icon.png",
         }
       : null,
   );
