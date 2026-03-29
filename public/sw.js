@@ -1,4 +1,4 @@
-const CACHE_NAME = "lavinderia-v4";
+const CACHE_NAME = "lavinderia-v5";
 const OFFLINE_URL = "/";
 
 // Assets to pre-cache during install
