@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,19 +25,20 @@ export default function Login() {
     ?? "/";
   const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/";
   const isScanLiteFlow = safeReturnTo === "/scan-lite" || safeReturnTo.startsWith("/scan-lite?");
+  const hasRedirectedRef = useRef(false);
 
   const redirectToTarget = useCallback(() => {
+    if (hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+
     if (typeof window !== "undefined") {
       window.sessionStorage.removeItem(RETURN_TO_STORAGE_KEY);
-    }
-
-    if (isScanLiteFlow) {
       window.location.replace(safeReturnTo);
       return;
     }
 
     navigate(safeReturnTo, { replace: true });
-  }, [isScanLiteFlow, navigate, safeReturnTo]);
+  }, [navigate, safeReturnTo]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

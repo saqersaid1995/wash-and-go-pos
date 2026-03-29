@@ -3,17 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lavinderia POS</title>
-    <meta name="description" content="Lavinderia POS - Professional Laundry Management System">
-    <meta name="application-name" content="Lavinderia POS" />
-    <meta name="author" content="Lavinderia" />
-    <link rel="icon" href="/favicon.jpeg" type="image/jpeg" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Lavinderia POS" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0f172a" />
     <script>
       (() => {
         const params = new URLSearchParams(window.location.search);
@@ -21,38 +10,50 @@
         const isScanLite = window.location.pathname.startsWith("/scan-lite")
           || (window.location.pathname === "/login" && returnTo.startsWith("/scan-lite"));
 
-        if (!isScanLite) return;
+        const config = isScanLite
+          ? {
+              title: "Quick Scan",
+              description: "Lavinderia Scan - Quick Order Lookup",
+              applicationName: "Quick Scan",
+              appleMobileWebAppTitle: "Quick Scan",
+              iconHref: "/scan-favicon.png",
+              iconType: "image/png",
+              appleTouchIconHref: "/scan-apple-touch-icon.png",
+              manifestHref: "/scan-lite-manifest.json",
+              themeColor: "#0f172a",
+            }
+          : {
+              title: "Lavinderia POS",
+              description: "Lavinderia POS - Professional Laundry Management System",
+              applicationName: "Lavinderia POS",
+              appleMobileWebAppTitle: "Lavinderia POS",
+              iconHref: "/favicon.jpeg",
+              iconType: "image/jpeg",
+              appleTouchIconHref: "/icon-192.png",
+              manifestHref: "/manifest.json",
+              themeColor: "#0f172a",
+            };
 
-        document.title = "Quick Scan";
+        const escapeHtml = (value) => String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;");
 
-        const setMeta = (name, content) => {
-          let element = document.head.querySelector(`meta[name='${name}']`);
-          if (!element) {
-            element = document.createElement("meta");
-            element.setAttribute("name", name);
-            document.head.appendChild(element);
-          }
-          element.setAttribute("content", content);
-        };
-
-        const setLink = (rel, href, extra = {}) => {
-          let element = document.head.querySelector(`link[rel='${rel}']`);
-          if (!element) {
-            element = document.createElement("link");
-            element.setAttribute("rel", rel);
-            document.head.appendChild(element);
-          }
-          Object.entries(extra).forEach(([key, value]) => element.setAttribute(key, value));
-          element.setAttribute("href", href);
-        };
-
-        setMeta("description", "Lavinderia Scan - Quick Order Lookup");
-        setMeta("application-name", "Quick Scan");
-        setMeta("apple-mobile-web-app-title", "Quick Scan");
-        setMeta("theme-color", "#0f172a");
-        setLink("icon", "/scan-favicon.png", { type: "image/png" });
-        setLink("apple-touch-icon", "/scan-apple-touch-icon.png");
-        setLink("manifest", "/scan-lite-manifest.json");
+        document.write(`
+          <title>${escapeHtml(config.title)}</title>
+          <meta name="description" content="${escapeHtml(config.description)}">
+          <meta name="application-name" content="${escapeHtml(config.applicationName)}" />
+          <meta name="author" content="Lavinderia" />
+          <link rel="icon" href="${escapeHtml(config.iconHref)}" type="${escapeHtml(config.iconType)}" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-title" content="${escapeHtml(config.appleMobileWebAppTitle)}" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <link rel="apple-touch-icon" href="${escapeHtml(config.appleTouchIconHref)}" />
+          <link rel="manifest" href="${escapeHtml(config.manifestHref)}" />
+          <meta name="theme-color" content="${escapeHtml(config.themeColor)}" />
+        `);
       })();
     </script>
 
