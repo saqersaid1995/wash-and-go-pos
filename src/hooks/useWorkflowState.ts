@@ -54,6 +54,7 @@ function offlineOrderToWorkflow(o: OfflineOrder): WorkflowOrder {
     orderNotes: o.orderNotes || undefined,
     statusHistory: [],
     internalNotes: [],
+    paymentHistory: [],
   };
 }
 

@@ -76,6 +76,7 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
     orderNotes: row.general_notes || undefined,
     statusHistory,
     internalNotes,
+    paymentHistory,
   };
 }
 
