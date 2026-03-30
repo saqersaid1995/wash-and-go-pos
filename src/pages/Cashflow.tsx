@@ -127,7 +127,7 @@ export default function Cashflow() {
   const dailyBreakdown = useMemo(() => {
     const map: Record<string, { cash: number; card: number; transfer: number }> = {};
     filtered.forEach((p) => {
-      const d = p.payment_date.split("T")[0];
+      const d = new Date(p.payment_date).toLocaleDateString('en-CA');
       if (!map[d]) map[d] = { cash: 0, card: 0, transfer: 0 };
       if (p.payment_method === "cash") map[d].cash += p.amount;
       else if (p.payment_method === "card") map[d].card += p.amount;
