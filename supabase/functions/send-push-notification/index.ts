@@ -223,7 +223,7 @@ async function sendPushToSubscription(
   payloadStr: string,
   vapidPublicKey: string,
   vapidPrivateKey: string
-): Promise<boolean> {
+): Promise<"ok" | "stale" | "error"> {
   try {
     const authorization = await generateVapidAuthHeader(
       sub.endpoint,
@@ -246,22 +246,21 @@ async function sendPushToSubscription(
     });
 
     if (res.status === 410 || res.status === 404) {
-      // Subscription expired/invalid
       console.log(`Subscription expired (${res.status}): ${sub.endpoint.slice(0, 60)}...`);
-      return false;
+      return "stale";
     }
 
     if (!res.ok) {
       const text = await res.text();
       console.error(`Push failed (${res.status}):`, text);
-      return false;
+      return "error";
     }
 
     console.log("Push sent successfully");
-    return true;
+    return "ok";
   } catch (e) {
     console.error("Push send error:", e);
-    return false;
+    return "error";
   }
 }
 
