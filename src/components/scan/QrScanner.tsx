@@ -140,16 +140,26 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
           // Fallback: html5-qrcode canvas-based decoding (iOS Safari, etc.)
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d")!;
-          const html5Qr = new Html5Qrcode("__html5qr_hidden__", /* verbose */ false);
 
-          // html5-qrcode needs a hidden div to exist
-          let hiddenDiv = document.getElementById("__html5qr_hidden__");
-          if (!hiddenDiv) {
-            hiddenDiv = document.createElement("div");
-            hiddenDiv.id = "__html5qr_hidden__";
-            hiddenDiv.style.display = "none";
-            document.body.appendChild(hiddenDiv);
+          let html5Qr: any = null;
+          try {
+            const { Html5Qrcode } = await import("html5-qrcode");
+            // html5-qrcode needs a hidden div to exist
+            let hiddenDiv = document.getElementById("__html5qr_hidden__");
+            if (!hiddenDiv) {
+              hiddenDiv = document.createElement("div");
+              hiddenDiv.id = "__html5qr_hidden__";
+              hiddenDiv.style.display = "none";
+              document.body.appendChild(hiddenDiv);
+            }
+            html5Qr = new Html5Qrcode("__html5qr_hidden__", false);
+          } catch (e) {
+            console.warn("html5-qrcode init failed, camera will work but scanning disabled:", e);
+            setError("QR decoding library unavailable. Use manual entry below.");
+            return;
           }
+
+          if (cancelled) return;
 
           const scanFrame = async () => {
             if (cancelled || scannedRef.current || !videoRef.current) return;
@@ -168,7 +178,7 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
                 try {
                   const blob = await (await fetch(imageData)).blob();
                   const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
-                  const result = await html5Qr.scanFileV2(file, /* showImage */ false);
+                  const result = await html5Qr.scanFileV2(file, false);
                   if (result?.decodedText && !scannedRef.current) {
                     scannedRef.current = true;
                     stopCamera();
@@ -177,13 +187,12 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
                     return;
                   }
                 } catch {
-                  // No code found in this frame — continue
+                  // No code found in this frame
                 }
               }
             } catch {
-              // Canvas/draw errors — continue
+              // Canvas errors
             }
-            // Throttle to ~4 fps to save CPU on fallback path
             setTimeout(() => {
               animFrameRef.current = requestAnimationFrame(scanFrame);
             }, 250);
