@@ -10,7 +10,8 @@ const ORDER_SELECT = `
   customers (id, full_name, phone_number, customer_type),
   order_items (*),
   order_status_history (*),
-  internal_order_notes (*)
+  internal_order_notes (*),
+  payments (*)
 `;
 
 export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
