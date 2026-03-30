@@ -50,6 +50,7 @@ export default function SupportInboxTab() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const { updateBadge } = useBadgeCount();
 
   useEffect(() => {
     async function load() {
