@@ -102,7 +102,7 @@ export function usePushNotifications() {
 
         // Remove from DB
         await supabase
-          .from("push_subscriptions" as any)
+          .from("push_subscriptions")
           .delete()
           .eq("endpoint", endpoint);
       }
