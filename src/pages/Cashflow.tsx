@@ -68,7 +68,10 @@ export default function Cashflow() {
       .order("payment_date", { ascending: false });
 
     if (bounds) {
-      query = query.gte("payment_date", bounds[0] + "T00:00:00").lte("payment_date", bounds[1] + "T23:59:59");
+      // Use Asia/Muscat timezone (UTC+4) for date filtering to match local business day
+      const offsetStart = bounds[0] + "T00:00:00+04:00";
+      const offsetEnd = bounds[1] + "T23:59:59+04:00";
+      query = query.gte("payment_date", offsetStart).lte("payment_date", offsetEnd);
     }
 
     const { data } = await query;
@@ -114,7 +117,7 @@ export default function Cashflow() {
 
     // Highest day
     const dayMap: Record<string, number> = {};
-    filtered.forEach((p) => { const d = p.payment_date.split("T")[0]; dayMap[d] = (dayMap[d] || 0) + p.amount; });
+    filtered.forEach((p) => { const d = new Date(p.payment_date).toLocaleDateString('en-CA'); dayMap[d] = (dayMap[d] || 0) + p.amount; });
     const highestDay = Object.entries(dayMap).sort((a, b) => b[1] - a[1])[0];
 
     return { cash, card, transfer, total, count: filtered.length, avg, cashPct, cardPct, highestDay };
@@ -124,7 +127,7 @@ export default function Cashflow() {
   const dailyBreakdown = useMemo(() => {
     const map: Record<string, { cash: number; card: number; transfer: number }> = {};
     filtered.forEach((p) => {
-      const d = p.payment_date.split("T")[0];
+      const d = new Date(p.payment_date).toLocaleDateString('en-CA');
       if (!map[d]) map[d] = { cash: 0, card: 0, transfer: 0 };
       if (p.payment_method === "cash") map[d].cash += p.amount;
       else if (p.payment_method === "card") map[d].card += p.amount;
