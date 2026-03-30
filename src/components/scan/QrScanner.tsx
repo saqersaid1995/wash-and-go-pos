@@ -167,10 +167,9 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
                 ctx.drawImage(videoRef.current, 0, 0, vw, vh);
                 const imageData = canvas.toDataURL("image/jpeg", 0.8);
                 try {
-                  const result = await html5Qr.scanFileV2(
-                    await (await fetch(imageData)).blob(),
-                    /* showImage */ false
-                  );
+                  const blob = await (await fetch(imageData)).blob();
+                  const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
+                  const result = await html5Qr.scanFileV2(file, /* showImage */ false);
                   if (result?.decodedText && !scannedRef.current) {
                     scannedRef.current = true;
                     stopCamera();
