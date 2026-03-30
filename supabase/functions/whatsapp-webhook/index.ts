@@ -552,23 +552,29 @@ Deno.serve(async (req) => {
               })());
             }
 
-            // ── Auto-reply ──
-            if (accessToken && phoneNumberId) {
-              try {
-                await handleAutoReply(
-                  phone,
-                  messageText,
-                  messageType,
-                  mediaUrl,
-                  customerId,
-                  supabase,
-                  accessToken,
-                  phoneNumberId
-                );
-              } catch (e) {
-                console.error("Auto-reply error:", e);
+              // Auto-reply (fire-and-forget)
+              if (accessToken && phoneNumberId) {
+                bgTasks.push((async () => {
+                  try {
+                    await handleAutoReply(
+                      phone,
+                      messageText,
+                      messageType,
+                      mediaUrl,
+                      customerId,
+                      supabase,
+                      accessToken,
+                      phoneNumberId
+                    );
+                  } catch (e) {
+                    console.error("Auto-reply error:", e);
+                  }
+                })());
               }
-            }
+
+              // Let background tasks run without blocking the webhook response
+              // EdgeRuntime will keep the isolate alive for these promises
+              Promise.allSettled(bgTasks).catch(() => {});
           }
         }
       }
