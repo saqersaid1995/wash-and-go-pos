@@ -223,7 +223,7 @@ async function sendPushToSubscription(
   payloadStr: string,
   vapidPublicKey: string,
   vapidPrivateKey: string
-): Promise<boolean> {
+): Promise<"ok" | "stale" | "error"> {
   try {
     const authorization = await generateVapidAuthHeader(
       sub.endpoint,
@@ -246,22 +246,21 @@ async function sendPushToSubscription(
     });
 
     if (res.status === 410 || res.status === 404) {
-      // Subscription expired/invalid
       console.log(`Subscription expired (${res.status}): ${sub.endpoint.slice(0, 60)}...`);
-      return false;
+      return "stale";
     }
 
     if (!res.ok) {
       const text = await res.text();
       console.error(`Push failed (${res.status}):`, text);
-      return false;
+      return "error";
     }
 
     console.log("Push sent successfully");
-    return true;
+    return "ok";
   } catch (e) {
     console.error("Push send error:", e);
-    return false;
+    return "error";
   }
 }
 
@@ -318,20 +317,21 @@ Deno.serve(async (req) => {
     const stale: string[] = [];
 
     for (const sub of subscriptions) {
-      const ok = await sendPushToSubscription(
+      const result = await sendPushToSubscription(
         sub,
         payload,
         vapidPublicKey,
         vapidPrivateKey
       );
-      if (ok) {
+      if (result === "ok") {
         sent++;
-      } else {
+      } else if (result === "stale") {
         stale.push(sub.id);
       }
+      // "error" = transient failure, don't delete the subscription
     }
 
-    // Clean up stale subscriptions
+    // Only clean up confirmed stale/expired subscriptions
     if (stale.length > 0) {
       await supabase.from("push_subscriptions").delete().in("id", stale);
     }
