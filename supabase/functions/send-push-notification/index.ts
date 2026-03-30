@@ -317,20 +317,21 @@ Deno.serve(async (req) => {
     const stale: string[] = [];
 
     for (const sub of subscriptions) {
-      const ok = await sendPushToSubscription(
+      const result = await sendPushToSubscription(
         sub,
         payload,
         vapidPublicKey,
         vapidPrivateKey
       );
-      if (ok) {
+      if (result === "ok") {
         sent++;
-      } else {
+      } else if (result === "stale") {
         stale.push(sub.id);
       }
+      // "error" = transient failure, don't delete the subscription
     }
 
-    // Clean up stale subscriptions
+    // Only clean up confirmed stale/expired subscriptions
     if (stale.length > 0) {
       await supabase.from("push_subscriptions").delete().in("id", stale);
     }
