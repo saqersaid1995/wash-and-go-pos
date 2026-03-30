@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy, Trash2, CreditCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
@@ -169,15 +169,43 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
             <div className="py-3">
               <h4 className="pos-label mb-2 flex items-center gap-1"><History className="h-3 w-3" /> Status History</h4>
               <div className="space-y-1">
-                {order.statusHistory.map((change) => (
-                  <div key={change.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 shrink-0" />
-                    <span>
-                      {change.fromStatus ? `${change.fromStatus} → ${change.toStatus}` : `Created as ${change.toStatus}`}
-                    </span>
-                    <span className="ml-auto shrink-0">{new Date(change.changedAt).toLocaleDateString()}</span>
-                  </div>
-                ))}
+                {/* Merge status changes and payments, sorted by date */}
+                {[
+                  ...order.statusHistory.map((change) => ({
+                    id: change.id,
+                    date: change.changedAt,
+                    type: "status" as const,
+                    data: change,
+                  })),
+                  ...order.paymentHistory.map((payment) => ({
+                    id: payment.id,
+                    date: payment.paymentDate,
+                    type: "payment" as const,
+                    data: payment,
+                  })),
+                ]
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((entry) =>
+                    entry.type === "status" ? (
+                      <div key={entry.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <span>
+                          {entry.data.fromStatus ? `${entry.data.fromStatus} → ${entry.data.toStatus}` : `Created as ${entry.data.toStatus}`}
+                        </span>
+                        <span className="ml-auto shrink-0">{new Date(entry.date).toLocaleDateString()}</span>
+                      </div>
+                    ) : (
+                      <div key={entry.id} className="flex items-center gap-2 text-xs text-success">
+                        <CreditCard className="h-3 w-3 shrink-0" />
+                        <span>
+                          Payment: {formatOMR(entry.data.amount)} ({entry.data.paymentMethod})
+                        </span>
+                        <span className="ml-auto shrink-0 text-muted-foreground">
+                          {new Date(entry.date).toLocaleDateString()} {new Date(entry.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )
+                  )}
               </div>
             </div>
 

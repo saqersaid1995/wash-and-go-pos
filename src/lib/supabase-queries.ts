@@ -10,7 +10,8 @@ const ORDER_SELECT = `
   customers (id, full_name, phone_number, customer_type),
   order_items (*),
   order_status_history (*),
-  internal_order_notes (*)
+  internal_order_notes (*),
+  payments (*)
 `;
 
 export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
@@ -42,6 +43,14 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
     createdBy: n.created_by || undefined,
   }));
 
+  const paymentHistory = (row.payments || []).map((p: any) => ({
+    id: p.id,
+    orderId: p.order_id,
+    amount: Number(p.amount),
+    paymentMethod: p.payment_method,
+    paymentDate: p.payment_date,
+  }));
+
   // Determine payment method from last payment or fallback
   const paymentMethod = row.employee_id || "cash";
 
@@ -67,6 +76,7 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
     orderNotes: row.general_notes || undefined,
     statusHistory,
     internalNotes,
+    paymentHistory,
   };
 }
 

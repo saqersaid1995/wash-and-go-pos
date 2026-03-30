@@ -26,6 +26,14 @@ export interface InternalNote {
   createdBy?: string;
 }
 
+export interface PaymentRecord {
+  id: string;
+  orderId: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDate: string;
+}
+
 export interface WorkflowOrder {
   id: string;
   customerId?: string;
@@ -55,4 +63,5 @@ export interface WorkflowOrder {
   orderNotes?: string;
   statusHistory: StatusChange[];
   internalNotes: InternalNote[];
+  paymentHistory: PaymentRecord[];
 }
