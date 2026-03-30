@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ChatView from "./ChatView";
+import { useBadgeCount } from "@/hooks/useBadgeCount";
 
 interface WaMessage {
   id: string;
