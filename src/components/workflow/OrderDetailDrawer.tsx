@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, AlertTriangle, Clock, StickyNote, History, ExternalLink, Banknote, Copy, Trash2, CreditCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
