@@ -68,7 +68,10 @@ export default function Cashflow() {
       .order("payment_date", { ascending: false });
 
     if (bounds) {
-      query = query.gte("payment_date", bounds[0] + "T00:00:00").lte("payment_date", bounds[1] + "T23:59:59");
+      // Use Asia/Muscat timezone (UTC+4) for date filtering to match local business day
+      const offsetStart = bounds[0] + "T00:00:00+04:00";
+      const offsetEnd = bounds[1] + "T23:59:59+04:00";
+      query = query.gte("payment_date", offsetStart).lte("payment_date", offsetEnd);
     }
 
     const { data } = await query;
