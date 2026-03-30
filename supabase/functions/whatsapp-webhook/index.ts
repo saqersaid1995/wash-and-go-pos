@@ -518,32 +518,38 @@ Deno.serve(async (req) => {
                 `Saved ${messageType} from ${phone}, media: ${mediaUrl ? "stored" : "none"}`
               );
 
-              // ── Send push notification to Support Lite staff ──
-              try {
-                const customerName = customerId
-                  ? await (async () => {
-                      const { data: c } = await supabase.from("customers").select("full_name").eq("id", customerId).maybeSingle();
-                      return c?.full_name || null;
-                    })()
-                  : null;
+              // ── Fire-and-forget: push notification + auto-reply ──
+              // Don't await these so webhook returns 200 to Meta quickly
+              const bgTasks: Promise<void>[] = [];
 
-                const pushUrl = `${supabaseUrl}/functions/v1/send-push-notification`;
-                await fetch(pushUrl, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${supabaseKey}`,
-                  },
-                  body: JSON.stringify({
-                    phone,
-                    message: messageText,
-                    customerName,
-                    appContext: "support-lite",
-                  }),
-                });
-              } catch (pushErr) {
-                console.error("Push notification error:", pushErr);
-              }
+              // Push notification (fire-and-forget)
+              bgTasks.push((async () => {
+                try {
+                  const customerName = customerId
+                    ? await (async () => {
+                        const { data: c } = await supabase.from("customers").select("full_name").eq("id", customerId).maybeSingle();
+                        return c?.full_name || null;
+                      })()
+                    : null;
+
+                  const pushUrl = `${supabaseUrl}/functions/v1/send-push-notification`;
+                  await fetch(pushUrl, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${supabaseKey}`,
+                    },
+                    body: JSON.stringify({
+                      phone,
+                      message: messageText,
+                      customerName,
+                      appContext: "support-lite",
+                    }),
+                  });
+                } catch (pushErr) {
+                  console.error("Push notification error:", pushErr);
+                }
+              })());
             }
 
             // ── Auto-reply ──
