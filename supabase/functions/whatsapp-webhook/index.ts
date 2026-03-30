@@ -493,6 +493,19 @@ Deno.serve(async (req) => {
 
             const customerId = await resolveCustomerId(phone, supabase);
 
+            // Deduplicate: skip if wa_message_id already exists
+            if (waMessageId) {
+              const { data: existing } = await supabase
+                .from("whatsapp_messages")
+                .select("id")
+                .eq("wa_message_id", waMessageId)
+                .maybeSingle();
+              if (existing) {
+                console.log(`Duplicate skipped: ${waMessageId}`);
+                continue;
+              }
+            }
+
             // Store incoming message
             const { error: insertError } = await supabase
               .from("whatsapp_messages")
