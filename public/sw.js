@@ -99,6 +99,60 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+// ── Push Notification Handler ──
+self.addEventListener("push", (event) => {
+  let data = { title: "Lavinderia Support", body: "New message", url: "/support-lite" };
+
+  try {
+    if (event.data) {
+      data = { ...data, ...event.data.json() };
+    }
+  } catch (e) {
+    console.error("Push parse error:", e);
+  }
+
+  const options = {
+    body: data.body,
+    icon: "/support-icon-192.png",
+    badge: "/support-icon-192.png",
+    tag: data.tag || "support-message",
+    renotify: true,
+    data: { url: data.url || "/support-lite" },
+    actions: [
+      { action: "open", title: "Open" },
+      { action: "dismiss", title: "Dismiss" },
+    ],
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// ── Notification Click Handler ──
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  if (event.action === "dismiss") return;
+
+  const url = event.notification.data?.url || "/support-lite";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // Try to focus existing support-lite window
+      for (const client of clientList) {
+        if (client.url.includes("/support-lite") && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Open new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
+    })
+  );
+});
+
 // Listen for messages from the app
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") {
@@ -110,5 +164,16 @@ self.addEventListener("message", (event) => {
         return cache.addAll(PRE_CACHE);
       })
     );
+  }
+  // Update badge from client
+  if (event.data && event.data.type === "UPDATE_BADGE") {
+    const count = event.data.count || 0;
+    if (self.navigator && "setAppBadge" in self.navigator) {
+      if (count > 0) {
+        self.navigator.setAppBadge(count);
+      } else {
+        self.navigator.clearAppBadge();
+      }
+    }
   }
 });
