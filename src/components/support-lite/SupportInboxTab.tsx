@@ -82,6 +82,12 @@ export default function SupportInboxTab() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
         setMessages((prev) => [...prev, payload.new as WaMessage]);
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        setMessages((prev) => prev.map((m) => m.id === (payload.new as WaMessage).id ? (payload.new as WaMessage) : m));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        setMessages((prev) => prev.filter((m) => m.id !== (payload.old as any).id));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
