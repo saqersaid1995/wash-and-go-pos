@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, CameraOff } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
 
 interface QrScannerProps {
   onScan: (code: string) => void;
