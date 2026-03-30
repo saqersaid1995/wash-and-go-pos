@@ -413,30 +413,54 @@ export default function OrderDetails() {
         {/* Status History */}
         <section className="pos-section space-y-3">
           <SectionHeader icon={History} title="Status History" />
-          {order.statusHistory.length === 0 ? (
+          {order.statusHistory.length === 0 && order.paymentHistory.length === 0 ? (
             <p className="text-sm text-muted-foreground">No status changes yet.</p>
           ) : (
             <div className="space-y-0">
-              {order.statusHistory.map((change, i) => (
-                <div key={change.id} className="flex gap-3 pb-4 last:pb-0">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-3 h-3 rounded-full shrink-0 ${i === order.statusHistory.length - 1 ? "bg-primary" : "bg-border"}`} />
-                    {i < order.statusHistory.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+              {(() => {
+                const timeline = [
+                  ...order.statusHistory.map((change) => ({ id: change.id, date: change.changedAt, type: "status" as const, data: change })),
+                  ...order.paymentHistory.map((payment) => ({ id: payment.id, date: payment.paymentDate, type: "payment" as const, data: payment })),
+                ].sort((a, b) => a.date.localeCompare(b.date));
+
+                return timeline.map((entry, i) => (
+                  <div key={entry.id} className="flex gap-3 pb-4 last:pb-0">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-3 h-3 rounded-full shrink-0 ${
+                        entry.type === "payment" ? "bg-green-500" :
+                        i === timeline.length - 1 ? "bg-primary" : "bg-border"
+                      }`} />
+                      {i < timeline.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                    </div>
+                    <div className="text-sm space-y-0.5 -mt-0.5">
+                      {entry.type === "status" ? (
+                        <>
+                          <p className="font-medium">
+                            {entry.data.fromStatus
+                              ? <><span className="capitalize">{(entry.data as any).fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{entry.data.toStatus.replace("-", " ")}</span></>
+                              : <span>Created as <span className="capitalize font-semibold">{entry.data.toStatus.replace("-", " ")}</span></span>
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(entry.date).toLocaleString()}
+                            {(entry.data as any).changedBy && <> • {(entry.data as any).changedBy}</>}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium text-green-600">
+                            <CreditCard className="inline h-3 w-3 mr-1" />
+                            Payment: {formatOMR((entry.data as any).amount)} ({(entry.data as any).paymentMethod})
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(entry.date).toLocaleString()}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm space-y-0.5 -mt-0.5">
-                    <p className="font-medium">
-                      {change.fromStatus
-                        ? <><span className="capitalize">{change.fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{change.toStatus.replace("-", " ")}</span></>
-                        : <span>Created as <span className="capitalize font-semibold">{change.toStatus.replace("-", " ")}</span></span>
-                      }
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(change.changedAt).toLocaleString()}
-                      {change.changedBy && <> • {change.changedBy}</>}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
         </section>
