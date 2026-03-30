@@ -117,7 +117,7 @@ export default function Cashflow() {
 
     // Highest day
     const dayMap: Record<string, number> = {};
-    filtered.forEach((p) => { const d = p.payment_date.split("T")[0]; dayMap[d] = (dayMap[d] || 0) + p.amount; });
+    filtered.forEach((p) => { const d = new Date(p.payment_date).toLocaleDateString('en-CA'); dayMap[d] = (dayMap[d] || 0) + p.amount; });
     const highestDay = Object.entries(dayMap).sort((a, b) => b[1] - a[1])[0];
 
     return { cash, card, transfer, total, count: filtered.length, avg, cashPct, cardPct, highestDay };
