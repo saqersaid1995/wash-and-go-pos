@@ -105,7 +105,11 @@ self.addEventListener("push", (event) => {
 
   try {
     if (event.data) {
-      data = { ...data, ...event.data.json() };
+      const text = event.data.text();
+      if (text) {
+        const parsed = JSON.parse(text);
+        data = { ...data, ...parsed };
+      }
     }
   } catch (e) {
     console.error("Push parse error:", e);

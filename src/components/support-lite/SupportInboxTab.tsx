@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ChatView from "./ChatView";
+import { useBadgeCount } from "@/hooks/useBadgeCount";
 
 interface WaMessage {
   id: string;
@@ -49,6 +50,7 @@ export default function SupportInboxTab() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const { updateBadge } = useBadgeCount();
 
   useEffect(() => {
     async function load() {
@@ -132,7 +134,9 @@ export default function SupportInboxTab() {
     const unreadIds = selectedConversation.messages.filter((m) => m.type === "incoming" && !m.is_read).map((m) => m.id);
     if (!unreadIds.length) return;
     setMessages((prev) => prev.map((m) => (unreadIds.includes(m.id) ? { ...m, is_read: true } : m)));
-    supabase.from("whatsapp_messages").update({ is_read: true } as any).in("id", unreadIds).then(() => {});
+    supabase.from("whatsapp_messages").update({ is_read: true } as any).in("id", unreadIds).then(() => {
+      updateBadge();
+    });
   }, [selectedPhone, selectedConversation?.messages.length]);
 
   const handleNewMessage = useCallback(() => {
