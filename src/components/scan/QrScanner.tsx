@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, CameraOff } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface QrScannerProps {
   onScan: (code: string) => void;
@@ -108,40 +109,88 @@ export default function QrScanner({ onScan, scanning, onToggle }: QrScannerProps
 
         await video.play();
 
-        if (!hasBarcodeDetector) {
-          setError("QR scanning not supported on this device. Use manual entry below.");
-          return;
-        }
+        if (hasBarcodeDetector) {
+          // Native BarcodeDetector path (Chrome, Android)
+          const detector = new (window as any).BarcodeDetector({
+            formats: ["qr_code", "code_128", "code_39", "ean_13", "ean_8"],
+          });
 
-        const detector = new (window as any).BarcodeDetector({
-          formats: ["qr_code", "code_128", "code_39", "ean_13", "ean_8"],
-        });
-
-        const scanFrame = async () => {
-          if (cancelled || scannedRef.current || !videoRef.current) return;
-          if (videoRef.current.readyState < 2) {
-            animFrameRef.current = requestAnimationFrame(scanFrame);
-            return;
-          }
-
-          try {
-            const barcodes = await detector.detect(videoRef.current);
-            if (barcodes.length > 0 && !scannedRef.current) {
-              scannedRef.current = true;
-              const code = barcodes[0].rawValue;
-              stopCamera();
-              onScan(code);
-              onToggle();
+          const scanFrame = async () => {
+            if (cancelled || scannedRef.current || !videoRef.current) return;
+            if (videoRef.current.readyState < 2) {
+              animFrameRef.current = requestAnimationFrame(scanFrame);
               return;
             }
-          } catch {
-            // detect() can fail on some frames, continue
+            try {
+              const barcodes = await detector.detect(videoRef.current);
+              if (barcodes.length > 0 && !scannedRef.current) {
+                scannedRef.current = true;
+                const code = barcodes[0].rawValue;
+                stopCamera();
+                onScan(code);
+                onToggle();
+                return;
+              }
+            } catch {
+              // detect() can fail on some frames, continue
+            }
+            animFrameRef.current = requestAnimationFrame(scanFrame);
+          };
+          animFrameRef.current = requestAnimationFrame(scanFrame);
+        } else {
+          // Fallback: html5-qrcode canvas-based decoding (iOS Safari, etc.)
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d")!;
+          const html5Qr = new Html5Qrcode("__html5qr_hidden__", /* verbose */ false);
+
+          // html5-qrcode needs a hidden div to exist
+          let hiddenDiv = document.getElementById("__html5qr_hidden__");
+          if (!hiddenDiv) {
+            hiddenDiv = document.createElement("div");
+            hiddenDiv.id = "__html5qr_hidden__";
+            hiddenDiv.style.display = "none";
+            document.body.appendChild(hiddenDiv);
           }
 
+          const scanFrame = async () => {
+            if (cancelled || scannedRef.current || !videoRef.current) return;
+            if (videoRef.current.readyState < 2) {
+              animFrameRef.current = requestAnimationFrame(scanFrame);
+              return;
+            }
+            try {
+              const vw = videoRef.current.videoWidth;
+              const vh = videoRef.current.videoHeight;
+              if (vw && vh) {
+                canvas.width = vw;
+                canvas.height = vh;
+                ctx.drawImage(videoRef.current, 0, 0, vw, vh);
+                const imageData = canvas.toDataURL("image/jpeg", 0.8);
+                try {
+                  const blob = await (await fetch(imageData)).blob();
+                  const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
+                  const result = await html5Qr.scanFileV2(file, /* showImage */ false);
+                  if (result?.decodedText && !scannedRef.current) {
+                    scannedRef.current = true;
+                    stopCamera();
+                    onScan(result.decodedText);
+                    onToggle();
+                    return;
+                  }
+                } catch {
+                  // No code found in this frame — continue
+                }
+              }
+            } catch {
+              // Canvas/draw errors — continue
+            }
+            // Throttle to ~4 fps to save CPU on fallback path
+            setTimeout(() => {
+              animFrameRef.current = requestAnimationFrame(scanFrame);
+            }, 250);
+          };
           animFrameRef.current = requestAnimationFrame(scanFrame);
-        };
-
-        animFrameRef.current = requestAnimationFrame(scanFrame);
+        }
       } catch (err: any) {
         if (cancelled) return;
         console.error("Camera error:", err);
