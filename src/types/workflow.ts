@@ -63,4 +63,5 @@ export interface WorkflowOrder {
   orderNotes?: string;
   statusHistory: StatusChange[];
   internalNotes: InternalNote[];
+  paymentHistory: PaymentRecord[];
 }

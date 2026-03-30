@@ -43,6 +43,14 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
     createdBy: n.created_by || undefined,
   }));
 
+  const paymentHistory = (row.payments || []).map((p: any) => ({
+    id: p.id,
+    orderId: p.order_id,
+    amount: Number(p.amount),
+    paymentMethod: p.payment_method,
+    paymentDate: p.payment_date,
+  }));
+
   // Determine payment method from last payment or fallback
   const paymentMethod = row.employee_id || "cash";
 
