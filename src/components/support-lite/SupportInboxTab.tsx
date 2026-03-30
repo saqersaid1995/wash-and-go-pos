@@ -52,31 +52,43 @@ export default function SupportInboxTab() {
   const [loading, setLoading] = useState(true);
   const { updateBadge } = useBadgeCount();
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [msgRes, custRes] = await Promise.all([
-        supabase
-          .from("whatsapp_messages")
-          .select("*")
-          .eq("is_deleted", false)
-          .order("created_at", { ascending: true }),
-        supabase.from("customers").select("id, full_name, phone_number").eq("is_active", true),
-      ]);
-      if (msgRes.data) setMessages(msgRes.data as WaMessage[]);
-      if (custRes.data) {
-        const map: Record<string, { id: string; name: string; phone: string }> = {};
-        for (const c of custRes.data) {
-          const digits = c.phone_number.replace(/\D/g, "");
-          map[digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
-          if (digits.length === 8) map["968" + digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
-        }
-        setCustomers(map);
+  const loadMessages = useCallback(async () => {
+    setLoading(true);
+    const [msgRes, custRes] = await Promise.all([
+      supabase
+        .from("whatsapp_messages")
+        .select("*")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: true }),
+      supabase.from("customers").select("id, full_name, phone_number").eq("is_active", true),
+    ]);
+    if (msgRes.data) setMessages(msgRes.data as WaMessage[]);
+    if (custRes.data) {
+      const map: Record<string, { id: string; name: string; phone: string }> = {};
+      for (const c of custRes.data) {
+        const digits = c.phone_number.replace(/\D/g, "");
+        map[digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
+        if (digits.length === 8) map["968" + digits] = { id: c.id, name: c.full_name, phone: c.phone_number };
       }
-      setLoading(false);
+      setCustomers(map);
     }
-    load();
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  // Refresh messages when app returns to foreground
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadMessages();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [loadMessages]);
 
   useEffect(() => {
     const channel = supabase
