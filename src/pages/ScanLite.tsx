@@ -9,6 +9,8 @@ import { WORKFLOW_STAGES } from "@/types/workflow";
 import {
   searchOrderByCode, updateOrderStatus, fetchCustomerByPhone, fetchOrdersByCustomerId,
 } from "@/lib/supabase-queries";
+import { sendReadyForPickupWhatsApp } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowOrder } from "@/types/workflow";
 import QrScanner from "@/components/scan/QrScanner";
 import ScanResultCard from "@/components/scan/ScanResultCard";
@@ -99,8 +101,40 @@ export default function ScanLite() {
     if (!foundOrder) return;
     const idx = WORKFLOW_STAGES.findIndex((s) => s.id === foundOrder.currentStatus);
     if (idx < WORKFLOW_STAGES.length - 1) {
-      await updateOrderStatus(foundOrder.id, foundOrder.currentStatus, WORKFLOW_STAGES[idx + 1].id);
-      toast.success("Moved to next stage");
+      const fromStatus = foundOrder.currentStatus;
+      const toStatus = WORKFLOW_STAGES[idx + 1].id;
+      await updateOrderStatus(foundOrder.id, fromStatus, toStatus);
+
+      // Trigger WhatsApp when moving to ready-for-pickup (same as workflow)
+      if (fromStatus === "received" && toStatus === "ready-for-pickup") {
+        const { data: orderData } = await supabase
+          .from("orders")
+          .select("ready_pickup_whatsapp_sent, customer_id")
+          .eq("id", foundOrder.id)
+          .maybeSingle();
+
+        if (orderData && !orderData.ready_pickup_whatsapp_sent) {
+          const result = await sendReadyForPickupWhatsApp({
+            orderId: foundOrder.id,
+            customerId: orderData.customer_id,
+            customerName: foundOrder.customerName,
+            customerPhone: foundOrder.customerPhone,
+            orderNumber: foundOrder.orderNumber,
+            totalAmount: foundOrder.totalAmount,
+            remainingAmount: foundOrder.remainingBalance,
+          });
+          if (result.success) {
+            toast.success("Moved to Ready for Pickup & WhatsApp sent");
+          } else {
+            toast.warning("Moved to Ready for Pickup, but WhatsApp failed");
+          }
+        } else {
+          toast.success("Moved to next stage");
+        }
+      } else {
+        toast.success("Moved to next stage");
+      }
+
       const updated = await searchOrderByCode(foundOrder.orderNumber);
       if (updated) setFoundOrder(updated);
     }
