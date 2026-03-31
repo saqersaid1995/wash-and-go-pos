@@ -9,6 +9,8 @@ import { WORKFLOW_STAGES } from "@/types/workflow";
 import {
   searchOrderByCode, updateOrderStatus, fetchCustomerByPhone, fetchOrdersByCustomerId,
 } from "@/lib/supabase-queries";
+import { sendReadyForPickupWhatsApp } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowOrder } from "@/types/workflow";
 import QrScanner from "@/components/scan/QrScanner";
 import ScanResultCard from "@/components/scan/ScanResultCard";
