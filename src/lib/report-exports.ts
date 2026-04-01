@@ -66,6 +66,8 @@ export function exportExpensesCSV(expenses: any[]) {
     Category: e.category,
     Description: e.description,
     Amount: e.amount.toFixed(3),
+    Status: e.expense_status === "paid" ? "Paid" : "Accrued",
+    Source: e.is_auto_generated ? "Auto-generated" : "Manual",
     Recurring: e.is_recurring ? e.recurring_period || "Yes" : "No",
   })), "expenses-report");
 }
