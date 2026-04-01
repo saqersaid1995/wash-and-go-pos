@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -36,10 +36,17 @@ export default function MultiOrderCheckoutModal({
   const combinedTotal = orders.reduce((s, o) => s + o.totalAmount, 0);
   const combinedPaid = orders.reduce((s, o) => s + o.paidAmount, 0);
 
-  const [amount, setAmount] = useState(combinedRemaining.toFixed(3));
+  const [amount, setAmount] = useState("0.000");
   const [method, setMethod] = useState<string>("cash");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<{ amount: number; method: string; date: string; delivered: boolean } | null>(null);
+
+  // Sync amount with remaining balance whenever modal opens or orders change
+  useEffect(() => {
+    if (open && !receipt) {
+      setAmount(combinedRemaining.toFixed(3));
+    }
+  }, [open, combinedRemaining, receipt]);
 
   const numericAmount = parseFloat(amount) || 0;
   const isValid = numericAmount > 0 && numericAmount <= combinedRemaining;
