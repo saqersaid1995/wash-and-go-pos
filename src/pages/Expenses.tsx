@@ -5,34 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import AppHeader from "@/components/AppHeader";
-import { Plus, Trash2, Loader2, Receipt } from "lucide-react";
+import { Plus, Loader2, Receipt, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import {
   type Expense,
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
+  EXPENSE_STATUSES,
   fetchAllExpenses,
   createExpense,
   deleteExpense,
+  updateExpenseStatus,
+  triggerRecurringGeneration,
 } from "@/lib/expense-queries";
+import { ExpenseForm } from "@/components/expenses/ExpenseForm";
+import { ExpenseTable } from "@/components/expenses/ExpenseTable";
+import { RecurringPreview } from "@/components/expenses/RecurringPreview";
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  // Form state
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState("Other");
-  const [customCategory, setCustomCategory] = useState("");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringPeriod, setRecurringPeriod] = useState<string>("Monthly");
+  const [generating, setGenerating] = useState(false);
 
   const loadExpenses = useCallback(async () => {
     setLoading(true);
@@ -43,33 +39,21 @@ const Expenses = () => {
 
   useEffect(() => { loadExpenses(); }, [loadExpenses]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
-    const finalCategory = category === "Custom" ? customCategory.trim() : category;
-    if (!finalCategory) { toast.error("Select or enter a category"); return; }
-
-    setSaving(true);
-    const ok = await createExpense({
-      expense_date: date,
-      category: finalCategory,
-      description: description.trim(),
-      amount: amt,
-      is_recurring: isRecurring,
-      recurring_period: isRecurring ? recurringPeriod : null,
-    });
-    setSaving(false);
-
-    if (ok) {
-      toast.success("Expense recorded");
-      setDescription("");
-      setAmount("");
-      setIsRecurring(false);
+  const handleGenerate = async () => {
+    setGenerating(true);
+    const result = await triggerRecurringGeneration();
+    setGenerating(false);
+    if (result?.generated > 0) {
+      toast.success(`Generated ${result.generated} recurring expense(s)`);
       await loadExpenses();
     } else {
-      toast.error("Failed to save expense");
+      toast.info("No recurring expenses due today");
     }
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    const ok = await updateExpenseStatus(id, status);
+    if (ok) { toast.success("Status updated"); await loadExpenses(); }
   };
 
   const handleDelete = async (id: string) => {
@@ -77,7 +61,10 @@ const Expenses = () => {
     if (ok) { toast.success("Expense deleted"); await loadExpenses(); }
   };
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = expenses.filter(e => !e.is_recurring || e.is_auto_generated).reduce((s, e) => s + e.amount, 0);
+  const actualExpenses = expenses.filter(e => (!e.is_recurring || e.is_auto_generated) && e.expense_status === "paid");
+  const accruedExpenses = expenses.filter(e => (!e.is_recurring || e.is_auto_generated) && e.expense_status === "accrued");
+  const recurringTemplates = expenses.filter(e => e.is_recurring && !e.is_auto_generated);
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,63 +72,10 @@ const Expenses = () => {
 
       <div className="p-4 max-w-[1200px] mx-auto space-y-6">
         {/* Add Expense Form */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Plus className="h-4 w-4" /> Record Expense
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-1.5">
-                <Label>Date</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    <SelectItem value="Custom">Custom...</SelectItem>
-                  </SelectContent>
-                </Select>
-                {category === "Custom" && (
-                  <Input placeholder="Custom category" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} className="mt-1.5" />
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Description</Label>
-                <Input placeholder="e.g. Monthly rent" value={description} onChange={(e) => setDescription(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Amount (OMR)</Label>
-                <Input type="number" step="0.001" min="0" placeholder="0.000" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-              </div>
-              <div className="flex items-center gap-3 sm:col-span-2">
-                <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
-                <Label>Recurring</Label>
-                {isRecurring && (
-                  <Select value={recurringPeriod} onValueChange={setRecurringPeriod}>
-                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {RECURRING_PERIODS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              <div className="flex items-end">
-                <Button type="submit" disabled={saving} className="w-full">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                  Add Expense
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <ExpenseForm onSaved={loadExpenses} />
 
         {/* Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">Total Expenses</p>
@@ -150,17 +84,33 @@ const Expenses = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Records</p>
-              <p className="text-xl font-bold">{expenses.length}</p>
+              <p className="text-xs text-muted-foreground">Paid</p>
+              <p className="text-xl font-bold text-[hsl(142,72%,40%)]">{actualExpenses.length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Recurring</p>
-              <p className="text-xl font-bold">{expenses.filter((e) => e.is_recurring).length}</p>
+              <p className="text-xs text-muted-foreground">Accrued (Unpaid)</p>
+              <p className="text-xl font-bold text-destructive">{accruedExpenses.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                Recurring Templates
+                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleGenerate} disabled={generating}>
+                  <RefreshCw className={`h-3 w-3 ${generating ? "animate-spin" : ""}`} />
+                </Button>
+              </p>
+              <p className="text-xl font-bold">{recurringTemplates.length}</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Recurring Templates Preview */}
+        {recurringTemplates.length > 0 && (
+          <RecurringPreview templates={recurringTemplates} />
+        )}
 
         {/* Expense List */}
         <Card>
@@ -170,44 +120,12 @@ const Expenses = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : expenses.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No expenses recorded yet</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Recurring</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses.map((exp) => (
-                    <TableRow key={exp.id}>
-                      <TableCell className="text-xs">{exp.expense_date}</TableCell>
-                      <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
-                      <TableCell className="text-sm">{exp.description || "—"}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatOMR(exp.amount)}</TableCell>
-                      <TableCell>
-                        {exp.is_recurring ? (
-                          <Badge variant="outline" className="text-xs">{exp.recurring_period}</Badge>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(exp.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <ExpenseTable
+              expenses={expenses.filter(e => !e.is_recurring || e.is_auto_generated)}
+              loading={loading}
+              onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
+            />
           </CardContent>
         </Card>
       </div>
