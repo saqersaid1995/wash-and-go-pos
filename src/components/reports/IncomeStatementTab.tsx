@@ -6,6 +6,8 @@ import { formatOMR } from "@/lib/currency";
 import { printReport } from "@/lib/report-exports";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-queries";
 
+const ALL_REPORT_CATEGORIES = [...EXPENSE_CATEGORIES, "Other"] as const;
+
 interface IncomeStatementTabProps {
   data: {
     laundrySales: number;
