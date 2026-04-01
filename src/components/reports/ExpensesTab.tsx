@@ -114,7 +114,8 @@ export function ExpensesTab({ expenses, expensesByCategory }: ExpensesTabProps) 
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -124,7 +125,12 @@ export function ExpensesTab({ expenses, expensesByCategory }: ExpensesTabProps) 
                     <TableCell className="font-medium">{e.category}</TableCell>
                     <TableCell className="text-muted-foreground">{e.description || "—"}</TableCell>
                     <TableCell className="text-right font-medium text-destructive">{formatOMR(e.amount)}</TableCell>
-                    <TableCell className="text-xs">{e.is_recurring ? `Recurring (${e.recurring_period})` : "One-time"}</TableCell>
+                    <TableCell className="text-xs">
+                      <span className={e.expense_status === "paid" ? "text-[hsl(142,72%,40%)]" : "text-destructive"}>
+                        {e.expense_status === "paid" ? "Paid" : "Accrued"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs">{e.is_auto_generated ? "Auto" : "Manual"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
