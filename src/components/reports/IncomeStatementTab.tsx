@@ -82,7 +82,7 @@ export function IncomeStatementTab({ data, dateRangeLabel }: IncomeStatementTabP
           <Row label="Total Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold />
 
           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-6 mb-1">Expenses</h4>
-          {EXPENSE_CATEGORIES.map((cat) => {
+          {[...new Set([...EXPENSE_CATEGORIES, ...Object.keys(data.expensesByCategory)])].map((cat) => {
             const amount = data.expensesByCategory[cat] || 0;
             const prev = data.prevExpensesByCategory[cat] || 0;
             if (amount === 0 && prev === 0) return null;
