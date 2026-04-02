@@ -38,6 +38,8 @@ export function buildReceiptHtml(
     orderDate,
     deliveryDate,
     items,
+    subtotal,
+    discount,
     total,
     paidAmount,
     remainingBalance,
