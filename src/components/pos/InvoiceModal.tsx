@@ -89,7 +89,7 @@ export default function InvoiceModal(props: Props) {
       printWindow.focus();
       printWindow.print();
     };
-  }, [customerName, customerPhone, deliveryDate, items, orderDate, orderNumber, paidAmount, remainingBalance, total]);
+  }, [customerName, customerPhone, deliveryDate, items, orderDate, orderNumber, subtotal, discount, paidAmount, remainingBalance, total]);
 
   return (
     <>
