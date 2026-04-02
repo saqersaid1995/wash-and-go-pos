@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function InvoiceModal(props: Props) {
-  const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, total, paidAmount, remainingBalance, onClose } = props;
+  const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, subtotal, discount, total, paidAmount, remainingBalance, onClose } = props;
   const printTriggered = useRef(false);
 
   const handlePrint = useCallback(() => {
