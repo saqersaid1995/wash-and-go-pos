@@ -49,6 +49,8 @@ export default function InvoiceModal(props: Props) {
       orderDate,
       deliveryDate,
       items,
+      subtotal,
+      discount,
       total,
       paidAmount,
       remainingBalance,
