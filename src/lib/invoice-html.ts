@@ -21,6 +21,8 @@ export interface InvoiceData {
   orderDate: string;
   deliveryDate: string;
   items: OrderItem[];
+  subtotal: number;
+  discount: number;
   total: number;
   paidAmount: number;
   remainingBalance: number;
