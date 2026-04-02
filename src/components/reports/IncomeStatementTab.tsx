@@ -10,12 +10,16 @@ const ALL_REPORT_CATEGORIES = [...EXPENSE_CATEGORIES, "Other"] as const;
 
 interface IncomeStatementTabProps {
   data: {
+    grossSales?: number;
+    totalDiscounts?: number;
     laundrySales: number;
     totalRevenue: number;
     expensesByCategory: Record<string, number>;
     totalExpenses: number;
     netProfit: number;
     profitMargin: number;
+    prevGrossSales?: number;
+    prevTotalDiscounts?: number;
     prevRevenue: number;
     prevExpensesByCategory: Record<string, number>;
     prevTotalExpenses: number;
