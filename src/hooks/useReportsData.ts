@@ -175,26 +175,30 @@ export function useReportsData() {
   }, [orders, expenses]);
 
   const incomeStatement = useMemo(() => {
-    const laundrySales = orders.reduce((s, o) => s + o.totalAmount, 0);
-    const urgentFees = orders.filter((o) => o.orderType === "urgent").reduce((s, o) => s + o.totalAmount * 0, 0); // urgent fee would need separate field
-    const totalRevenue = laundrySales;
+    const grossSales = orders.reduce((s, o) => s + o.subtotal, 0);
+    const totalDiscounts = orders.reduce((s, o) => s + o.discount, 0);
+    const netRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
     const catMap: Record<string, number> = {};
     expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
     const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
-    const netProfit = totalRevenue - totalExp;
-    const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const netProfit = netRevenue - totalExp;
+    const margin = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
 
     // Previous period
-    const prevRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
+    const prevGrossSales = prevOrders.reduce((s, o) => s + o.subtotal, 0);
+    const prevTotalDiscounts = prevOrders.reduce((s, o) => s + o.discount, 0);
+    const prevNetRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
     const prevCatMap: Record<string, number> = {};
     prevExpenses.forEach((e) => { prevCatMap[e.category] = (prevCatMap[e.category] || 0) + e.amount; });
     const prevTotalExp = prevExpenses.reduce((s, e) => s + e.amount, 0);
-    const prevNetProfit = prevRevenue - prevTotalExp;
+    const prevNetProfit = prevNetRevenue - prevTotalExp;
 
     return {
-      laundrySales, totalRevenue, expensesByCategory: catMap, totalExpenses: totalExp,
+      grossSales, totalDiscounts, laundrySales: netRevenue, totalRevenue: netRevenue,
+      expensesByCategory: catMap, totalExpenses: totalExp,
       netProfit, profitMargin: margin,
-      prevRevenue, prevExpensesByCategory: prevCatMap, prevTotalExpenses: prevTotalExp, prevNetProfit,
+      prevGrossSales, prevTotalDiscounts, prevRevenue: prevNetRevenue,
+      prevExpensesByCategory: prevCatMap, prevTotalExpenses: prevTotalExp, prevNetProfit,
     };
   }, [orders, expenses, prevOrders, prevExpenses]);
 
