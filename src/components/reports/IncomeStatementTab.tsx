@@ -81,9 +81,20 @@ export function IncomeStatementTab({ data, dateRangeLabel }: IncomeStatementTabP
           </div>
 
           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-4 mb-1">Revenue</h4>
-          <Row label="Laundry Sales" amount={data.laundrySales} prevAmount={data.prevRevenue} indent />
-          <Separator />
-          <Row label="Total Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold />
+          {(data.grossSales ?? 0) > 0 && (data.totalDiscounts ?? 0) > 0 ? (
+            <>
+              <Row label="Gross Sales" amount={data.grossSales!} prevAmount={data.prevGrossSales} indent />
+              <Row label="Sales Discounts" amount={-(data.totalDiscounts!)} prevAmount={data.prevTotalDiscounts ? -data.prevTotalDiscounts : 0} indent negative />
+              <Separator />
+              <Row label="Net Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold />
+            </>
+          ) : (
+            <>
+              <Row label="Laundry Sales" amount={data.laundrySales} prevAmount={data.prevRevenue} indent />
+              <Separator />
+              <Row label="Total Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold />
+            </>
+          )}
 
           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-6 mb-1">Expenses</h4>
           {[...new Set([...EXPENSE_CATEGORIES, ...Object.keys(data.expensesByCategory)])].map((cat) => {
