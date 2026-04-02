@@ -46,6 +46,8 @@ export interface WorkflowOrder {
   pickupMethod: "walk-in" | "delivery" | "app";
   paymentStatus: "unpaid" | "partially-paid" | "paid";
   paymentMethod: string;
+  subtotal: number;
+  discount: number;
   totalAmount: number;
   paidAmount: number;
   remainingBalance: number;

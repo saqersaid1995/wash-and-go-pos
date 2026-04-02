@@ -66,6 +66,8 @@ export function mapDbOrderToWorkflow(row: any): WorkflowOrder {
     pickupMethod: row.pickup_method as "walk-in" | "delivery" | "app",
     paymentStatus: row.payment_status as "unpaid" | "partially-paid" | "paid",
     paymentMethod,
+    subtotal: Number(row.subtotal),
+    discount: Number(row.discount),
     totalAmount: Number(row.total_amount),
     paidAmount: Number(row.paid_amount),
     remainingBalance: Number(row.remaining_amount),

@@ -44,6 +44,8 @@ function offlineOrderToWorkflow(o: OfflineOrder): WorkflowOrder {
     pickupMethod: (o.pickupMethod as "walk-in" | "delivery" | "app") || "walk-in",
     paymentStatus: (o.paymentStatus as "unpaid" | "partially-paid" | "paid") || "unpaid",
     paymentMethod: o.paymentMethod || "cash",
+    subtotal: o.subtotal ?? o.total,
+    discount: o.discount ?? 0,
     totalAmount: o.total,
     paidAmount: o.paidAmount,
     remainingBalance: o.remainingBalance,
