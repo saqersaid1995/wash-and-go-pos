@@ -12,6 +12,8 @@ interface Props {
   orderDate: string;
   deliveryDate: string;
   items: OrderItem[];
+  subtotal: number;
+  discount: number;
   total: number;
   paidAmount: number;
   remainingBalance: number;
@@ -19,7 +21,7 @@ interface Props {
 }
 
 export default function InvoiceModal(props: Props) {
-  const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, total, paidAmount, remainingBalance, onClose } = props;
+  const { orderNumber, customerName, customerPhone, orderDate, deliveryDate, items, subtotal, discount, total, paidAmount, remainingBalance, onClose } = props;
   const printTriggered = useRef(false);
 
   const handlePrint = useCallback(() => {
@@ -47,6 +49,8 @@ export default function InvoiceModal(props: Props) {
       orderDate,
       deliveryDate,
       items,
+      subtotal,
+      discount,
       total,
       paidAmount,
       remainingBalance,
@@ -85,7 +89,7 @@ export default function InvoiceModal(props: Props) {
       printWindow.focus();
       printWindow.print();
     };
-  }, [customerName, customerPhone, deliveryDate, items, orderDate, orderNumber, paidAmount, remainingBalance, total]);
+  }, [customerName, customerPhone, deliveryDate, items, orderDate, orderNumber, subtotal, discount, paidAmount, remainingBalance, total]);
 
   return (
     <>
@@ -140,6 +144,16 @@ export default function InvoiceModal(props: Props) {
             </table>
             <div className="h-px bg-border" />
             <div className="space-y-0.5 text-xs">
+              {discount > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span><span>{formatOMR(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-destructive">
+                    <span>Discount</span><span>-{formatOMR(discount)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between font-bold text-sm">
                 <span>Total</span><span>{formatOMR(total)}</span>
               </div>

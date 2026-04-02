@@ -233,6 +233,8 @@ const Index = () => {
           orderDate={pos.orderDate}
           deliveryDate={pos.deliveryDate}
           items={pos.items}
+          subtotal={pos.subtotal}
+          discount={pos.discount}
           total={pos.total}
           paidAmount={pos.paidAmount}
           remainingBalance={pos.remainingBalance}
