@@ -172,6 +172,8 @@ export function buildReceiptHtml(
     <hr class="divider" />
 
     <div class="totals">
+      ${discount > 0 ? `<div class="totals-row"><span class="label">Subtotal</span><span>${esc(formatOMR(subtotal))}</span></div>
+      <div class="totals-row" style="color:#c1121f"><span>Discount</span><span>-${esc(formatOMR(discount))}</span></div>` : ""}
       <div class="totals-row total">
         <span>Total</span>
         <span>${esc(formatOMR(total))}</span>
