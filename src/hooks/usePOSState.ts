@@ -21,7 +21,7 @@ export function usePOSState() {
 
   // Order details
   const [orderNumber, setOrderNumber] = useState(generateOrderNumber);
-  const [orderDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [orderDate] = useState(() => toLocalDateStr());
   const [deliveryDate, setDeliveryDate] = useState("");
   const [orderType, setOrderTypeRaw] = useState<OrderType>("regular");
   const [pickupMethod, setPickupMethod] = useState<PickupMethod>("walk-in");

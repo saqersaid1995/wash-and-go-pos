@@ -30,7 +30,7 @@ export default function PhoneSearchResults({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [delivering, setDelivering] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
 
   const filteredOrders = useMemo(() => {
     if (showAll) return orders;

@@ -29,7 +29,7 @@ interface PaymentRow {
   payment_status?: string;
 }
 
-const toDateStr = (d: Date) => d.toISOString().split("T")[0];
+const toDateStr = (d: Date) => toLocalDateStr(d);
 
 function getPresetBounds(preset: DatePreset): [string, string] | null {
   const now = new Date();

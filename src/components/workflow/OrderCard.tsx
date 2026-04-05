@@ -18,7 +18,7 @@ interface OrderCardProps {
 
 export default function OrderCard({ order, onSelect, onMoveNext, onMovePrev, onPaymentComplete }: OrderCardProps) {
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
   const isOverdue = order.deliveryDate && order.deliveryDate < today && order.currentStatus !== "delivered";
   const isDueToday = order.deliveryDate === today && order.currentStatus !== "delivered";
   const stageIdx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);

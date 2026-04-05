@@ -35,7 +35,7 @@ export default function OrderDetailDrawer({ order, open, onClose, onMoveNext, on
   const stageIdx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);
   const canNext = stageIdx < WORKFLOW_STAGES.length - 1;
   const canPrev = stageIdx > 0;
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
   const isOverdue = order.deliveryDate < today && order.currentStatus !== "delivered";
   const isReadyForPickup = order.currentStatus === "ready-for-pickup";
 

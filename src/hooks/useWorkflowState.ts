@@ -66,7 +66,7 @@ export function useWorkflowState() {
   const [filters, setFilters] = useState<WorkflowFilters>(initialFilters);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
 
   const loadOrders = useCallback(async () => {
     setLoading(true);

@@ -19,7 +19,7 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ onSaved }: ExpenseFormProps) {
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => toLocalDateStr());
   const [category, setCategory] = useState("Other");
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
