@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { OrderItem, OrderType, PickupMethod, PaymentMethod, PaymentStatus } from "@/types/pos";
 import { generateOrderNumber, createOrder, fetchCustomerByPhone } from "@/lib/supabase-queries";
+import { toLocalDateStr } from "@/lib/utils";
 import type { CustomerRecord } from "@/types/customer";
 import { saveOfflineOrder, addToSyncQueue, generateLocalId, getCachedCustomerByPhone } from "@/lib/offline-db";
 import { supabase } from "@/integrations/supabase/client";
