@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toLocalDateStr } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ interface ScanResultCardProps {
 export default function ScanResultCard({ order, onMoveNext, onMarkDelivered, onPrint, onRefresh }: ScanResultCardProps) {
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
   const isOverdue = order.deliveryDate < today && order.currentStatus !== "delivered";
   const isDueToday = order.deliveryDate === today && order.currentStatus !== "delivered";
   const stageIdx = WORKFLOW_STAGES.findIndex((s) => s.id === order.currentStatus);

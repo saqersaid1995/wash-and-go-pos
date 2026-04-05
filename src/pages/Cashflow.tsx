@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { toLocalDateStr } from "@/lib/utils";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ interface PaymentRow {
   payment_status?: string;
 }
 
-const toDateStr = (d: Date) => d.toISOString().split("T")[0];
+const toDateStr = (d: Date) => toLocalDateStr(d);
 
 function getPresetBounds(preset: DatePreset): [string, string] | null {
   const now = new Date();

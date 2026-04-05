@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { toLocalDateStr } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export default function PhoneSearchResults({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [delivering, setDelivering] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr();
 
   const filteredOrders = useMemo(() => {
     if (showAll) return orders;
