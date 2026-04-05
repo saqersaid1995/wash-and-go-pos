@@ -9,9 +9,10 @@ export type DateRange =
   | "today" | "yesterday" | "this-week" | "this-month" | "last-month"
   | "last-3-months" | "last-6-months" | "this-year" | "all" | "custom";
 
-const toDateStr = (d: Date) => d.toISOString().split("T")[0];
+const toDateStr = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const todayStr = () => toDateStr(new Date());
-const yesterdayStr = () => toDateStr(new Date(Date.now() - 86400000));
+const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return toDateStr(d); };
 
 function startOfWeek() { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return toDateStr(d); }
 function startOfMonth() { const d = new Date(); d.setDate(1); return toDateStr(d); }
