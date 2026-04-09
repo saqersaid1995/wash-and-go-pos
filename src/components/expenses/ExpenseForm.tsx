@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toLocalDateStr } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,9 @@ import { toast } from "sonner";
 import {
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
-  EXPENSE_STATUSES,
   createExpense,
 } from "@/lib/expense-queries";
+import { formatOMR } from "@/lib/currency";
 
 interface ExpenseFormProps {
   onSaved: () => Promise<void>;
@@ -30,10 +30,29 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
   const [billingDay, setBillingDay] = useState<string>("1");
   const [expenseStatus, setExpenseStatus] = useState<string>("paid");
   const [saving, setSaving] = useState(false);
+  const [paymentSource, setPaymentSource] = useState<string>("cash");
+  const [cashAmount, setCashAmount] = useState("");
+  const [bankAmount, setBankAmount] = useState("");
+
+  const amt = parseFloat(amount) || 0;
+
+  // Auto-fill cash/bank amounts when source or total changes
+  useEffect(() => {
+    if (paymentSource === "cash") {
+      setCashAmount(amt > 0 ? amt.toFixed(3) : "");
+      setBankAmount("0");
+    } else if (paymentSource === "bank") {
+      setCashAmount("0");
+      setBankAmount(amt > 0 ? amt.toFixed(3) : "");
+    }
+  }, [paymentSource, amt]);
+
+  const mixedTotal = (parseFloat(cashAmount) || 0) + (parseFloat(bankAmount) || 0);
+  const mixedDiff = amt - mixedTotal;
+  const mixedValid = paymentSource !== "mixed" || Math.abs(mixedDiff) < 0.001;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = parseFloat(amount);
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
     const finalCategory = category === "Custom" ? customCategory.trim() : category;
     if (!finalCategory) { toast.error("Select or enter a category"); return; }
@@ -46,6 +65,14 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       }
     }
 
+    if (!mixedValid) {
+      toast.error(`Cash + Bank must equal ${formatOMR(amt)}. Difference: ${formatOMR(Math.abs(mixedDiff))}`);
+      return;
+    }
+
+    const finalCash = paymentSource === "cash" ? amt : paymentSource === "bank" ? 0 : parseFloat(cashAmount) || 0;
+    const finalBank = paymentSource === "bank" ? amt : paymentSource === "cash" ? 0 : parseFloat(bankAmount) || 0;
+
     setSaving(true);
     const ok = await createExpense({
       expense_date: date,
@@ -56,6 +83,9 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       recurring_period: isRecurring ? recurringPeriod : null,
       billing_day: isRecurring ? parseInt(billingDay) || 1 : null,
       expense_status: expenseStatus,
+      payment_source: paymentSource,
+      cash_amount: finalCash,
+      bank_amount: finalBank,
     });
     setSaving(false);
 
@@ -65,6 +95,9 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       setAmount("");
       setIsRecurring(false);
       setExpenseStatus("paid");
+      setPaymentSource("cash");
+      setCashAmount("");
+      setBankAmount("");
       await onSaved();
     } else {
       toast.error("Failed to save expense");
@@ -126,6 +159,18 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
               </Select>
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Payment Source</Label>
+              <Select value={paymentSource} onValueChange={setPaymentSource}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank">Bank</SelectItem>
+                  <SelectItem value="mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center gap-3">
               <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
               <Label>Recurring</Label>
@@ -152,13 +197,51 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
                 />
               </div>
             )}
+          </div>
 
-            <div className="flex items-end">
-              <Button type="submit" disabled={saving} className="w-full">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                Add Expense
-              </Button>
+          {/* Mixed payment split fields */}
+          {paymentSource === "mixed" && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end p-3 rounded-lg bg-accent/50">
+              <div className="space-y-1.5">
+                <Label>Cash Amount (OMR)</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  placeholder="0.000"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bank Amount (OMR)</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  placeholder="0.000"
+                  value={bankAmount}
+                  onChange={(e) => setBankAmount(e.target.value)}
+                />
+              </div>
+              <div className="text-sm">
+                {amt > 0 && (
+                  <p className={`font-medium ${mixedValid ? "text-[hsl(142,72%,40%)]" : "text-destructive"}`}>
+                    {mixedValid
+                      ? `✓ Total: ${formatOMR(mixedTotal)}`
+                      : `Difference: ${formatOMR(Math.abs(mixedDiff))} ${mixedDiff > 0 ? "remaining" : "over"}`
+                    }
+                  </p>
+                )}
+              </div>
             </div>
+          )}
+
+          <div className="flex items-end">
+            <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              Add Expense
+            </Button>
           </div>
 
           {/* Recurring preview */}

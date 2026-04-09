@@ -14,9 +14,14 @@ export interface Expense {
   expense_status: string;
   is_auto_generated: boolean;
   parent_recurring_id: string | null;
+  payment_source: string;
+  cash_amount: number;
+  bank_amount: number;
   created_at: string;
   updated_at: string;
 }
+
+export const PAYMENT_SOURCES = ["cash", "bank", "mixed"] as const;
 
 export const EXPENSE_CATEGORIES = [
   "Rent",
@@ -44,7 +49,7 @@ export async function fetchAllExpenses(): Promise<Expense[]> {
     console.error("fetchAllExpenses error:", error);
     return [];
   }
-  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount) }));
+  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount), cash_amount: Number(r.cash_amount), bank_amount: Number(r.bank_amount) }));
 }
 
 export async function fetchRecurringTemplates(): Promise<Expense[]> {
@@ -59,7 +64,7 @@ export async function fetchRecurringTemplates(): Promise<Expense[]> {
     console.error("fetchRecurringTemplates error:", error);
     return [];
   }
-  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount) }));
+  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount), cash_amount: Number(r.cash_amount), bank_amount: Number(r.bank_amount) }));
 }
 
 export async function createExpense(params: {
@@ -72,6 +77,9 @@ export async function createExpense(params: {
   billing_day?: number | null;
   next_run_date?: string | null;
   expense_status?: string;
+  payment_source: string;
+  cash_amount: number;
+  bank_amount: number;
 }) {
   const insertData: any = { ...params };
   

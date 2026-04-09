@@ -120,7 +120,9 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          bank_amount: number
           billing_day: number | null
+          cash_amount: number
           category: string
           created_at: string
           description: string
@@ -132,12 +134,15 @@ export type Database = {
           last_run_date: string | null
           next_run_date: string | null
           parent_recurring_id: string | null
+          payment_source: string
           recurring_period: string | null
           updated_at: string
         }
         Insert: {
           amount?: number
+          bank_amount?: number
           billing_day?: number | null
+          cash_amount?: number
           category?: string
           created_at?: string
           description?: string
@@ -149,12 +154,15 @@ export type Database = {
           last_run_date?: string | null
           next_run_date?: string | null
           parent_recurring_id?: string | null
+          payment_source?: string
           recurring_period?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          bank_amount?: number
           billing_day?: number | null
+          cash_amount?: number
           category?: string
           created_at?: string
           description?: string
@@ -166,6 +174,7 @@ export type Database = {
           last_run_date?: string | null
           next_run_date?: string | null
           parent_recurring_id?: string | null
+          payment_source?: string
           recurring_period?: string | null
           updated_at?: string
         }

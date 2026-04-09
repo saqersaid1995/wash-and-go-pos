@@ -13,6 +13,15 @@ interface ExpenseTableProps {
   onStatusChange: (id: string, status: string) => void;
 }
 
+function sourceBadge(source: string) {
+  switch (source) {
+    case "cash": return <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">Cash</Badge>;
+    case "bank": return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">Bank</Badge>;
+    case "mixed": return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-xs">Mixed</Badge>;
+    default: return <Badge variant="outline" className="text-xs">{source}</Badge>;
+  }
+}
+
 export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: ExpenseTableProps) {
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -31,6 +40,7 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: Ex
             <TableHead>Category</TableHead>
             <TableHead>Description</TableHead>
             <TableHead className="text-right">Amount</TableHead>
+            <TableHead>Payment Source</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Source</TableHead>
             <TableHead className="w-10"></TableHead>
@@ -43,6 +53,14 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: Ex
               <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
               <TableCell className="text-sm">{exp.description || "—"}</TableCell>
               <TableCell className="text-right font-semibold">{formatOMR(exp.amount)}</TableCell>
+              <TableCell>
+                {sourceBadge(exp.payment_source || "cash")}
+                {exp.payment_source === "mixed" && (
+                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                    C: {formatOMR(exp.cash_amount)} / B: {formatOMR(exp.bank_amount)}
+                  </span>
+                )}
+              </TableCell>
               <TableCell>
                 <Select value={exp.expense_status} onValueChange={(v) => onStatusChange(exp.id, v)}>
                   <SelectTrigger className="h-7 w-24 text-xs">
