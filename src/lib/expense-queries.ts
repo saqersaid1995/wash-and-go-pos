@@ -49,7 +49,7 @@ export async function fetchAllExpenses(): Promise<Expense[]> {
     console.error("fetchAllExpenses error:", error);
     return [];
   }
-  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount) }));
+  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount), cash_amount: Number(r.cash_amount), bank_amount: Number(r.bank_amount) }));
 }
 
 export async function fetchRecurringTemplates(): Promise<Expense[]> {
@@ -64,7 +64,7 @@ export async function fetchRecurringTemplates(): Promise<Expense[]> {
     console.error("fetchRecurringTemplates error:", error);
     return [];
   }
-  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount) }));
+  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount), cash_amount: Number(r.cash_amount), bank_amount: Number(r.bank_amount) }));
 }
 
 export async function createExpense(params: {
@@ -77,6 +77,9 @@ export async function createExpense(params: {
   billing_day?: number | null;
   next_run_date?: string | null;
   expense_status?: string;
+  payment_source: string;
+  cash_amount: number;
+  bank_amount: number;
 }) {
   const insertData: any = { ...params };
   
