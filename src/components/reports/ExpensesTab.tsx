@@ -114,6 +114,7 @@ export function ExpensesTab({ expenses, expensesByCategory }: ExpensesTabProps) 
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Payment Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Source</TableHead>
                 </TableRow>
@@ -125,6 +126,7 @@ export function ExpensesTab({ expenses, expensesByCategory }: ExpensesTabProps) 
                     <TableCell className="font-medium">{e.category}</TableCell>
                     <TableCell className="text-muted-foreground">{e.description || "—"}</TableCell>
                     <TableCell className="text-right font-medium text-destructive">{formatOMR(e.amount)}</TableCell>
+                    <TableCell className="text-xs capitalize">{e.payment_source || "cash"}</TableCell>
                     <TableCell className="text-xs">
                       <span className={e.expense_status === "paid" ? "text-[hsl(142,72%,40%)]" : "text-destructive"}>
                         {e.expense_status === "paid" ? "Paid" : "Accrued"}
