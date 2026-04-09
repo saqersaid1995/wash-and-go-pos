@@ -14,9 +14,14 @@ export interface Expense {
   expense_status: string;
   is_auto_generated: boolean;
   parent_recurring_id: string | null;
+  payment_source: string;
+  cash_amount: number;
+  bank_amount: number;
   created_at: string;
   updated_at: string;
 }
+
+export const PAYMENT_SOURCES = ["cash", "bank", "mixed"] as const;
 
 export const EXPENSE_CATEGORIES = [
   "Rent",
