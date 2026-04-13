@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ShoppingCart, Package, Truck, AlertTriangle, Clock, Zap } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
 import type { WorkflowOrder } from "@/types/workflow";
+import { ServiceIntelligence } from "./ServiceIntelligence";
 
 interface OrdersTabProps {
   orders: WorkflowOrder[];
