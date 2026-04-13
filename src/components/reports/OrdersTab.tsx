@@ -96,55 +96,54 @@ export function OrdersTab({ orders, kpis, statusDistribution, ordersByDay, overd
         </Card>
       </div>
 
-        {/* Service Intelligence */}
-        <ServiceIntelligence orders={orders} />
+      {/* Service Intelligence */}
+      <ServiceIntelligence orders={orders} />
 
-        {/* Overdue / Ready */}
-        <div className="space-y-4">
-          {overdueOrders.length > 0 && (
-            <Card>
-              <CardContent className="p-0">
-                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  <h3 className="text-sm font-semibold">Overdue Orders ({overdueOrders.length})</h3>
-                </div>
-                <Table>
-                  <TableBody>
-                    {overdueOrders.slice(0, 5).map((o) => (
-                      <TableRow key={o.id}>
-                        <TableCell className="font-mono text-xs">{o.orderNumber}</TableCell>
-                        <TableCell>{o.customerName}</TableCell>
-                        <TableCell className="text-xs text-destructive">Due: {o.deliveryDate}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
+      {/* Overdue / Ready */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {overdueOrders.length > 0 && (
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <h3 className="text-sm font-semibold">Overdue Orders ({overdueOrders.length})</h3>
+              </div>
+              <Table>
+                <TableBody>
+                  {overdueOrders.slice(0, 5).map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-mono text-xs">{o.orderNumber}</TableCell>
+                      <TableCell>{o.customerName}</TableCell>
+                      <TableCell className="text-xs text-destructive">Due: {o.deliveryDate}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-          {readyForPickupOrders.length > 0 && (
-            <Card>
-              <CardContent className="p-0">
-                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                  <Package className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold">Ready for Pickup ({readyForPickupOrders.length})</h3>
-                </div>
-                <Table>
-                  <TableBody>
-                    {readyForPickupOrders.slice(0, 5).map((o) => (
-                      <TableRow key={o.id}>
-                        <TableCell className="font-mono text-xs">{o.orderNumber}</TableCell>
-                        <TableCell>{o.customerName}</TableCell>
-                        <TableCell className="text-right">{formatOMR(o.totalAmount)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {readyForPickupOrders.length > 0 && (
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Ready for Pickup ({readyForPickupOrders.length})</h3>
+              </div>
+              <Table>
+                <TableBody>
+                  {readyForPickupOrders.slice(0, 5).map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-mono text-xs">{o.orderNumber}</TableCell>
+                      <TableCell>{o.customerName}</TableCell>
+                      <TableCell className="text-right">{formatOMR(o.totalAmount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
