@@ -122,4 +122,30 @@
     top: 0;
     width: 100%;
   }
+
+  /* Income Statement print styles */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:border-none {
+    border: none !important;
+  }
+
+  #income-statement {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #income-statement .is-row {
+    page-break-inside: avoid;
+  }
+
+  #income-statement .is-result {
+    page-break-inside: avoid;
+  }
 }
