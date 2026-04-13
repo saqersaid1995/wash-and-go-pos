@@ -96,51 +96,8 @@ export function OrdersTab({ orders, kpis, statusDistribution, ordersByDay, overd
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Analytics */}
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm font-semibold mb-4">Analytics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg bg-secondary text-center">
-                <p className="text-2xl font-bold">{kpis.avgGarmentsPerOrder.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">Avg Garments/Order</p>
-              </div>
-              <div className="p-3 rounded-lg bg-secondary text-center">
-                <p className="text-2xl font-bold">{formatOMR(kpis.avgOrderValue)}</p>
-                <p className="text-xs text-muted-foreground">Avg Order Value</p>
-              </div>
-            </div>
-
-            {itemTypeStats.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Top Garment Types</h4>
-                <div className="space-y-1">
-                  {itemTypeStats.slice(0, 5).map((it) => (
-                    <div key={it.name} className="flex justify-between text-sm">
-                      <span>{it.name}</span>
-                      <span className="font-medium">{it.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {serviceStats.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Top Services</h4>
-                <div className="space-y-1">
-                  {serviceStats.slice(0, 5).map((s) => (
-                    <div key={s.name} className="flex justify-between text-sm">
-                      <span>{s.name}</span>
-                      <span className="font-medium">{formatOMR(s.revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Service Intelligence */}
+        <ServiceIntelligence orders={orders} />
 
         {/* Overdue / Ready */}
         <div className="space-y-4">
