@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Package, Truck, AlertTriangle, Users, TrendingUp, TrendingDown, Percent, Receipt, Star, Shirt, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { RevenueExpensesCharts } from "./RevenueExpensesCharts";
 import { formatOMR } from "@/lib/currency";
 
 const PIE_COLORS = [
