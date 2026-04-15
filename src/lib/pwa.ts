@@ -2,6 +2,7 @@
 
 let deferredPrompt: any = null;
 let swRegistration: ServiceWorkerRegistration | null = null;
+let isRefreshing = false;
 
 export function isPWAInstalled(): boolean {
   return (
@@ -22,6 +23,29 @@ export async function promptInstall(): Promise<boolean> {
   return outcome === "accepted";
 }
 
+function attachServiceWorkerUpdateHandling(registration: ServiceWorkerRegistration) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (isRefreshing) return;
+    isRefreshing = true;
+    window.location.reload();
+  });
+
+  if (registration.waiting) {
+    registration.waiting.postMessage("SKIP_WAITING");
+  }
+
+  registration.addEventListener("updatefound", () => {
+    const newWorker = registration.installing;
+    if (!newWorker) return;
+
+    newWorker.addEventListener("statechange", () => {
+      if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+        newWorker.postMessage("SKIP_WAITING");
+      }
+    });
+  });
+}
+
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) {
     console.warn("Service workers not supported");
@@ -30,6 +54,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
   try {
     swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    attachServiceWorkerUpdateHandling(swRegistration);
+    swRegistration.update().catch(() => undefined);
     console.log("SW registered:", swRegistration.scope);
     return swRegistration;
   } catch (err) {
@@ -50,7 +76,6 @@ export async function cacheAppShell(): Promise<void> {
 }
 
 export function initPWA() {
-  // Capture install prompt
   window.addEventListener("beforeinstallprompt", (e: Event) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -62,6 +87,5 @@ export function initPWA() {
     console.log("PWA installed");
   });
 
-  // Register SW
   registerServiceWorker();
 }
