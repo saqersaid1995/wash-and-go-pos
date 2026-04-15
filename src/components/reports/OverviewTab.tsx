@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Package, Truck, AlertTriangle, Users, TrendingUp, TrendingDown, Percent, Receipt, Star, Shirt, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { RevenueExpensesCharts } from "./RevenueExpensesCharts";
 import { formatOMR } from "@/lib/currency";
 
 const PIE_COLORS = [
@@ -41,6 +42,8 @@ function KpiCard({ label, value, icon: Icon, accent, change }: { label: string; 
 
 interface OverviewTabProps {
   kpis: any;
+  orders: any[];
+  expenses: any[];
   revenueVsExpenses: any[];
   expensesByCategory: { name: string; value: number }[];
   statusDistribution: { name: string; value: number }[];
@@ -50,7 +53,7 @@ interface OverviewTabProps {
   mostPopularGarment: { name: string; count: number } | null;
 }
 
-export function OverviewTab({ kpis, revenueVsExpenses, expensesByCategory, statusDistribution, paymentDistribution, serviceStats, mostProfitableService, mostPopularGarment }: OverviewTabProps) {
+export function OverviewTab({ kpis, orders, expenses, revenueVsExpenses, expensesByCategory, statusDistribution, paymentDistribution, serviceStats, mostProfitableService, mostPopularGarment }: OverviewTabProps) {
   const hasData = kpis.totalOrders > 0 || kpis.totalExpenses > 0;
 
   if (!hasData) {
@@ -106,30 +109,8 @@ export function OverviewTab({ kpis, revenueVsExpenses, expensesByCategory, statu
         </div>
       </section>
 
-      {/* Charts */}
-      {revenueVsExpenses.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm font-semibold mb-4">Revenue vs Expenses Trend</h3>
-            <ChartContainer config={{
-              revenue: { label: "Revenue", color: "hsl(142, 72%, 40%)" },
-              expenses: { label: "Expenses", color: "hsl(0, 72%, 51%)" },
-              profit: { label: "Profit", color: "hsl(230, 60%, 50%)" },
-            }} className="h-[280px] w-full">
-              <LineChart data={revenueVsExpenses}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="hsl(142, 72%, 40%)" strokeWidth={2} dot={{ r: 2 }} />
-                <Line type="monotone" dataKey="expenses" stroke="hsl(0, 72%, 51%)" strokeWidth={2} dot={{ r: 2 }} />
-                <Line type="monotone" dataKey="profit" stroke="hsl(230, 60%, 50%)" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 2 }} />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
+      {/* Revenue vs Expenses Charts */}
+      <RevenueExpensesCharts orders={orders} expenses={expenses} revenueVsExpenses={revenueVsExpenses} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Expense Breakdown */}

@@ -116,6 +116,8 @@ const Reports = () => {
             <TabsContent value="overview">
               <OverviewTab
                 kpis={data.kpis}
+                orders={data.orders}
+                expenses={data.expenses}
                 revenueVsExpenses={data.revenueVsExpenses}
                 expensesByCategory={data.expensesByCategory}
                 statusDistribution={data.statusDistribution}
