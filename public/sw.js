@@ -1,7 +1,6 @@
-const CACHE_NAME = "lavinderia-v5";
+const CACHE_NAME = "lavinderia-v6";
 const OFFLINE_URL = "/";
 
-// Assets to pre-cache during install
 const PRE_CACHE = [
   "/",
   "/scan-lite",
@@ -22,7 +21,6 @@ const PRE_CACHE = [
   "/support-apple-touch-icon.png",
 ];
 
-// Install: pre-cache shell
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRE_CACHE))
@@ -30,7 +28,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -40,18 +37,13 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for assets
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET and cross-origin
   if (event.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
-
-  // Supabase API calls - network only
   if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/")) return;
 
-  // Navigation requests: network-first, fallback to cached index
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
@@ -62,18 +54,37 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cachedRequest = await caches.match(event.request);
-          const routeFallback = url.pathname.startsWith("/scan-lite") ? "/scan-lite" : url.pathname.startsWith("/support-lite") ? "/support-lite" : OFFLINE_URL;
+          const routeFallback = url.pathname.startsWith("/scan-lite")
+            ? "/scan-lite"
+            : url.pathname.startsWith("/support-lite")
+              ? "/support-lite"
+              : OFFLINE_URL;
           return cachedRequest || caches.match(routeFallback) || caches.match(OFFLINE_URL);
         })
     );
     return;
   }
 
-  // Static assets: cache-first
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf|eot)$/) ||
-    url.pathname.startsWith("/assets/")
-  ) {
+  const isCodeAsset = event.request.destination === "script" || event.request.destination === "style";
+  const isMediaAsset =
+    event.request.destination === "image" ||
+    event.request.destination === "font" ||
+    url.pathname.match(/\.(png|jpg|jpeg|svg|ico|woff2?|ttf|eot)$/);
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  if (isMediaAsset || url.pathname.startsWith("/assets/")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -87,7 +98,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Default: network first, cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -99,7 +109,6 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// ── Push Notification Handler ──
 self.addEventListener("push", (event) => {
   let data = { title: "Lavinderia Support", body: "New message", url: "/support-lite" };
 
@@ -128,12 +137,9 @@ self.addEventListener("push", (event) => {
     ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// ── Notification Click Handler ──
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
@@ -143,13 +149,11 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // Try to focus existing support-lite window
       for (const client of clientList) {
         if (client.url.includes("/support-lite") && "focus" in client) {
           return client.focus();
         }
       }
-      // Open new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(url);
       }
@@ -157,7 +161,6 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// Listen for messages from the app
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") {
     self.skipWaiting();
@@ -169,7 +172,6 @@ self.addEventListener("message", (event) => {
       })
     );
   }
-  // Update badge from client
   if (event.data && event.data.type === "UPDATE_BADGE") {
     const count = event.data.count || 0;
     if (self.navigator && "setAppBadge" in self.navigator) {
