@@ -42,6 +42,8 @@ function KpiCard({ label, value, icon: Icon, accent, change }: { label: string; 
 
 interface OverviewTabProps {
   kpis: any;
+  orders: any[];
+  expenses: any[];
   revenueVsExpenses: any[];
   expensesByCategory: { name: string; value: number }[];
   statusDistribution: { name: string; value: number }[];
@@ -51,7 +53,7 @@ interface OverviewTabProps {
   mostPopularGarment: { name: string; count: number } | null;
 }
 
-export function OverviewTab({ kpis, revenueVsExpenses, expensesByCategory, statusDistribution, paymentDistribution, serviceStats, mostProfitableService, mostPopularGarment }: OverviewTabProps) {
+export function OverviewTab({ kpis, orders, expenses, revenueVsExpenses, expensesByCategory, statusDistribution, paymentDistribution, serviceStats, mostProfitableService, mostPopularGarment }: OverviewTabProps) {
   const hasData = kpis.totalOrders > 0 || kpis.totalExpenses > 0;
 
   if (!hasData) {
