@@ -1,82 +1,66 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend, ReferenceLine, Tooltip } from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Legend, ReferenceLine, Tooltip,
+} from "recharts";
 import { formatOMR } from "@/lib/currency";
-import { TrendingUp, TrendingDown, DollarSign, Receipt, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Receipt, BarChart3, Filter } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const FIXED_CATEGORIES = ["Rent", "Loan", "Salaries"];
 
-interface Expense {
-  expense_date: string;
-  category: string;
-  amount: number;
-}
-
-interface Order {
-  orderDate: string;
-  totalAmount: number;
-}
-
+interface Expense { expense_date: string; category: string; amount: number }
+interface Order { orderDate: string; totalAmount: number }
 interface Props {
   orders: Order[];
   expenses: Expense[];
   revenueVsExpenses: { date: string; revenue: number; expenses: number; profit: number }[];
 }
 
-function aggregateWeekly(data: { date: string; revenue: number; varExpenses: number; profit: number; orderCount: number }[]) {
-  const weeks: Record<string, { revenue: number; varExpenses: number; profit: number; orderCount: number }> = {};
+function aggregateWeekly(data: { date: string; revenue: number; expenses: number; profit: number; orderCount: number }[]) {
+  const weeks: Record<string, { revenue: number; expenses: number; profit: number; orderCount: number }> = {};
   data.forEach((d) => {
     const dt = new Date(d.date);
     const weekStart = new Date(dt);
     weekStart.setDate(dt.getDate() - dt.getDay());
     const key = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-    if (!weeks[key]) weeks[key] = { revenue: 0, varExpenses: 0, profit: 0, orderCount: 0 };
+    if (!weeks[key]) weeks[key] = { revenue: 0, expenses: 0, profit: 0, orderCount: 0 };
     weeks[key].revenue += d.revenue;
-    weeks[key].varExpenses += d.varExpenses;
+    weeks[key].expenses += d.expenses;
     weeks[key].profit += d.profit;
     weeks[key].orderCount += d.orderCount;
   });
   return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: `W ${date.slice(5)}`, ...v }));
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function ComboTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   const rev = payload.find((p: any) => p.dataKey === "revenue")?.value ?? 0;
-  const exp = payload.find((p: any) => p.dataKey === "varExpenses")?.value ?? 0;
-  const orders = payload.find((p: any) => p.dataKey === "revenue")?.payload?.orderCount ?? 0;
-  const profit = rev - exp;
+  const exp = payload.find((p: any) => p.dataKey === "expenses")?.value ?? 0;
+  const profit = payload.find((p: any) => p.dataKey === "profit")?.value ?? 0;
+  const orders = payload[0]?.payload?.orderCount ?? 0;
   return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-xs space-y-1">
-      <p className="font-semibold text-foreground">{label}</p>
-      <p className="text-[hsl(142,72%,40%)]">Revenue: {formatOMR(rev)}</p>
-      <p className="text-destructive">Expenses: {formatOMR(exp)}</p>
-      <p className={profit >= 0 ? "text-[hsl(230,60%,50%)]" : "text-destructive"}>Profit: {formatOMR(profit)}</p>
-      <p className="text-muted-foreground">Orders: {orders}</p>
+    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-xs space-y-1.5 min-w-[160px]">
+      <p className="font-semibold text-foreground text-sm">{label}</p>
+      <div className="flex justify-between"><span className="text-muted-foreground">Revenue</span><span className="font-medium text-[hsl(142,72%,40%)]">{formatOMR(rev)}</span></div>
+      <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span className="font-medium text-destructive">{formatOMR(exp)}</span></div>
+      <div className="flex justify-between"><span className="text-muted-foreground">Profit</span><span className={`font-medium ${profit >= 0 ? "text-[hsl(230,60%,50%)]" : "text-destructive"}`}>{formatOMR(profit)}</span></div>
+      <div className="flex justify-between border-t border-border pt-1.5"><span className="text-muted-foreground">Orders</span><span className="font-medium">{orders}</span></div>
     </div>
   );
 }
 
-function ProfitTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const profit = payload[0]?.value ?? 0;
-  return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-xs space-y-1">
-      <p className="font-semibold text-foreground">{label}</p>
-      <p className={profit >= 0 ? "text-[hsl(230,60%,50%)]" : "text-destructive"}>
-        {profit >= 0 ? "Profit" : "Loss"}: {formatOMR(Math.abs(profit))}
-      </p>
-    </div>
-  );
-}
-
-export function RevenueExpensesCharts({ orders, expenses, revenueVsExpenses }: Props) {
+export function RevenueExpensesCharts({ orders, expenses }: Props) {
   const [view, setView] = useState<"daily" | "weekly">("daily");
+  const [includeFixed, setIncludeFixed] = useState(false);
 
   const { dailyData, fixedTotal, fixedByCategory } = useMemo(() => {
     const fixedExps = expenses.filter((e) => FIXED_CATEGORIES.includes(e.category));
-    const varExps = expenses.filter((e) => !FIXED_CATEGORIES.includes(e.category));
+    const varExps = includeFixed ? expenses : expenses.filter((e) => !FIXED_CATEGORIES.includes(e.category));
     const fixedTotal = fixedExps.reduce((s, e) => s + e.amount, 0);
     const fixedByCategory: Record<string, number> = {};
     fixedExps.forEach((e) => { fixedByCategory[e.category] = (fixedByCategory[e.category] || 0) + e.amount; });
@@ -96,12 +80,12 @@ export function RevenueExpensesCharts({ orders, expenses, revenueVsExpenses }: P
 
     const dailyData = Array.from(dateSet).sort().map((date) => {
       const revenue = revMap[date] || 0;
-      const varExpenses = expMap[date] || 0;
-      return { date, revenue, varExpenses, profit: revenue - varExpenses, orderCount: ordCountMap[date] || 0 };
+      const exp = expMap[date] || 0;
+      return { date, revenue, expenses: exp, profit: revenue - exp, orderCount: ordCountMap[date] || 0 };
     });
 
     return { dailyData, fixedTotal, fixedByCategory };
-  }, [orders, expenses]);
+  }, [orders, expenses, includeFixed]);
 
   const chartData = useMemo(() => {
     if (view === "weekly") return aggregateWeekly(dailyData);
@@ -109,7 +93,7 @@ export function RevenueExpensesCharts({ orders, expenses, revenueVsExpenses }: P
   }, [dailyData, view]);
 
   const avgRevenue = chartData.length > 0 ? chartData.reduce((s, d) => s + d.revenue, 0) / chartData.length : 0;
-  const avgExpenses = chartData.length > 0 ? chartData.reduce((s, d) => s + d.varExpenses, 0) / chartData.length : 0;
+  const avgExpenses = chartData.length > 0 ? chartData.reduce((s, d) => s + d.expenses, 0) / chartData.length : 0;
   const avgProfit = chartData.length > 0 ? chartData.reduce((s, d) => s + d.profit, 0) / chartData.length : 0;
 
   if (chartData.length === 0) return null;
@@ -130,7 +114,7 @@ export function RevenueExpensesCharts({ orders, expenses, revenueVsExpenses }: P
           <div className="flex items-center gap-2 mb-1">{avgProfit >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-[hsl(230,60%,50%)]" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}<span className="text-xs text-muted-foreground">Avg {view === "daily" ? "Daily" : "Weekly"} Profit</span></div>
           <p className="text-lg font-bold">{formatOMR(avgProfit)}</p>
         </CardContent></Card>
-        {fixedTotal > 0 && (
+        {!includeFixed && fixedTotal > 0 && (
           <Card className="border-dashed"><CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1"><BarChart3 className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Fixed Expenses (excl.)</span></div>
             <p className="text-lg font-bold">{formatOMR(fixedTotal)}</p>
@@ -143,53 +127,43 @@ export function RevenueExpensesCharts({ orders, expenses, revenueVsExpenses }: P
         )}
       </div>
 
-      {/* Toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">View:</span>
-        <div className="flex gap-1">
-          <Button variant={view === "daily" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("daily")}>Daily</Button>
-          <Button variant={view === "weekly" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("weekly")}>Weekly</Button>
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">View:</span>
+          <div className="flex gap-1">
+            <Button variant={view === "daily" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("daily")}>Daily</Button>
+            <Button variant={view === "weekly" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("weekly")}>Weekly</Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Switch id="include-fixed" checked={includeFixed} onCheckedChange={setIncludeFixed} />
+          <Label htmlFor="include-fixed" className="text-xs text-muted-foreground cursor-pointer">Include fixed expenses</Label>
         </div>
       </div>
 
-      {/* Chart 1: Revenue vs Variable Expenses */}
+      {/* Combo Chart */}
       <Card>
         <CardContent className="pt-6">
-          <h3 className="text-sm font-semibold mb-4">Revenue vs Operating Expenses</h3>
+          <h3 className="text-sm font-semibold mb-4">Revenue vs Expenses & Profit Trend</h3>
           <ChartContainer config={{
             revenue: { label: "Revenue", color: "hsl(142, 72%, 40%)" },
-            varExpenses: { label: "Expenses", color: "hsl(0, 72%, 51%)" },
-          }} className="h-[260px] w-full">
-            <BarChart data={chartData} barGap={2}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <ReferenceLine y={avgRevenue} stroke="hsl(142, 72%, 40%)" strokeDasharray="6 3" strokeOpacity={0.5} label={{ value: "Avg Rev", fontSize: 9, fill: "hsl(142, 72%, 40%)" }} />
-              <Bar dataKey="revenue" name="Revenue" fill="hsl(142, 72%, 40%)" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="varExpenses" name="Expenses" fill="hsl(0, 72%, 51%)" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      {/* Chart 2: Profit Trend */}
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="text-sm font-semibold mb-4">Profit Trend</h3>
-          <ChartContainer config={{
+            expenses: { label: "Expenses", color: "hsl(0, 72%, 51%)" },
             profit: { label: "Profit", color: "hsl(230, 60%, 50%)" },
-          }} className="h-[200px] w-full">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip content={<ProfitTooltip />} />
-              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.3} />
-              <ReferenceLine y={avgProfit} stroke="hsl(230, 60%, 50%)" strokeDasharray="6 3" strokeOpacity={0.5} label={{ value: "Avg", fontSize: 9, fill: "hsl(230, 60%, 50%)" }} />
-              <Line type="monotone" dataKey="profit" stroke="hsl(230, 60%, 50%)" strokeWidth={2} dot={{ r: 2 }} />
-            </LineChart>
+          }} className="h-[320px] w-full">
+            <ComposedChart data={chartData} barGap={4} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v} />
+              <Tooltip content={<ComboTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+              <ReferenceLine y={avgRevenue} stroke="hsl(142, 72%, 40%)" strokeDasharray="6 3" strokeOpacity={0.4} label={{ value: `Avg Rev ${formatOMR(avgRevenue)}`, fontSize: 9, fill: "hsl(142, 72%, 40%)", position: "insideTopRight" }} />
+              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} />
+              <Bar dataKey="revenue" name="Revenue" fill="hsl(142, 72%, 40%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="expenses" name="Expenses" fill="hsl(0, 72%, 51%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Line type="monotone" dataKey="profit" name="Profit" stroke="hsl(230, 60%, 50%)" strokeWidth={2.5} dot={{ r: 3, fill: "hsl(230, 60%, 50%)" }} activeDot={{ r: 5 }} />
+            </ComposedChart>
           </ChartContainer>
         </CardContent>
       </Card>
