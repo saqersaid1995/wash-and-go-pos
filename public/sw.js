@@ -1,4 +1,4 @@
-const CACHE_NAME = "lavinderia-v6";
+const CACHE_NAME = "lavinderia-v7";
 const OFFLINE_URL = "/";
 
 const PRE_CACHE = [
