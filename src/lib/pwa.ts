@@ -1,13 +1,30 @@
 // PWA registration and install prompt utilities
 
-let deferredPrompt: any = null;
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
 let swRegistration: ServiceWorkerRegistration | null = null;
 let isRefreshing = false;
+
+function isPreviewHost(): boolean {
+  return window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
+}
+
+function isInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
 
 export function isPWAInstalled(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as any).standalone === true
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
 
@@ -17,10 +34,16 @@ export function getDeferredPrompt() {
 
 export async function promptInstall(): Promise<boolean> {
   if (!deferredPrompt) return false;
-  deferredPrompt.prompt();
+  await deferredPrompt.prompt();
   const { outcome } = await deferredPrompt.userChoice;
   deferredPrompt = null;
   return outcome === "accepted";
+}
+
+async function unregisterPreviewServiceWorkers() {
+  if (!("serviceWorker" in navigator)) return;
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((registration) => registration.unregister()));
 }
 
 function attachServiceWorkerUpdateHandling(registration: ServiceWorkerRegistration) {
@@ -52,8 +75,16 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     return null;
   }
 
+  if (isPreviewHost() || isInIframe()) {
+    await unregisterPreviewServiceWorkers();
+    return null;
+  }
+
   try {
-    swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    swRegistration = await navigator.serviceWorker.register("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
     attachServiceWorkerUpdateHandling(swRegistration);
     swRegistration.update().catch(() => undefined);
     console.log("SW registered:", swRegistration.scope);
@@ -78,7 +109,7 @@ export async function cacheAppShell(): Promise<void> {
 export function initPWA() {
   window.addEventListener("beforeinstallprompt", (e: Event) => {
     e.preventDefault();
-    deferredPrompt = e;
+    deferredPrompt = e as BeforeInstallPromptEvent;
     window.dispatchEvent(new CustomEvent("pwa-install-available"));
   });
 
@@ -87,5 +118,5 @@ export function initPWA() {
     console.log("PWA installed");
   });
 
-  registerServiceWorker();
+  void registerServiceWorker();
 }

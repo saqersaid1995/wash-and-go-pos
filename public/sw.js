@@ -1,4 +1,4 @@
-const CACHE_NAME = "lavinderia-v7";
+const CACHE_NAME = "lavinderia-v8";
 const OFFLINE_URL = "/";
 
 const PRE_CACHE = [
@@ -22,17 +22,13 @@ const PRE_CACHE = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRE_CACHE))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRE_CACHE)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
@@ -46,21 +42,14 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          return response;
-        })
-        .catch(async () => {
-          const cachedRequest = await caches.match(event.request);
-          const routeFallback = url.pathname.startsWith("/scan-lite")
-            ? "/scan-lite"
-            : url.pathname.startsWith("/support-lite")
-              ? "/support-lite"
-              : OFFLINE_URL;
-          return cachedRequest || caches.match(routeFallback) || caches.match(OFFLINE_URL);
-        })
+      fetch(new Request(event.request, { cache: "no-store" })).catch(async () => {
+        const routeFallback = url.pathname.startsWith("/scan-lite")
+          ? "/scan-lite"
+          : url.pathname.startsWith("/support-lite")
+            ? "/support-lite"
+            : OFFLINE_URL;
+        return (await caches.match(routeFallback)) || caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
