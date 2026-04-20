@@ -109,6 +109,7 @@ export function RevenueExpensesCharts({ orders, expenses }: Props) {
 
   const chartData = useMemo(() => {
     if (view === "weekly") return aggregateWeekly(dailyData);
+    if (view === "monthly") return aggregateMonthly(dailyData);
     return dailyData.map((d) => ({ ...d, date: d.date.slice(5) }));
   }, [dailyData, view]);
 
