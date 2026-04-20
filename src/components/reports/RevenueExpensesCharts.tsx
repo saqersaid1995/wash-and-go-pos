@@ -174,16 +174,17 @@ export function RevenueExpensesCharts({ orders, expenses }: Props) {
             expenses: { label: "Expenses", color: "hsl(0, 72%, 51%)" },
             profit: { label: "Profit", color: "hsl(230, 60%, 50%)" },
           }} className="h-[320px] w-full">
-            <ComposedChart data={chartData} barGap={4} barCategoryGap="20%">
+            <ComposedChart data={chartData.map((d) => ({ ...d, expenses: -d.expenses }))} barGap={4} barCategoryGap="20%" stackOffset="sign">
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v} />
+              <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v) => { const a = Math.abs(v); return a >= 1000 ? `${(a / 1000).toFixed(1)}k` : `${a}`; }} />
               <Tooltip content={<ComboTooltip />} />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               <ReferenceLine y={avgRevenue} stroke="hsl(142, 72%, 40%)" strokeDasharray="6 3" strokeOpacity={0.4} label={{ value: `Avg Rev ${formatOMR(avgRevenue)}`, fontSize: 9, fill: "hsl(142, 72%, 40%)", position: "insideTopRight" }} />
-              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} />
+              <ReferenceLine y={-avgExpenses} stroke="hsl(0, 72%, 51%)" strokeDasharray="6 3" strokeOpacity={0.4} label={{ value: `Avg Exp ${formatOMR(avgExpenses)}`, fontSize: 9, fill: "hsl(0, 72%, 51%)", position: "insideBottomRight" }} />
+              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.4} />
               <Bar dataKey="revenue" name="Revenue" fill="hsl(142, 72%, 40%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-              <Bar dataKey="expenses" name="Expenses" fill="hsl(0, 72%, 51%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="expenses" name="Expenses" fill="hsl(0, 72%, 51%)" radius={[0, 0, 4, 4]} maxBarSize={40} />
               <Line type="monotone" dataKey="profit" name="Profit" stroke="hsl(230, 60%, 50%)" strokeWidth={2.5} dot={{ r: 3, fill: "hsl(230, 60%, 50%)" }} activeDot={{ r: 5 }} />
             </ComposedChart>
           </ChartContainer>
