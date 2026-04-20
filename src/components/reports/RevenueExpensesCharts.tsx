@@ -124,15 +124,15 @@ export function RevenueExpensesCharts({ orders, expenses }: Props) {
       {/* KPI Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1"><DollarSign className="h-3.5 w-3.5 text-[hsl(142,72%,40%)]" /><span className="text-xs text-muted-foreground">Avg {view === "daily" ? "Daily" : "Weekly"} Revenue</span></div>
+          <div className="flex items-center gap-2 mb-1"><DollarSign className="h-3.5 w-3.5 text-[hsl(142,72%,40%)]" /><span className="text-xs text-muted-foreground">Avg {viewLabel} Revenue</span></div>
           <p className="text-lg font-bold">{formatOMR(avgRevenue)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1"><Receipt className="h-3.5 w-3.5 text-destructive" /><span className="text-xs text-muted-foreground">Avg {view === "daily" ? "Daily" : "Weekly"} Expenses</span></div>
+          <div className="flex items-center gap-2 mb-1"><Receipt className="h-3.5 w-3.5 text-destructive" /><span className="text-xs text-muted-foreground">Avg {viewLabel} Expenses</span></div>
           <p className="text-lg font-bold">{formatOMR(avgExpenses)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">{avgProfit >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-[hsl(230,60%,50%)]" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}<span className="text-xs text-muted-foreground">Avg {view === "daily" ? "Daily" : "Weekly"} Profit</span></div>
+          <div className="flex items-center gap-2 mb-1">{avgProfit >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-[hsl(230,60%,50%)]" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}<span className="text-xs text-muted-foreground">Avg {viewLabel} Profit</span></div>
           <p className="text-lg font-bold">{formatOMR(avgProfit)}</p>
         </CardContent></Card>
         {!includeFixed && fixedTotal > 0 && (
