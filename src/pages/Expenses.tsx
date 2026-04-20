@@ -109,7 +109,7 @@ const Expenses = () => {
 
         {/* Recurring Templates Preview */}
         {recurringTemplates.length > 0 && (
-          <RecurringPreview templates={recurringTemplates} />
+          <RecurringPreview templates={recurringTemplates} onChanged={loadExpenses} />
         )}
 
         {/* Expense List */}
