@@ -37,6 +37,24 @@ function aggregateWeekly(data: { date: string; revenue: number; expenses: number
   return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: `W ${date.slice(5)}`, ...v }));
 }
 
+function aggregateMonthly(data: { date: string; revenue: number; expenses: number; profit: number; orderCount: number }[]) {
+  const months: Record<string, { revenue: number; expenses: number; profit: number; orderCount: number }> = {};
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  data.forEach((d) => {
+    const dt = new Date(d.date);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    if (!months[key]) months[key] = { revenue: 0, expenses: 0, profit: 0, orderCount: 0 };
+    months[key].revenue += d.revenue;
+    months[key].expenses += d.expenses;
+    months[key].profit += d.profit;
+    months[key].orderCount += d.orderCount;
+  });
+  return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => {
+    const [y, m] = key.split("-");
+    return { date: `${monthNames[parseInt(m) - 1]} ${y.slice(2)}`, ...v };
+  });
+}
+
 function ComboTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   const rev = payload.find((p: any) => p.dataKey === "revenue")?.value ?? 0;
