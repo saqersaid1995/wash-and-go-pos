@@ -74,8 +74,9 @@ function ComboTooltip({ active, payload, label }: any) {
 }
 
 export function RevenueExpensesCharts({ orders, expenses }: Props) {
-  const [view, setView] = useState<"daily" | "weekly">("daily");
+  const [view, setView] = useState<"daily" | "weekly" | "monthly">("daily");
   const [includeFixed, setIncludeFixed] = useState(false);
+  const viewLabel = view === "daily" ? "Daily" : view === "weekly" ? "Weekly" : "Monthly";
 
   const { dailyData, fixedTotal, fixedByCategory } = useMemo(() => {
     const fixedExps = expenses.filter((e) => FIXED_CATEGORIES.includes(e.category));
