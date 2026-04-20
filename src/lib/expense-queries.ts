@@ -98,6 +98,35 @@ export async function createExpense(params: {
   return !error;
 }
 
+export async function updateExpense(id: string, updates: Partial<{
+  expense_date: string;
+  category: string;
+  description: string;
+  amount: number;
+  is_recurring: boolean;
+  recurring_period: string | null;
+  billing_day: number | null;
+  next_run_date: string | null;
+  expense_status: string;
+  payment_source: string;
+  cash_amount: number;
+  bank_amount: number;
+}>) {
+  const patch: any = { ...updates };
+  // Recompute next_run_date when billing_day changes for recurring templates
+  if (updates.billing_day) {
+    const today = new Date();
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const maxDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+    const day = Math.min(updates.billing_day, maxDay);
+    nextMonth.setDate(day);
+    patch.next_run_date = nextMonth.toISOString().split("T")[0];
+  }
+  const { error } = await supabase.from("expenses").update(patch).eq("id", id);
+  if (error) console.error("updateExpense error:", error);
+  return !error;
+}
+
 export async function updateExpenseStatus(id: string, status: string) {
   const { error } = await supabase
     .from("expenses")
