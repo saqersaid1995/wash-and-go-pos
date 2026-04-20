@@ -58,14 +58,15 @@ function aggregateMonthly(data: { date: string; revenue: number; expenses: numbe
 function ComboTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   const rev = payload.find((p: any) => p.dataKey === "revenue")?.value ?? 0;
-  const exp = payload.find((p: any) => p.dataKey === "expenses")?.value ?? 0;
+  const expRaw = payload.find((p: any) => p.dataKey === "expenses")?.value ?? 0;
+  const exp = Math.abs(expRaw);
   const profit = payload.find((p: any) => p.dataKey === "profit")?.value ?? 0;
   const orders = payload[0]?.payload?.orderCount ?? 0;
   return (
     <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-xs space-y-1.5 min-w-[160px]">
       <p className="font-semibold text-foreground text-sm">{label}</p>
       <div className="flex justify-between"><span className="text-muted-foreground">Revenue</span><span className="font-medium text-[hsl(142,72%,40%)]">{formatOMR(rev)}</span></div>
-      <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span className="font-medium text-destructive">{formatOMR(exp)}</span></div>
+      <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span className="font-medium text-destructive">-{formatOMR(exp)}</span></div>
       <div className="flex justify-between"><span className="text-muted-foreground">Profit</span><span className={`font-medium ${profit >= 0 ? "text-[hsl(230,60%,50%)]" : "text-destructive"}`}>{formatOMR(profit)}</span></div>
       <div className="flex justify-between border-t border-border pt-1.5"><span className="text-muted-foreground">Orders</span><span className="font-medium">{orders}</span></div>
     </div>
