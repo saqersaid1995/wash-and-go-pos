@@ -155,6 +155,7 @@ export function RevenueExpensesCharts({ orders, expenses }: Props) {
           <div className="flex gap-1">
             <Button variant={view === "daily" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("daily")}>Daily</Button>
             <Button variant={view === "weekly" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("weekly")}>Weekly</Button>
+            <Button variant={view === "monthly" ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setView("monthly")}>Monthly</Button>
           </div>
         </div>
         <div className="flex items-center gap-2">
