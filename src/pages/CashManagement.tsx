@@ -9,8 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Banknote, Building2, ArrowDownCircle, ArrowUpCircle,
-  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil,
+  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil, CalendarIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +28,7 @@ interface OpeningBalance {
   notes?: string;
 }
 
-type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all";
+type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all" | "custom";
 
 interface PaymentRow {
   id: string;
@@ -54,12 +57,20 @@ function getRangeBounds(preset: RangePreset): [string, string] | null {
 
 export default function CashManagement() {
   const [preset, setPreset] = useState<RangePreset>("this-month");
+  const [customStart, setCustomStart] = useState<Date>();
+  const [customEnd, setCustomEnd] = useState<Date>();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
-  const bounds = useMemo(() => getRangeBounds(preset), [preset]);
+  const bounds = useMemo(() => {
+    if (preset === "custom") {
+      if (customStart && customEnd) return [toDateStr(customStart), toDateStr(customEnd)] as [string, string];
+      return null;
+    }
+    return getRangeBounds(preset);
+  }, [preset, customStart, customEnd]);
 
   const [openingCash, setOpeningCash] = useState<OpeningBalance>({ account_type: "cash", amount: 0, as_of_date: toDateStr(new Date()) });
   const [openingBank, setOpeningBank] = useState<OpeningBalance>({ account_type: "bank", amount: 0, as_of_date: toDateStr(new Date()) });
@@ -153,6 +164,36 @@ export default function CashManagement() {
     return expenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
   }, [expenses, bounds]);
 
+  // Dynamic opening balance for the selected period:
+  // = stored opening + net flows strictly BEFORE bounds[0]
+  const periodOpening = useMemo(() => {
+    if (!bounds) {
+      return { cash: openingCash.amount, bank: openingBank.amount };
+    }
+    const start = bounds[0];
+    let cash = openingCash.amount;
+    let bank = openingBank.amount;
+    payments.forEach((p) => {
+      const d = p.payment_date.slice(0, 10);
+      if (d < start) {
+        if (p.payment_method === "cash") cash += p.amount;
+        else bank += p.amount;
+      }
+    });
+    expenses.forEach((e) => {
+      if (e.expense_status !== "paid") return;
+      if (e.expense_date < start) {
+        if (e.payment_source === "cash") cash -= e.amount;
+        else if (e.payment_source === "bank") bank -= e.amount;
+        else if (e.payment_source === "mixed") {
+          cash -= Number(e.cash_amount || 0);
+          bank -= Number(e.bank_amount || 0);
+        }
+      }
+    });
+    return { cash, bank };
+  }, [bounds, payments, expenses, openingCash.amount, openingBank.amount]);
+
   const summary = useMemo(() => {
     const inflows = periodPayments.reduce((s, p) => s + p.amount, 0);
     const paidExpenses = periodExpenses.filter((e) => e.expense_status === "paid");
@@ -184,13 +225,13 @@ export default function CashManagement() {
       }
     });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-    let runningCash = openingCash.amount, runningBank = openingBank.amount;
+    let runningCash = periodOpening.cash, runningBank = periodOpening.bank;
     return sorted.map(([date, v]) => {
       runningCash += v.cashIn - v.cashOut;
       runningBank += v.bankIn - v.bankOut;
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse(); // newest first for display
-  }, [periodPayments, periodExpenses, openingCash.amount, openingBank.amount]);
+  }, [periodPayments, periodExpenses, periodOpening.cash, periodOpening.bank]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
@@ -229,7 +270,7 @@ export default function CashManagement() {
 
       <div className="max-w-[1800px] mx-auto p-4 sm:p-6 space-y-6">
         {/* Range filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Label className="text-xs text-muted-foreground">Period for movements & summary:</Label>
           <Select value={preset} onValueChange={(v) => setPreset(v as RangePreset)}>
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
@@ -239,8 +280,46 @@ export default function CashManagement() {
               <SelectItem value="last-3-months">Last 3 Months</SelectItem>
               <SelectItem value="this-year">This Year</SelectItem>
               <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
             </SelectContent>
           </Select>
+
+          {preset === "custom" && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[140px] text-xs", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customStart ? format(customStart, "dd/MM/yyyy") : "From date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customStart} onSelect={setCustomStart} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground text-xs">to</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[140px] text-xs", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customEnd ? format(customEnd, "dd/MM/yyyy") : "To date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              {(!customStart || !customEnd) && (
+                <span className="text-xs text-warning">Select both dates</span>
+              )}
+            </div>
+          )}
+
+          {bounds && (
+            <Badge variant="outline" className="text-[10px]">
+              {bounds[0]} → {bounds[1]}
+            </Badge>
+          )}
         </div>
 
         {/* Opening Balances */}
@@ -327,7 +406,24 @@ export default function CashManagement() {
               <TrendingUp className="h-4 w-4" /> Cashflow Summary <span className="text-xs text-muted-foreground font-normal">(selected period)</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Cash</p>
+                <p className="text-lg font-bold">{formatOMR(periodOpening.cash)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Balance before period start</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Bank</p>
+                <p className="text-lg font-bold">{formatOMR(periodOpening.bank)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Balance before period start</p>
+              </div>
+              <div className="rounded-lg border bg-primary/5 border-primary/20 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Total</p>
+                <p className="text-lg font-bold text-primary">{formatOMR(periodOpening.cash + periodOpening.bank)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Dynamic — updates with date range</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <SummaryCard
                 label="Total Inflows (Sales)"
