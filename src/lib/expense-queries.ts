@@ -152,14 +152,16 @@ export async function createExpense(params: {
 }) {
   const insertData: any = { ...params };
 
-  // Calculate next_run_date for recurring expenses
+  // Calculate next_run_date for recurring expenses.
+  // If billing_day already passed (or is today) in current month → due today (catch up this cycle).
+  // Otherwise schedule for billing_day of current month.
   if (params.is_recurring && params.billing_day) {
     const today = new Date();
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    const maxDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-    const day = Math.min(params.billing_day, maxDay);
-    nextMonth.setDate(day);
-    insertData.next_run_date = nextMonth.toISOString().split("T")[0];
+    const maxDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dayThisMonth = Math.min(params.billing_day, maxDayThisMonth);
+    const thisMonthBilling = new Date(today.getFullYear(), today.getMonth(), dayThisMonth);
+    insertData.next_run_date = (thisMonthBilling <= today ? today : thisMonthBilling)
+      .toISOString().split("T")[0];
   }
 
   const { error } = await supabase.from("expenses").insert(insertData);
@@ -187,11 +189,11 @@ export async function updateExpense(id: string, updates: Partial<{
   // Recompute next_run_date when billing_day changes for recurring templates
   if (updates.billing_day) {
     const today = new Date();
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    const maxDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-    const day = Math.min(updates.billing_day, maxDay);
-    nextMonth.setDate(day);
-    patch.next_run_date = nextMonth.toISOString().split("T")[0];
+    const maxDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dayThisMonth = Math.min(updates.billing_day, maxDayThisMonth);
+    const thisMonthBilling = new Date(today.getFullYear(), today.getMonth(), dayThisMonth);
+    patch.next_run_date = (thisMonthBilling <= today ? today : thisMonthBilling)
+      .toISOString().split("T")[0];
   }
   const { error } = await supabase.from("expenses").update(patch).eq("id", id);
   if (error) console.error("updateExpense error:", error);

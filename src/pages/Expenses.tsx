@@ -98,13 +98,18 @@ const Expenses = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                Recurring Templates
-                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleGenerate} disabled={generating}>
-                  <RefreshCw className={`h-3 w-3 ${generating ? "animate-spin" : ""}`} />
-                </Button>
-              </p>
+              <p className="text-xs text-muted-foreground">Recurring Templates</p>
               <p className="text-xl font-bold">{recurringTemplates.length}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 h-7 w-full text-xs"
+                onClick={handleGenerate}
+                disabled={generating}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${generating ? "animate-spin" : ""}`} />
+                Generate Now
+              </Button>
             </CardContent>
           </Card>
         </div>
