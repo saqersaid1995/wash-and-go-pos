@@ -11,7 +11,10 @@ import { toast } from "sonner";
 import {
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
+  INCOME_CATEGORIES,
+  autoMapIncomeCategory,
   createExpense,
+  type IncomeCategory,
 } from "@/lib/expense-queries";
 import { formatOMR } from "@/lib/currency";
 
@@ -33,6 +36,16 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
   const [paymentSource, setPaymentSource] = useState<string>("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("other_opex");
+  const [incomeCategoryTouched, setIncomeCategoryTouched] = useState(false);
+
+  // Auto-map income_category when category changes (unless user manually picked one)
+  useEffect(() => {
+    if (!incomeCategoryTouched) {
+      const finalCategory = category === "Custom" ? customCategory.trim() : category;
+      setIncomeCategory(autoMapIncomeCategory(finalCategory));
+    }
+  }, [category, customCategory, incomeCategoryTouched]);
 
   const amt = parseFloat(amount) || 0;
 
