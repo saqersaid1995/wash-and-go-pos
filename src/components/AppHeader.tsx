@@ -61,6 +61,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/reports", label: "Overview", roles: ["admin"] },
       { to: "/cashflow", label: "Cashflow", roles: ["admin"] },
+      { to: "/cash-management", label: "Cash Mgmt", roles: ["admin"] },
       { to: "/expenses", label: "Expenses", roles: ["admin"] },
       { to: "/services", label: "Pricing", roles: ["admin"] },
     ],
