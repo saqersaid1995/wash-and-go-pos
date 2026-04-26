@@ -11,32 +11,33 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 
-type OpexBreakdown = {
-  salaries: number; rent: number; utilities: number;
-  maintenance: number; supplies: number; other_opex: number;
-};
-
 type Structured = {
   revenue: number;
   cogs: number;
   grossProfit: number;
   grossProfitPct: number;
-  opex: number;
-  opexBreakdown: OpexBreakdown;
+  sgaAdmin: number;
+  otherOperatingIncome: number;
   ebitda: number;
   ebitdaPct: number;
   depreciation: number;
-  interest: number;
+  interestExpense: number;
   ebit: number;
+  interestIncome: number;
   otherIncome: number;
+  nonOperatingIncome: number;
+  profitBeforeTax: number;
+  taxProvision: number;
   netProfit: number;
   netProfitPct: number;
   cashProfit: number;
   prev: {
-    revenue: number; cogs: number; grossProfit: number; opex: number;
-    opexBreakdown: OpexBreakdown;
-    ebitda: number; depreciation: number; interest: number; ebit: number;
-    otherIncome: number; netProfit: number; cashProfit: number;
+    revenue: number; cogs: number; grossProfit: number;
+    sgaAdmin: number; otherOperatingIncome: number;
+    ebitda: number; depreciation: number; interestExpense: number; ebit: number;
+    interestIncome: number; otherIncome: number; nonOperatingIncome: number;
+    profitBeforeTax: number; taxProvision: number;
+    netProfit: number; cashProfit: number;
   };
 };
 
@@ -95,7 +96,6 @@ function DrillDownModal({
   );
 }
 
-// ---------- Summary card ----------
 function SummaryCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "profit" | "loss" | "neutral" }) {
   const color = accent === "profit" ? "text-[hsl(142,72%,40%)]" : accent === "loss" ? "text-destructive" : "";
   return (
@@ -109,7 +109,6 @@ function SummaryCard({ label, value, sub, accent }: { label: string; value: stri
   );
 }
 
-// ---------- Line row ----------
 function Line({
   label, current, previous, indent, bold, negative, onClick,
 }: {
@@ -133,11 +132,10 @@ function Line({
   );
 }
 
-// ---------- Subtotal row (highlighted) ----------
 function Subtotal({ label, current, previous, pctValue, accent }: { label: string; current: number; previous: number; pctValue?: number; accent?: "profit" | "loss" }) {
   const color = accent === "profit" ? "text-[hsl(142,72%,40%)]" : accent === "loss" ? "text-destructive" : "";
   return (
-    <div className={`grid grid-cols-[1fr_auto_auto] items-center gap-6 py-3 px-2 my-1 rounded-md bg-muted/50 border-y`}>
+    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-6 py-3 px-2 my-1 rounded-md bg-muted/50 border-y">
       <span className="text-sm font-bold flex items-center gap-2">
         {label}
         {pctValue !== undefined && (
@@ -152,7 +150,6 @@ function Subtotal({ label, current, previous, pctValue, accent }: { label: strin
   );
 }
 
-// ---------- Section wrapper ----------
 function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -168,7 +165,6 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   );
 }
 
-// ---------- PDF / Print ----------
 async function exportPDF(elementId: string, filename: string) {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -202,23 +198,25 @@ function handlePrint(elementId: string) {
   setTimeout(() => win.print(), 300);
 }
 
-// ---------- Main component ----------
 export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: IncomeStatementTabProps) {
-  const emptyOpex: OpexBreakdown = { salaries: 0, rent: 0, utilities: 0, maintenance: 0, supplies: 0, other_opex: 0 };
   const s: Structured = data.structured ?? {
     revenue: 0, cogs: 0, grossProfit: 0, grossProfitPct: 0,
-    opex: 0, opexBreakdown: { ...emptyOpex },
-    ebitda: 0, ebitdaPct: 0, depreciation: 0, interest: 0, ebit: 0,
-    otherIncome: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
-    prev: { revenue: 0, cogs: 0, grossProfit: 0, opex: 0,
-      opexBreakdown: { ...emptyOpex },
-      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, otherIncome: 0, netProfit: 0, cashProfit: 0 },
+    sgaAdmin: 0, otherOperatingIncome: 0,
+    ebitda: 0, ebitdaPct: 0, depreciation: 0, interestExpense: 0, ebit: 0,
+    interestIncome: 0, otherIncome: 0, nonOperatingIncome: 0,
+    profitBeforeTax: 0, taxProvision: 0,
+    netProfit: 0, netProfitPct: 0, cashProfit: 0,
+    prev: {
+      revenue: 0, cogs: 0, grossProfit: 0, sgaAdmin: 0, otherOperatingIncome: 0,
+      ebitda: 0, depreciation: 0, interestExpense: 0, ebit: 0,
+      interestIncome: 0, otherIncome: 0, nonOperatingIncome: 0,
+      profitBeforeTax: 0, taxProvision: 0, netProfit: 0, cashProfit: 0,
+    },
   };
 
-  // Drill-down state — filters by pl_line
   const [drill, setDrill] = useState<{ open: boolean; title: string; line: PLLine | null }>({ open: false, title: "", line: null });
   const filtered = useMemo(
-    () => drill.line ? expenses.filter((e) => ((e as any).pl_line || "other_opex") === drill.line) : [],
+    () => drill.line ? expenses.filter((e) => ((e as any).pl_line || "sga_admin") === drill.line) : [],
     [drill.line, expenses]
   );
   const openDrill = (line: PLLine) => {
@@ -230,7 +228,6 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
 
   return (
     <div className="space-y-4">
-      {/* Action header */}
       <div className="flex items-center justify-between print:hidden">
         <div>
           <h2 className="text-lg font-bold">Income Statement</h2>
@@ -246,7 +243,6 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
         </div>
       </div>
 
-      {/* Top summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <SummaryCard label="Revenue" value={formatOMR(s.revenue)} sub={`Prev: ${formatOMR(s.prev.revenue)}`} />
         <SummaryCard label="Gross Profit %" value={pct(s.grossProfitPct)} sub={`GP: ${formatOMR(s.grossProfit)}`} accent={s.grossProfit >= 0 ? "profit" : "loss"} />
@@ -254,7 +250,6 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
         <SummaryCard label={isLoss ? "Net Loss" : "Net Profit"} value={fmt(s.netProfit)} sub={`Margin: ${pct(s.netProfitPct)}`} accent={isLoss ? "loss" : "profit"} />
       </div>
 
-      {/* Income Statement body */}
       <Card id="income-statement">
         <CardContent className="p-4 sm:p-6">
           <div className="text-center mb-4">
@@ -262,7 +257,6 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
             <p className="text-xs text-muted-foreground">Income Statement — {dateRangeLabel}</p>
           </div>
 
-          {/* Column header */}
           <div className="grid grid-cols-[1fr_auto_auto] gap-6 px-2 pb-2 mb-2 border-b text-xs uppercase tracking-wider text-muted-foreground">
             <span>Line Item</span>
             <span className="w-28 text-right">Previous</span>
@@ -270,54 +264,101 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
           </div>
 
           <div className="space-y-2">
-            {/* REVENUE */}
+            {/* GROSS SALES / REVENUE */}
             <Section title="Revenue">
-              <Line label="Laundry Sales (Net)" current={s.revenue} previous={s.prev.revenue} indent />
-              <Subtotal label="Total Revenue" current={s.revenue} previous={s.prev.revenue} />
+              <Line
+                label="Gross Sales / Revenue"
+                current={s.revenue} previous={s.prev.revenue} indent
+                onClick={() => openDrill("revenue")}
+              />
             </Section>
 
-            {/* COST OF SALES */}
+            {/* COGS → Gross Profit */}
             <Section title="Cost of Sales">
               <Line
-                label="COGS — click to view transactions"
+                label="(Cost of Goods Sold)"
                 current={s.cogs} previous={s.prev.cogs} indent negative
                 onClick={() => openDrill("cogs")}
               />
-              <Subtotal label="Gross Profit" current={s.grossProfit} previous={s.prev.grossProfit} pctValue={s.grossProfitPct} accent={s.grossProfit >= 0 ? "profit" : "loss"} />
+              <Subtotal
+                label="Gross Profit"
+                current={s.grossProfit} previous={s.prev.grossProfit}
+                pctValue={s.grossProfitPct}
+                accent={s.grossProfit >= 0 ? "profit" : "loss"}
+              />
             </Section>
 
-            {/* OPERATING EXPENSES */}
-            <Section title="Operating Expenses">
-              <Line label="Salaries" current={s.opexBreakdown.salaries} previous={s.prev.opexBreakdown.salaries} indent negative onClick={() => openDrill("salaries")} />
-              <Line label="Rent" current={s.opexBreakdown.rent} previous={s.prev.opexBreakdown.rent} indent negative onClick={() => openDrill("rent")} />
-              <Line label="Utilities" current={s.opexBreakdown.utilities} previous={s.prev.opexBreakdown.utilities} indent negative onClick={() => openDrill("utilities")} />
-              <Line label="Maintenance" current={s.opexBreakdown.maintenance} previous={s.prev.opexBreakdown.maintenance} indent negative onClick={() => openDrill("maintenance")} />
-              <Line label="Supplies" current={s.opexBreakdown.supplies} previous={s.prev.opexBreakdown.supplies} indent negative onClick={() => openDrill("supplies")} />
-              <Line label="Other Operating Expenses" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
-              <Line label="Total Operating Expenses" current={s.opex} previous={s.prev.opex} bold negative />
-              <Subtotal label="EBITDA" current={s.ebitda} previous={s.prev.ebitda} pctValue={s.ebitdaPct} accent={s.ebitda >= 0 ? "profit" : "loss"} />
+            {/* OPERATING EXPENSES → EBITDA */}
+            <Section title="Operating">
+              <Line
+                label="(S, G & A) incl depcn - admn"
+                current={s.sgaAdmin} previous={s.prev.sgaAdmin} indent negative
+                onClick={() => openDrill("sga_admin")}
+              />
+              <Line
+                label="Other Operating Income"
+                current={s.otherOperatingIncome} previous={s.prev.otherOperatingIncome} indent
+                onClick={() => openDrill("other_operating_income")}
+              />
+              <Subtotal
+                label="EBITDA"
+                current={s.ebitda} previous={s.prev.ebitda}
+                pctValue={s.ebitdaPct}
+                accent={s.ebitda >= 0 ? "profit" : "loss"}
+              />
             </Section>
 
-            {/* DEPRECIATION & INTEREST */}
+            {/* DEPRECIATION & INTEREST → EBIT */}
             <Section title="Depreciation & Interest">
-              <Line label="Depreciation" current={s.depreciation} previous={s.prev.depreciation} indent negative onClick={() => openDrill("depreciation")} />
-              <Line label="Interest Expense" current={s.interest} previous={s.prev.interest} indent negative onClick={() => openDrill("interest")} />
-              <Subtotal label="EBIT" current={s.ebit} previous={s.prev.ebit} accent={s.ebit >= 0 ? "profit" : "loss"} />
+              <Line
+                label="(Depreciation / Amortization) - total"
+                current={s.depreciation} previous={s.prev.depreciation} indent negative
+                onClick={() => openDrill("depreciation")}
+              />
+              <Line
+                label="(Interest Expenses)"
+                current={s.interestExpense} previous={s.prev.interestExpense} indent negative
+                onClick={() => openDrill("interest_expense")}
+              />
+              <Subtotal
+                label="Operating Profit (OP) [EBIT]"
+                current={s.ebit} previous={s.prev.ebit}
+                accent={s.ebit >= 0 ? "profit" : "loss"}
+              />
             </Section>
 
-            {/* OTHER INCOME */}
-            <Section title="Other Income" defaultOpen={false}>
+            {/* NON-OPERATING INCOME → PBT */}
+            <Section title="Non-operating Income" defaultOpen={false}>
+              <Line
+                label="Interest Income"
+                current={s.interestIncome} previous={s.prev.interestIncome} indent
+                onClick={() => openDrill("interest_income")}
+              />
               <Line
                 label="Other Income"
                 current={s.otherIncome} previous={s.prev.otherIncome} indent
                 onClick={() => openDrill("other_income")}
+              />
+              <Subtotal
+                label="Profit / (Loss) before Tax"
+                current={s.profitBeforeTax} previous={s.prev.profitBeforeTax}
+                accent={s.profitBeforeTax >= 0 ? "profit" : "loss"}
+              />
+            </Section>
+
+            {/* TAX → NET PROFIT */}
+            <Section title="Tax">
+              <Line
+                label="(Provision for Tax)"
+                current={s.taxProvision} previous={s.prev.taxProvision} indent negative
+                onClick={() => openDrill("tax_provision")}
               />
             </Section>
 
             {/* RESULT */}
             <div className="pt-4 border-t-2 mt-4">
               <Subtotal
-                label={isLoss ? "Net Loss" : "Net Profit"}
+                label={isLoss ? "Net Loss" : "Net Profit / (Loss)"}
                 current={s.netProfit} previous={s.prev.netProfit}
                 pctValue={s.netProfitPct}
                 accent={isLoss ? "loss" : "profit"}
@@ -325,7 +366,7 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
               <div className="grid grid-cols-[1fr_auto_auto] items-center gap-6 py-2 px-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2">
                   {isLoss ? <TrendingDown className="h-4 w-4 text-destructive" /> : <TrendingUp className="h-4 w-4 text-[hsl(142,72%,40%)]" />}
-                  Cash Profit (Net Profit + Depreciation)
+                  Cash Profit / (Loss) — Net Profit + Depreciation
                 </span>
                 <span className="text-xs w-28 text-right tabular-nums">{fmt(s.prev.cashProfit)}</span>
                 <span className={`font-semibold w-32 text-right tabular-nums ${profitClass(s.cashProfit)}`}>{fmt(s.cashProfit)}</span>
