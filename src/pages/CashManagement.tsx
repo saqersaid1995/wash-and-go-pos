@@ -9,8 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Banknote, Building2, ArrowDownCircle, ArrowUpCircle,
-  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil,
+  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil, CalendarIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
