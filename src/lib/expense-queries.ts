@@ -18,22 +18,17 @@ export interface Expense {
   cash_amount: number;
   bank_amount: number;
   income_category: IncomeCategory;
+  pl_line: PLLine;
   created_at: string;
   updated_at: string;
 }
 
 export const PAYMENT_SOURCES = ["cash", "bank", "mixed"] as const;
 
+// Legacy income category type (kept for backward compatibility with existing UI)
 export type IncomeCategory =
-  | "cogs"
-  | "salaries"
-  | "rent"
-  | "utilities"
-  | "marketing"
-  | "other_opex"
-  | "depreciation"
-  | "interest"
-  | "non_operating";
+  | "cogs" | "salaries" | "rent" | "utilities" | "marketing"
+  | "other_opex" | "depreciation" | "interest" | "non_operating";
 
 export const INCOME_CATEGORIES: { value: IncomeCategory; label: string; group: "cogs" | "opex" | "below_ebitda" | "non_op" }[] = [
   { value: "cogs", label: "COGS (Cost of Sales)", group: "cogs" },
@@ -55,6 +50,38 @@ export function autoMapIncomeCategory(category: string): IncomeCategory {
     case "Marketing": return "marketing";
     case "Loan": return "interest";
     case "Supplies": return "cogs";
+    default: return "other_opex";
+  }
+}
+
+// === Income Statement P&L Line (manual mapping, required) ===
+export type PLLine =
+  | "cogs" | "salaries" | "rent" | "utilities" | "maintenance" | "supplies"
+  | "other_opex" | "depreciation" | "interest" | "other_income";
+
+export const PL_LINES: { value: PLLine; label: string; group: "cogs" | "opex" | "below_ebitda" | "income" }[] = [
+  { value: "cogs", label: "Cost of Goods Sold (COGS)", group: "cogs" },
+  { value: "salaries", label: "Salaries", group: "opex" },
+  { value: "rent", label: "Rent", group: "opex" },
+  { value: "utilities", label: "Utilities", group: "opex" },
+  { value: "maintenance", label: "Maintenance", group: "opex" },
+  { value: "supplies", label: "Supplies", group: "opex" },
+  { value: "other_opex", label: "Other Operating Expenses", group: "opex" },
+  { value: "depreciation", label: "Depreciation", group: "below_ebitda" },
+  { value: "interest", label: "Interest Expense", group: "below_ebitda" },
+  { value: "other_income", label: "Other Income", group: "income" },
+];
+
+export function suggestPLLine(category: string): PLLine {
+  switch (category) {
+    case "Salaries": return "salaries";
+    case "Rent": return "rent";
+    case "Utilities": return "utilities";
+    case "Maintenance": return "maintenance";
+    case "Supplies": return "supplies";
+    case "Loan": return "interest";
+    case "Marketing": return "other_opex";
+    case "Fuel": return "other_opex";
     default: return "other_opex";
   }
 }
