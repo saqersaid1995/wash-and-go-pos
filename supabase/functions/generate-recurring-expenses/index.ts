@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Generate the expense record
+      // Generate the expense record (copy all accounting fields from template)
       const { error: insertErr } = await supabase.from("expenses").insert({
         expense_date: todayStr,
         category: rec.category,
@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
         is_auto_generated: true,
         parent_recurring_id: rec.id,
         expense_status: "accrued",
+        // IMPORTANT: copy P&L mapping so it appears correctly in Income Statement
+        pl_line: rec.pl_line || "sga_admin",
+        income_category: rec.income_category || "other_opex",
+        // Payment source defaults to 'cash' until user marks it paid & picks source
+        payment_source: "cash",
+        cash_amount: 0,
+        bank_amount: 0,
       });
 
       if (insertErr) {
