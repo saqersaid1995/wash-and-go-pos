@@ -243,6 +243,49 @@ export default function CashManagement() {
           </Select>
         </div>
 
+        {/* Opening Balances */}
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" /> Opening Balances
+              <span className="text-xs text-muted-foreground font-normal">(starting point — not counted as income/expense)</span>
+            </CardTitle>
+            {!editingOpening ? (
+              <Button size="sm" variant="outline" onClick={() => setEditingOpening(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => { setEditingOpening(false); loadData(); }}>Cancel</Button>
+                <Button size="sm" onClick={saveOpeningBalances} disabled={savingOpening}>
+                  <Save className="h-3.5 w-3.5 mr-1" /> {savingOpening ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <OpeningBalanceField
+                label="Opening Cash Balance"
+                icon={<Banknote className="h-4 w-4" />}
+                value={openingCash}
+                editing={editingOpening}
+                onChange={setOpeningCash}
+              />
+              <OpeningBalanceField
+                label="Opening Bank Balance"
+                icon={<Building2 className="h-4 w-4" />}
+                value={openingBank}
+                editing={editingOpening}
+                onChange={setOpeningBank}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Formula: <span className="font-mono">Opening Balance + Inflows − Outflows = Current Balance</span>
+            </p>
+          </CardContent>
+        </Card>
+
         {/* 1. Cash Position (lifetime) */}
         <Card>
           <CardHeader className="pb-3">
