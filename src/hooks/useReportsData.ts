@@ -180,89 +180,102 @@ export function useReportsData() {
     const totalDiscounts = orders.reduce((s, o) => s + o.discount, 0);
     const netRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
 
+    // Sum expenses by the new pl_line buckets (exact Income Statement line items)
     const sumByPLLine = (exps: Expense[]) => {
       const m: Record<string, number> = {
-        cogs: 0, salaries: 0, rent: 0, utilities: 0, maintenance: 0, supplies: 0,
-        other_opex: 0, depreciation: 0, interest: 0, other_income: 0,
+        revenue: 0,
+        cogs: 0,
+        sga_admin: 0,
+        other_operating_income: 0,
+        depreciation: 0,
+        interest_expense: 0,
+        interest_income: 0,
+        other_income: 0,
+        tax_provision: 0,
       };
       exps.forEach((e) => {
-        const k = (e as any).pl_line || "other_opex";
+        const k = (e as any).pl_line || "sga_admin";
         m[k] = (m[k] || 0) + e.amount;
       });
       return m;
     };
 
     const cur = sumByPLLine(expenses);
-    const opex = cur.salaries + cur.rent + cur.utilities + cur.maintenance + cur.supplies + cur.other_opex;
-    const grossProfit = netRevenue - cur.cogs;
-    const grossProfitPct = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
-    const ebitda = grossProfit - opex;
-    const ebitdaPct = netRevenue > 0 ? (ebitda / netRevenue) * 100 : 0;
-    const ebit = ebitda - cur.depreciation - cur.interest;
-    // Other Income increases profit
-    const otherIncome = cur.other_income;
-    const netProfit = ebit + otherIncome;
-    const netProfitPct = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
+    const prev = sumByPLLine(prevExpenses);
+
+    // Revenue = order revenue + any expenses tagged 'revenue' (manual additions)
+    const revenue = netRevenue + cur.revenue;
+    const prevRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0) + prev.revenue;
+
+    // Calculated rows (exact Excel format)
+    const grossProfit = revenue - cur.cogs;
+    const grossProfitPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+    const ebitda = grossProfit - cur.sga_admin + cur.other_operating_income;
+    const ebitdaPct = revenue > 0 ? (ebitda / revenue) * 100 : 0;
+    const ebit = ebitda - cur.depreciation - cur.interest_expense;
+    const nonOperatingIncome = cur.interest_income + cur.other_income;
+    const profitBeforeTax = ebit + nonOperatingIncome;
+    const netProfit = profitBeforeTax - cur.tax_provision;
+    const netProfitPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
     const cashProfit = netProfit + cur.depreciation;
-    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
     // Previous period
-    const prevGrossSales = prevOrders.reduce((s, o) => s + o.subtotal, 0);
-    const prevTotalDiscounts = prevOrders.reduce((s, o) => s + o.discount, 0);
-    const prevNetRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
-    const prev = sumByPLLine(prevExpenses);
-    const prevOpex = prev.salaries + prev.rent + prev.utilities + prev.maintenance + prev.supplies + prev.other_opex;
-    const prevGrossProfit = prevNetRevenue - prev.cogs;
-    const prevEbitda = prevGrossProfit - prevOpex;
-    const prevEbit = prevEbitda - prev.depreciation - prev.interest;
-    const prevNetProfit = prevEbit + prev.other_income;
+    const prevGrossProfit = prevRevenue - prev.cogs;
+    const prevEbitda = prevGrossProfit - prev.sga_admin + prev.other_operating_income;
+    const prevEbit = prevEbitda - prev.depreciation - prev.interest_expense;
+    const prevPbt = prevEbit + prev.interest_income + prev.other_income;
+    const prevNetProfit = prevPbt - prev.tax_provision;
     const prevCashProfit = prevNetProfit + prev.depreciation;
+
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     const prevTotalExp = prevExpenses.reduce((s, e) => s + e.amount, 0);
 
-    // Legacy keys kept for older consumers
+    // Legacy keys
     const catMap: Record<string, number> = {};
     expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
     const prevCatMap: Record<string, number> = {};
     prevExpenses.forEach((e) => { prevCatMap[e.category] = (prevCatMap[e.category] || 0) + e.amount; });
 
     return {
-      // Legacy
       grossSales, totalDiscounts, laundrySales: netRevenue, totalRevenue: netRevenue,
       expensesByCategory: catMap, totalExpenses,
       netProfit, profitMargin: netProfitPct,
-      prevGrossSales, prevTotalDiscounts, prevRevenue: prevNetRevenue,
+      prevGrossSales: prevOrders.reduce((s, o) => s + o.subtotal, 0),
+      prevTotalDiscounts: prevOrders.reduce((s, o) => s + o.discount, 0),
+      prevRevenue,
       prevExpensesByCategory: prevCatMap, prevTotalExpenses: prevTotalExp, prevNetProfit,
-      // New structured statement (driven by pl_line)
       structured: {
-        revenue: netRevenue,
+        revenue,
         cogs: cur.cogs,
         grossProfit, grossProfitPct,
-        opex,
-        opexBreakdown: {
-          salaries: cur.salaries, rent: cur.rent, utilities: cur.utilities,
-          maintenance: cur.maintenance, supplies: cur.supplies, other_opex: cur.other_opex,
-        },
+        sgaAdmin: cur.sga_admin,
+        otherOperatingIncome: cur.other_operating_income,
         ebitda, ebitdaPct,
         depreciation: cur.depreciation,
-        interest: cur.interest,
+        interestExpense: cur.interest_expense,
         ebit,
-        otherIncome,
+        interestIncome: cur.interest_income,
+        otherIncome: cur.other_income,
+        nonOperatingIncome,
+        profitBeforeTax,
+        taxProvision: cur.tax_provision,
         netProfit, netProfitPct,
         cashProfit,
         prev: {
-          revenue: prevNetRevenue,
+          revenue: prevRevenue,
           cogs: prev.cogs,
           grossProfit: prevGrossProfit,
-          opex: prevOpex,
-          opexBreakdown: {
-            salaries: prev.salaries, rent: prev.rent, utilities: prev.utilities,
-            maintenance: prev.maintenance, supplies: prev.supplies, other_opex: prev.other_opex,
-          },
+          sgaAdmin: prev.sga_admin,
+          otherOperatingIncome: prev.other_operating_income,
           ebitda: prevEbitda,
           depreciation: prev.depreciation,
-          interest: prev.interest,
+          interestExpense: prev.interest_expense,
           ebit: prevEbit,
+          interestIncome: prev.interest_income,
           otherIncome: prev.other_income,
+          nonOperatingIncome: prev.interest_income + prev.other_income,
+          profitBeforeTax: prevPbt,
+          taxProvision: prev.tax_provision,
           netProfit: prevNetProfit,
           cashProfit: prevCashProfit,
         },
