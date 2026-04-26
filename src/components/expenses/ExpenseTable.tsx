@@ -81,6 +81,11 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange, onEd
                 </Select>
               </TableCell>
               <TableCell>
+                <span className="text-[11px] text-muted-foreground">
+                  {PL_LABEL[exp.pl_line] || exp.pl_line || "—"}
+                </span>
+              </TableCell>
+              <TableCell>
                 {exp.is_auto_generated ? (
                   <Badge variant="outline" className="text-xs gap-1">
                     <Bot className="h-3 w-3" /> Auto
@@ -90,9 +95,14 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange, onEd
                 )}
               </TableCell>
               <TableCell>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(exp.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(exp)} title="Edit expense">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(exp.id)} title="Delete expense">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
