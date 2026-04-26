@@ -11,12 +11,10 @@ import { toast } from "sonner";
 import {
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
-  INCOME_CATEGORIES,
   PL_LINES,
   autoMapIncomeCategory,
   suggestPLLine,
   createExpense,
-  type IncomeCategory,
   type PLLine,
 } from "@/lib/expense-queries";
 import { formatOMR } from "@/lib/currency";
