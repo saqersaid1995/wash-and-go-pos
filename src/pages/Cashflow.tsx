@@ -10,11 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon, Download, Printer, Search, DollarSign, CreditCard, Building2, TrendingUp, Hash, BarChart3, ArrowUpRight } from "lucide-react";
+import { CalendarIcon, Download, Printer, Search, DollarSign, CreditCard, Building2, TrendingUp, Hash, BarChart3, ArrowUpRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatOMR } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 type DatePreset = "today" | "yesterday" | "this-week" | "this-month" | "custom";
 
