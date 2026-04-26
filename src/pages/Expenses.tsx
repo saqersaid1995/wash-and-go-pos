@@ -23,6 +23,7 @@ import {
 } from "@/lib/expense-queries";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { ExpenseTable } from "@/components/expenses/ExpenseTable";
+import { EditExpenseDialog } from "@/components/expenses/EditExpenseDialog";
 import { RecurringPreview } from "@/components/expenses/RecurringPreview";
 
 const Expenses = () => {
