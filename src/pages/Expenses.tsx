@@ -30,6 +30,7 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const loadExpenses = useCallback(async () => {
     setLoading(true);
