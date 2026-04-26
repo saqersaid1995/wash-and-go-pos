@@ -170,18 +170,28 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Map to Income Statement</Label>
+          <div className="space-y-1.5">
+            <Label>
+              Map to Income Statement <span className="text-destructive">*</span>
+            </Label>
             <Select
-              value={incomeCategory}
-              onValueChange={(v) => { setIncomeCategory(v as IncomeCategory); setIncomeCategoryTouched(true); }}
+              value={plLine}
+              onValueChange={(v) => { setPlLine(v as PLLine); setPlLineTouched(true); }}
             >
-              <SelectTrigger className="max-w-md"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="max-w-md">
+                <SelectValue placeholder="Select an Income Statement line…" />
+              </SelectTrigger>
               <SelectContent>
-                {INCOME_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                {PL_LINES.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Required. Determines where this expense appears on the Income Statement.
+              {!plLineTouched && plLine && <> Auto-suggested from category — you can change it.</>}
+            </p>
+          </div>
             <p className="text-xs text-muted-foreground">Determines where this expense appears on the Income Statement.</p>
           </div>
 
