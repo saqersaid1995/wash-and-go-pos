@@ -55,34 +55,38 @@ export function autoMapIncomeCategory(category: string): IncomeCategory {
 }
 
 // === Income Statement P&L Line (manual mapping, required) ===
+// These are the EXACT line items from the company's Income Statement format.
+// Calculated rows (Gross Profit, EBITDA, EBIT, Net Profit, Cash Profit) are NOT included
+// because they are derived automatically.
 export type PLLine =
-  | "cogs" | "salaries" | "rent" | "utilities" | "maintenance" | "supplies"
-  | "other_opex" | "depreciation" | "interest" | "other_income";
+  | "revenue"
+  | "cogs"
+  | "sga_admin"
+  | "other_operating_income"
+  | "depreciation"
+  | "interest_expense"
+  | "interest_income"
+  | "other_income"
+  | "tax_provision";
 
-export const PL_LINES: { value: PLLine; label: string; group: "cogs" | "opex" | "below_ebitda" | "income" }[] = [
-  { value: "cogs", label: "Cost of Goods Sold (COGS)", group: "cogs" },
-  { value: "salaries", label: "Salaries", group: "opex" },
-  { value: "rent", label: "Rent", group: "opex" },
-  { value: "utilities", label: "Utilities", group: "opex" },
-  { value: "maintenance", label: "Maintenance", group: "opex" },
-  { value: "supplies", label: "Supplies", group: "opex" },
-  { value: "other_opex", label: "Other Operating Expenses", group: "opex" },
-  { value: "depreciation", label: "Depreciation", group: "below_ebitda" },
-  { value: "interest", label: "Interest Expense", group: "below_ebitda" },
-  { value: "other_income", label: "Other Income", group: "income" },
+export const PL_LINES: { value: PLLine; label: string; group: "revenue" | "cogs" | "opex" | "operating_income" | "below_ebitda" | "non_op" | "tax" }[] = [
+  { value: "revenue", label: "Gross Sales / Revenue", group: "revenue" },
+  { value: "cogs", label: "Cost of Goods Sold", group: "cogs" },
+  { value: "sga_admin", label: "S, G & A including depreciation - admin", group: "opex" },
+  { value: "other_operating_income", label: "Other Operating Income", group: "operating_income" },
+  { value: "depreciation", label: "Depreciation / Amortization - total", group: "below_ebitda" },
+  { value: "interest_expense", label: "Interest Expenses", group: "below_ebitda" },
+  { value: "interest_income", label: "Interest Income", group: "non_op" },
+  { value: "other_income", label: "Other Income", group: "non_op" },
+  { value: "tax_provision", label: "Provision for Tax", group: "tax" },
 ];
 
 export function suggestPLLine(category: string): PLLine {
   switch (category) {
-    case "Salaries": return "salaries";
-    case "Rent": return "rent";
-    case "Utilities": return "utilities";
-    case "Maintenance": return "maintenance";
-    case "Supplies": return "supplies";
-    case "Loan": return "interest";
-    case "Marketing": return "other_opex";
-    case "Fuel": return "other_opex";
-    default: return "other_opex";
+    case "Loan": return "interest_expense";
+    case "Supplies": return "cogs";
+    // Salaries / Rent / Utilities / Maintenance / Marketing / Fuel / Other -> SG&A admin
+    default: return "sga_admin";
   }
 }
 
