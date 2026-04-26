@@ -6,10 +6,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer, Download, ChevronDown, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
-import { INCOME_CATEGORIES, type Expense, type IncomeCategory } from "@/lib/expense-queries";
+import { PL_LINES, type Expense, type PLLine } from "@/lib/expense-queries";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
+
+type OpexBreakdown = {
+  salaries: number; rent: number; utilities: number;
+  maintenance: number; supplies: number; other_opex: number;
+};
 
 type Structured = {
   revenue: number;
@@ -17,21 +22,21 @@ type Structured = {
   grossProfit: number;
   grossProfitPct: number;
   opex: number;
-  opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+  opexBreakdown: OpexBreakdown;
   ebitda: number;
   ebitdaPct: number;
   depreciation: number;
   interest: number;
   ebit: number;
-  nonOperating: number;
+  otherIncome: number;
   netProfit: number;
   netProfitPct: number;
   cashProfit: number;
   prev: {
     revenue: number; cogs: number; grossProfit: number; opex: number;
-    opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+    opexBreakdown: OpexBreakdown;
     ebitda: number; depreciation: number; interest: number; ebit: number;
-    nonOperating: number; netProfit: number; cashProfit: number;
+    otherIncome: number; netProfit: number; cashProfit: number;
   };
 };
 
