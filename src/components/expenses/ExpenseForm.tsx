@@ -99,6 +99,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       payment_source: paymentSource,
       cash_amount: finalCash,
       bank_amount: finalBank,
+      income_category: incomeCategory,
     });
     setSaving(false);
 
@@ -111,6 +112,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       setPaymentSource("cash");
       setCashAmount("");
       setBankAmount("");
+      setIncomeCategoryTouched(false);
       await onSaved();
     } else {
       toast.error("Failed to save expense");
