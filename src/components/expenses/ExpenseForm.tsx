@@ -170,7 +170,6 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
           </div>
 
           <div className="space-y-1.5">
-          <div className="space-y-1.5">
             <Label>
               Map to Income Statement <span className="text-destructive">*</span>
             </Label>
@@ -191,8 +190,6 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
               Required. Determines where this expense appears on the Income Statement.
               {!plLineTouched && plLine && <> Auto-suggested from category — you can change it.</>}
             </p>
-          </div>
-            <p className="text-xs text-muted-foreground">Determines where this expense appears on the Income Statement.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
