@@ -39,16 +39,16 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
   const [paymentSource, setPaymentSource] = useState<string>("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
-  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("other_opex");
-  const [incomeCategoryTouched, setIncomeCategoryTouched] = useState(false);
+  const [plLine, setPlLine] = useState<PLLine | "">("");
+  const [plLineTouched, setPlLineTouched] = useState(false);
 
-  // Auto-map income_category when category changes (unless user manually picked one)
+  // Auto-suggest pl_line when category changes (only if user hasn't manually overridden it)
   useEffect(() => {
-    if (!incomeCategoryTouched) {
+    if (!plLineTouched) {
       const finalCategory = category === "Custom" ? customCategory.trim() : category;
-      setIncomeCategory(autoMapIncomeCategory(finalCategory));
+      if (finalCategory) setPlLine(suggestPLLine(finalCategory));
     }
-  }, [category, customCategory, incomeCategoryTouched]);
+  }, [category, customCategory, plLineTouched]);
 
   const amt = parseFloat(amount) || 0;
 
