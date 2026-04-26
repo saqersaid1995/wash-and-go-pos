@@ -2,16 +2,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Loader2, Bot } from "lucide-react";
+import { Trash2, Loader2, Bot, Pencil } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
-import type { Expense } from "@/lib/expense-queries";
+import { type Expense, PL_LINES } from "@/lib/expense-queries";
 
 interface ExpenseTableProps {
   expenses: Expense[];
   loading: boolean;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: string) => void;
+  onEdit: (expense: Expense) => void;
 }
+
+const PL_LABEL: Record<string, string> = Object.fromEntries(PL_LINES.map((l) => [l.value, l.label]));
 
 function sourceBadge(source: string) {
   switch (source) {
