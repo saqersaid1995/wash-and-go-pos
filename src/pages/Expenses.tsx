@@ -127,10 +127,18 @@ const Expenses = () => {
               loading={loading}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
+              onEdit={(exp) => setEditingExpense(exp)}
             />
           </CardContent>
         </Card>
       </div>
+
+      <EditExpenseDialog
+        expense={editingExpense}
+        open={!!editingExpense}
+        onOpenChange={(open) => { if (!open) setEditingExpense(null); }}
+        onSaved={loadExpenses}
+      />
     </div>
   );
 };
