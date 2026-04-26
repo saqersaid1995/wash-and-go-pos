@@ -563,7 +563,6 @@ Deno.serve(async (req) => {
                   console.error("Push notification error:", pushErr);
                 }
               })());
-            }
 
               // Auto-reply (fire-and-forget)
               if (accessToken && phoneNumberId) {
@@ -588,6 +587,7 @@ Deno.serve(async (req) => {
               // Let background tasks run without blocking the webhook response
               // EdgeRuntime will keep the isolate alive for these promises
               Promise.allSettled(bgTasks).catch(() => {});
+            }
           }
         }
       }
