@@ -56,6 +56,9 @@ export default function Cashflow() {
   const [search, setSearch] = useState("");
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const bounds = useMemo(() => {
     if (preset === "custom" && customStart && customEnd) {
