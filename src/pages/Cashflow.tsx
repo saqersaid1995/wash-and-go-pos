@@ -161,6 +161,67 @@ export default function Cashflow() {
 
   const todayStr = toDateStr(new Date());
 
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+  const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+  const someVisibleSelected = filtered.some((p) => selectedIds.has(p.id));
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) filtered.forEach((p) => next.add(p.id));
+      else filtered.forEach((p) => next.delete(p.id));
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const toDelete = payments.filter((p) => ids.includes(p.id));
+      const affectedOrderIds = Array.from(new Set(toDelete.map((p) => p.order_id)));
+
+      const { error: delErr } = await supabase.from("payments").delete().in("id", ids);
+      if (delErr) throw delErr;
+
+      for (const orderId of affectedOrderIds) {
+        const { data: order } = await supabase
+          .from("orders")
+          .select("total_amount")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (!order) continue;
+        const { data: remainingPayments } = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("order_id", orderId);
+        const paid = (remainingPayments || []).reduce((s, p: any) => s + Number(p.amount), 0);
+        const total = Number(order.total_amount) || 0;
+        const remaining = Math.max(0, total - paid);
+        const status = paid <= 0 ? "unpaid" : remaining <= 0.001 ? "paid" : "partial";
+        await supabase
+          .from("orders")
+          .update({ paid_amount: paid, remaining_amount: remaining, payment_status: status })
+          .eq("id", orderId);
+      }
+
+      toast.success(`Deleted ${ids.length} payment${ids.length > 1 ? "s" : ""}`);
+      setSelectedIds(new Set());
+      setConfirmOpen(false);
+      await loadPayments();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete payments");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const methodBadge = (m: string) => {
     switch (m) {
       case "cash": return <Badge variant="outline" className="bg-success/10 text-success border-success/30">Cash</Badge>;
