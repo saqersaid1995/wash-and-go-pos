@@ -517,9 +517,9 @@ export default function CashManagement() {
   );
 }
 
-function PositionCard({ label, value, icon, tone, highlight }: {
+function PositionCard({ label, value, icon, tone, highlight, subtitle }: {
   label: string; value: number; icon: React.ReactNode;
-  tone: "success" | "primary" | "accent"; highlight?: boolean;
+  tone: "success" | "primary" | "accent"; highlight?: boolean; subtitle?: string;
 }) {
   const toneClasses = {
     success: "bg-success/10 text-success border-success/30",
@@ -528,12 +528,57 @@ function PositionCard({ label, value, icon, tone, highlight }: {
   }[tone];
   const negative = value < 0;
   return (
-    <div className={cn("rounded-lg border p-4 flex items-center justify-between", highlight && "ring-2 ring-primary/20", toneClasses)}>
-      <div>
+    <div className={cn("rounded-lg border p-4 flex items-start justify-between gap-3", highlight && "ring-2 ring-primary/20", toneClasses)}>
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium opacity-80">{label}</p>
         <p className={cn("text-2xl font-bold mt-1", negative && "text-destructive")}>{formatOMR(value)}</p>
+        {subtitle && <p className="text-[10px] opacity-70 mt-1 truncate">{subtitle}</p>}
       </div>
-      <div className="opacity-70">{icon}</div>
+      <div className="opacity-70 shrink-0">{icon}</div>
+    </div>
+  );
+}
+
+function OpeningBalanceField({ label, icon, value, editing, onChange }: {
+  label: string; icon: React.ReactNode;
+  value: OpeningBalance; editing: boolean;
+  onChange: (v: OpeningBalance) => void;
+}) {
+  return (
+    <div className="rounded-lg border p-4 bg-muted/20">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-muted-foreground">{icon}</span>
+        <Label className="text-xs font-medium">{label}</Label>
+        <Badge variant="outline" className="ml-auto text-[10px]">Opening Balance</Badge>
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Amount (OMR)</Label>
+            <Input
+              type="number"
+              step="0.001"
+              value={value.amount}
+              onChange={(e) => onChange({ ...value, amount: parseFloat(e.target.value) || 0 })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">As of date</Label>
+            <Input
+              type="date"
+              value={value.as_of_date}
+              onChange={(e) => onChange({ ...value, as_of_date: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p className="text-2xl font-bold">{formatOMR(value.amount)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">As of {value.as_of_date}</p>
+        </div>
+      )}
     </div>
   );
 }
