@@ -4,16 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Banknote, Building2, ArrowDownCircle, ArrowUpCircle,
-  Scale, CalendarClock, TrendingUp, TrendingDown,
+  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil,
 } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllExpenses, type Expense } from "@/lib/expense-queries";
+import { toast } from "sonner";
+
+interface OpeningBalance {
+  id?: string;
+  account_type: "cash" | "bank";
+  amount: number;
+  as_of_date: string;
+  notes?: string;
+}
 
 type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all";
 
@@ -51,12 +61,17 @@ export default function CashManagement() {
 
   const bounds = useMemo(() => getRangeBounds(preset), [preset]);
 
+  const [openingCash, setOpeningCash] = useState<OpeningBalance>({ account_type: "cash", amount: 0, as_of_date: toDateStr(new Date()) });
+  const [openingBank, setOpeningBank] = useState<OpeningBalance>({ account_type: "bank", amount: 0, as_of_date: toDateStr(new Date()) });
+  const [editingOpening, setEditingOpening] = useState(false);
+  const [savingOpening, setSavingOpening] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    // Load ALL payments (for full-time cash position) and filtered for summary view
-    const [{ data: payData }, allExpenses] = await Promise.all([
+    const [{ data: payData }, allExpenses, { data: openingData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
+      supabase.from("opening_balances" as any).select("*"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
       id: p.id,
@@ -66,20 +81,45 @@ export default function CashManagement() {
     }));
     setPayments(mapped);
     setExpenses(allExpenses);
+    const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
+    const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
+    if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
+    if (bank) setOpeningBank({ id: bank.id, account_type: "bank", amount: Number(bank.amount), as_of_date: bank.as_of_date, notes: bank.notes });
     setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ========== CASH POSITION (lifetime, all-time) ==========
+  const saveOpeningBalances = async () => {
+    setSavingOpening(true);
+    try {
+      for (const ob of [openingCash, openingBank]) {
+        const payload = { account_type: ob.account_type, amount: ob.amount, as_of_date: ob.as_of_date, notes: ob.notes || "" };
+        if (ob.id) {
+          const { error } = await supabase.from("opening_balances" as any).update(payload).eq("id", ob.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("opening_balances" as any).insert(payload);
+          if (error) throw error;
+        }
+      }
+      toast.success("Opening balances saved");
+      setEditingOpening(false);
+      await loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSavingOpening(false);
+    }
+  };
+
+  // ========== CASH POSITION (lifetime, all-time + opening balances) ==========
   const cashPosition = useMemo(() => {
-    // Inflows by source
     let cashIn = 0, bankIn = 0;
     payments.forEach((p) => {
       if (p.payment_method === "cash") cashIn += p.amount;
-      else bankIn += p.amount; // card + bank-transfer = bank
+      else bankIn += p.amount;
     });
-    // Outflows: only PAID expenses
     let cashOut = 0, bankOut = 0;
     expenses.forEach((e) => {
       if (e.expense_status !== "paid") return;
@@ -90,10 +130,14 @@ export default function CashManagement() {
         bankOut += Number(e.bank_amount || 0);
       }
     });
-    const cashBalance = cashIn - cashOut;
-    const bankBalance = bankIn - bankOut;
-    return { cashIn, bankIn, cashOut, bankOut, cashBalance, bankBalance, total: cashBalance + bankBalance };
-  }, [payments, expenses]);
+    const cashBalance = openingCash.amount + cashIn - cashOut;
+    const bankBalance = openingBank.amount + bankIn - bankOut;
+    return {
+      openingCash: openingCash.amount, openingBank: openingBank.amount,
+      cashIn, bankIn, cashOut, bankOut,
+      cashBalance, bankBalance, total: cashBalance + bankBalance,
+    };
+  }, [payments, expenses, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
@@ -140,13 +184,13 @@ export default function CashManagement() {
       }
     });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-    let runningCash = 0, runningBank = 0;
+    let runningCash = openingCash.amount, runningBank = openingBank.amount;
     return sorted.map(([date, v]) => {
       runningCash += v.cashIn - v.cashOut;
       runningBank += v.bankIn - v.bankOut;
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse(); // newest first for display
-  }, [periodPayments, periodExpenses]);
+  }, [periodPayments, periodExpenses, openingCash.amount, openingBank.amount]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
@@ -199,6 +243,49 @@ export default function CashManagement() {
           </Select>
         </div>
 
+        {/* Opening Balances */}
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" /> Opening Balances
+              <span className="text-xs text-muted-foreground font-normal">(starting point — not counted as income/expense)</span>
+            </CardTitle>
+            {!editingOpening ? (
+              <Button size="sm" variant="outline" onClick={() => setEditingOpening(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => { setEditingOpening(false); loadData(); }}>Cancel</Button>
+                <Button size="sm" onClick={saveOpeningBalances} disabled={savingOpening}>
+                  <Save className="h-3.5 w-3.5 mr-1" /> {savingOpening ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <OpeningBalanceField
+                label="Opening Cash Balance"
+                icon={<Banknote className="h-4 w-4" />}
+                value={openingCash}
+                editing={editingOpening}
+                onChange={setOpeningCash}
+              />
+              <OpeningBalanceField
+                label="Opening Bank Balance"
+                icon={<Building2 className="h-4 w-4" />}
+                value={openingBank}
+                editing={editingOpening}
+                onChange={setOpeningBank}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Formula: <span className="font-mono">Opening Balance + Inflows − Outflows = Current Balance</span>
+            </p>
+          </CardContent>
+        </Card>
+
         {/* 1. Cash Position (lifetime) */}
         <Card>
           <CardHeader className="pb-3">
@@ -213,12 +300,14 @@ export default function CashManagement() {
                 value={cashPosition.cashBalance}
                 icon={<Banknote className="h-5 w-5" />}
                 tone="success"
+                subtitle={`Opening ${formatOMR(cashPosition.openingCash)} + In ${formatOMR(cashPosition.cashIn)} − Out ${formatOMR(cashPosition.cashOut)}`}
               />
               <PositionCard
                 label="Bank Balance"
                 value={cashPosition.bankBalance}
                 icon={<Building2 className="h-5 w-5" />}
                 tone="primary"
+                subtitle={`Opening ${formatOMR(cashPosition.openingBank)} + In ${formatOMR(cashPosition.bankIn)} − Out ${formatOMR(cashPosition.bankOut)}`}
               />
               <PositionCard
                 label="Total Balance"
@@ -428,9 +517,9 @@ export default function CashManagement() {
   );
 }
 
-function PositionCard({ label, value, icon, tone, highlight }: {
+function PositionCard({ label, value, icon, tone, highlight, subtitle }: {
   label: string; value: number; icon: React.ReactNode;
-  tone: "success" | "primary" | "accent"; highlight?: boolean;
+  tone: "success" | "primary" | "accent"; highlight?: boolean; subtitle?: string;
 }) {
   const toneClasses = {
     success: "bg-success/10 text-success border-success/30",
@@ -439,12 +528,57 @@ function PositionCard({ label, value, icon, tone, highlight }: {
   }[tone];
   const negative = value < 0;
   return (
-    <div className={cn("rounded-lg border p-4 flex items-center justify-between", highlight && "ring-2 ring-primary/20", toneClasses)}>
-      <div>
+    <div className={cn("rounded-lg border p-4 flex items-start justify-between gap-3", highlight && "ring-2 ring-primary/20", toneClasses)}>
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium opacity-80">{label}</p>
         <p className={cn("text-2xl font-bold mt-1", negative && "text-destructive")}>{formatOMR(value)}</p>
+        {subtitle && <p className="text-[10px] opacity-70 mt-1 truncate">{subtitle}</p>}
       </div>
-      <div className="opacity-70">{icon}</div>
+      <div className="opacity-70 shrink-0">{icon}</div>
+    </div>
+  );
+}
+
+function OpeningBalanceField({ label, icon, value, editing, onChange }: {
+  label: string; icon: React.ReactNode;
+  value: OpeningBalance; editing: boolean;
+  onChange: (v: OpeningBalance) => void;
+}) {
+  return (
+    <div className="rounded-lg border p-4 bg-muted/20">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-muted-foreground">{icon}</span>
+        <Label className="text-xs font-medium">{label}</Label>
+        <Badge variant="outline" className="ml-auto text-[10px]">Opening Balance</Badge>
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Amount (OMR)</Label>
+            <Input
+              type="number"
+              step="0.001"
+              value={value.amount}
+              onChange={(e) => onChange({ ...value, amount: parseFloat(e.target.value) || 0 })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">As of date</Label>
+            <Input
+              type="date"
+              value={value.as_of_date}
+              onChange={(e) => onChange({ ...value, as_of_date: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p className="text-2xl font-bold">{formatOMR(value.amount)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">As of {value.as_of_date}</p>
+        </div>
+      )}
     </div>
   );
 }
