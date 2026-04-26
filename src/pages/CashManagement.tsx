@@ -406,7 +406,24 @@ export default function CashManagement() {
               <TrendingUp className="h-4 w-4" /> Cashflow Summary <span className="text-xs text-muted-foreground font-normal">(selected period)</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Cash</p>
+                <p className="text-lg font-bold">{formatOMR(periodOpening.cash)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Balance before period start</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Bank</p>
+                <p className="text-lg font-bold">{formatOMR(periodOpening.bank)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Balance before period start</p>
+              </div>
+              <div className="rounded-lg border bg-primary/5 border-primary/20 p-3">
+                <p className="text-xs text-muted-foreground">Period Opening Total</p>
+                <p className="text-lg font-bold text-primary">{formatOMR(periodOpening.cash + periodOpening.bank)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Dynamic — updates with date range</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <SummaryCard
                 label="Total Inflows (Sales)"
