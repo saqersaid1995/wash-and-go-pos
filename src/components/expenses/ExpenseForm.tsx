@@ -72,6 +72,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
     const finalCategory = category === "Custom" ? customCategory.trim() : category;
     if (!finalCategory) { toast.error("Select or enter a category"); return; }
+    if (!plLine) { toast.error("Please map this expense to an Income Statement line"); return; }
 
     if (isRecurring && recurringPeriod === "Monthly") {
       const day = parseInt(billingDay);
@@ -102,7 +103,9 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       payment_source: paymentSource,
       cash_amount: finalCash,
       bank_amount: finalBank,
-      income_category: incomeCategory,
+      // Keep income_category in sync (legacy field) — derived from pl_line
+      income_category: autoMapIncomeCategory(finalCategory),
+      pl_line: plLine,
     });
     setSaving(false);
 
@@ -115,7 +118,8 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       setPaymentSource("cash");
       setCashAmount("");
       setBankAmount("");
-      setIncomeCategoryTouched(false);
+      setPlLine("");
+      setPlLineTouched(false);
       await onSaved();
     } else {
       toast.error("Failed to save expense");
