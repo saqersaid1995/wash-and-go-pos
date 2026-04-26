@@ -392,6 +392,36 @@ export type Database = {
           },
         ]
       }
+      opening_balances: {
+        Row: {
+          account_type: string
+          amount: number
+          as_of_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: string
+          amount?: number
+          as_of_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          amount?: number
+          as_of_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           brand: string | null
