@@ -28,7 +28,7 @@ interface OpeningBalance {
   notes?: string;
 }
 
-type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all";
+type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all" | "custom";
 
 interface PaymentRow {
   id: string;
