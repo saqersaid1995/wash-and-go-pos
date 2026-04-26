@@ -270,7 +270,7 @@ export default function CashManagement() {
 
       <div className="max-w-[1800px] mx-auto p-4 sm:p-6 space-y-6">
         {/* Range filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Label className="text-xs text-muted-foreground">Period for movements & summary:</Label>
           <Select value={preset} onValueChange={(v) => setPreset(v as RangePreset)}>
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
@@ -280,8 +280,46 @@ export default function CashManagement() {
               <SelectItem value="last-3-months">Last 3 Months</SelectItem>
               <SelectItem value="this-year">This Year</SelectItem>
               <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
             </SelectContent>
           </Select>
+
+          {preset === "custom" && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[140px] text-xs", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customStart ? format(customStart, "dd/MM/yyyy") : "From date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customStart} onSelect={setCustomStart} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground text-xs">to</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[140px] text-xs", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customEnd ? format(customEnd, "dd/MM/yyyy") : "To date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              {(!customStart || !customEnd) && (
+                <span className="text-xs text-warning">Select both dates</span>
+              )}
+            </div>
+          )}
+
+          {bounds && (
+            <Badge variant="outline" className="text-[10px]">
+              {bounds[0]} → {bounds[1]}
+            </Badge>
+          )}
         </div>
 
         {/* Opening Balances */}
