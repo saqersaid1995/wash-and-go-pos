@@ -29,10 +29,10 @@ async function hkdf(
   length: number
 ): Promise<Uint8Array> {
   // HKDF-Extract: PRK = HMAC-SHA256(salt, IKM) — salt is the key, IKM is the data
-  const saltKey = await crypto.subtle.importKey("raw", salt.length ? salt : new Uint8Array(32), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", saltKey, ikm));
+  const saltKey = await crypto.subtle.importKey("raw", (salt.length ? salt : new Uint8Array(32)) as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", saltKey, ikm as BufferSource));
 
-  const prkKey = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prkKey = await crypto.subtle.importKey("raw", prk as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const infoWithCounter = new Uint8Array(info.length + 1);
   infoWithCounter.set(info);
   infoWithCounter[info.length] = 1;
@@ -97,7 +97,7 @@ async function encryptPayload(
   // Import subscription public key
   const clientKey = await crypto.subtle.importKey(
     "raw",
-    clientPublicKeyBytes,
+    clientPublicKeyBytes as BufferSource,
     { name: "ECDH", namedCurve: "P-256" },
     false,
     []
@@ -135,12 +135,12 @@ async function encryptPayload(
   const paddedPlaintext = concatBuffers(plaintextBytes, new Uint8Array([2]));
   
   // Encrypt with AES-128-GCM
-  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const aesKey = await crypto.subtle.importKey("raw", cek as BufferSource, { name: "AES-GCM" }, false, ["encrypt"]);
   const encrypted = new Uint8Array(
     await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: nonce },
+      { name: "AES-GCM", iv: nonce as BufferSource },
       aesKey,
-      paddedPlaintext
+      paddedPlaintext as BufferSource
     )
   );
   

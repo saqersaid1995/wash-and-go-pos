@@ -416,7 +416,7 @@ Deno.serve(async (req) => {
     // Upload PDF as media to WhatsApp
     let mediaId: string | null = null;
     const formData = new FormData();
-    formData.append("file", new Blob([pdfBytes], { type: "application/pdf" }), pdfFilename);
+    formData.append("file", new Blob([pdfBytes as BlobPart], { type: "application/pdf" }), pdfFilename);
     formData.append("messaging_product", "whatsapp");
     formData.append("type", "application/pdf");
 
@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
           pdfBytes = await generateBrandedPdf(retryOrder, orderData.order_items || [], { includeLogo: false });
 
           const retryFormData = new FormData();
-          retryFormData.append("file", new Blob([pdfBytes], { type: "application/pdf" }), pdfFilename);
+          retryFormData.append("file", new Blob([pdfBytes as BlobPart], { type: "application/pdf" }), pdfFilename);
           retryFormData.append("messaging_product", "whatsapp");
           retryFormData.append("type", "application/pdf");
 
