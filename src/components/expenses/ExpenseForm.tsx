@@ -162,6 +162,22 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Map to Income Statement</Label>
+            <Select
+              value={incomeCategory}
+              onValueChange={(v) => { setIncomeCategory(v as IncomeCategory); setIncomeCategoryTouched(true); }}
+            >
+              <SelectTrigger className="max-w-md"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {INCOME_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Determines where this expense appears on the Income Statement.</p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div className="space-y-1.5">
               <Label>Status</Label>
