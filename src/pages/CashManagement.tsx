@@ -4,16 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Banknote, Building2, ArrowDownCircle, ArrowUpCircle,
-  Scale, CalendarClock, TrendingUp, TrendingDown,
+  Scale, CalendarClock, TrendingUp, TrendingDown, Save, Pencil,
 } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllExpenses, type Expense } from "@/lib/expense-queries";
+import { toast } from "sonner";
+
+interface OpeningBalance {
+  id?: string;
+  account_type: "cash" | "bank";
+  amount: number;
+  as_of_date: string;
+  notes?: string;
+}
 
 type RangePreset = "this-month" | "last-month" | "last-3-months" | "this-year" | "all";
 
