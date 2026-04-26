@@ -167,9 +167,9 @@ export default function CashManagement() {
   }, [payments, bounds]);
 
   const periodExpenses = useMemo(() => {
-    if (!bounds) return expenses;
-    return expenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
-  }, [expenses, bounds]);
+    if (!bounds) return realExpenses;
+    return realExpenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
+  }, [realExpenses, bounds]);
 
   // Dynamic opening balance for the selected period:
   // = stored opening + net flows strictly BEFORE bounds[0]
