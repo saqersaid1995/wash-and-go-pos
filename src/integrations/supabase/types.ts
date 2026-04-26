@@ -129,6 +129,7 @@ export type Database = {
           expense_date: string
           expense_status: string
           id: string
+          income_category: string
           is_auto_generated: boolean
           is_recurring: boolean
           last_run_date: string | null
@@ -149,6 +150,7 @@ export type Database = {
           expense_date?: string
           expense_status?: string
           id?: string
+          income_category?: string
           is_auto_generated?: boolean
           is_recurring?: boolean
           last_run_date?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           expense_date?: string
           expense_status?: string
           id?: string
+          income_category?: string
           is_auto_generated?: boolean
           is_recurring?: boolean
           last_run_date?: string | null
