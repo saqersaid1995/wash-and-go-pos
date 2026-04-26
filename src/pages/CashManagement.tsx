@@ -188,6 +188,7 @@ export default function CashManagement() {
       }
     });
     expenses.forEach((e) => {
+      if (e.is_recurring && !e.is_auto_generated) return; // skip templates
       if (e.expense_status !== "paid") return;
       if (e.expense_date < start) {
         if (e.payment_source === "cash") cash -= e.amount;
