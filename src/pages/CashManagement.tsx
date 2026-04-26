@@ -61,12 +61,17 @@ export default function CashManagement() {
 
   const bounds = useMemo(() => getRangeBounds(preset), [preset]);
 
+  const [openingCash, setOpeningCash] = useState<OpeningBalance>({ account_type: "cash", amount: 0, as_of_date: toDateStr(new Date()) });
+  const [openingBank, setOpeningBank] = useState<OpeningBalance>({ account_type: "bank", amount: 0, as_of_date: toDateStr(new Date()) });
+  const [editingOpening, setEditingOpening] = useState(false);
+  const [savingOpening, setSavingOpening] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    // Load ALL payments (for full-time cash position) and filtered for summary view
-    const [{ data: payData }, allExpenses] = await Promise.all([
+    const [{ data: payData }, allExpenses, { data: openingData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
+      supabase.from("opening_balances" as any).select("*"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
       id: p.id,
@@ -76,20 +81,45 @@ export default function CashManagement() {
     }));
     setPayments(mapped);
     setExpenses(allExpenses);
+    const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
+    const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
+    if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
+    if (bank) setOpeningBank({ id: bank.id, account_type: "bank", amount: Number(bank.amount), as_of_date: bank.as_of_date, notes: bank.notes });
     setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ========== CASH POSITION (lifetime, all-time) ==========
+  const saveOpeningBalances = async () => {
+    setSavingOpening(true);
+    try {
+      for (const ob of [openingCash, openingBank]) {
+        const payload = { account_type: ob.account_type, amount: ob.amount, as_of_date: ob.as_of_date, notes: ob.notes || "" };
+        if (ob.id) {
+          const { error } = await supabase.from("opening_balances" as any).update(payload).eq("id", ob.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("opening_balances" as any).insert(payload);
+          if (error) throw error;
+        }
+      }
+      toast.success("Opening balances saved");
+      setEditingOpening(false);
+      await loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSavingOpening(false);
+    }
+  };
+
+  // ========== CASH POSITION (lifetime, all-time + opening balances) ==========
   const cashPosition = useMemo(() => {
-    // Inflows by source
     let cashIn = 0, bankIn = 0;
     payments.forEach((p) => {
       if (p.payment_method === "cash") cashIn += p.amount;
-      else bankIn += p.amount; // card + bank-transfer = bank
+      else bankIn += p.amount;
     });
-    // Outflows: only PAID expenses
     let cashOut = 0, bankOut = 0;
     expenses.forEach((e) => {
       if (e.expense_status !== "paid") return;
@@ -100,10 +130,14 @@ export default function CashManagement() {
         bankOut += Number(e.bank_amount || 0);
       }
     });
-    const cashBalance = cashIn - cashOut;
-    const bankBalance = bankIn - bankOut;
-    return { cashIn, bankIn, cashOut, bankOut, cashBalance, bankBalance, total: cashBalance + bankBalance };
-  }, [payments, expenses]);
+    const cashBalance = openingCash.amount + cashIn - cashOut;
+    const bankBalance = openingBank.amount + bankIn - bankOut;
+    return {
+      openingCash: openingCash.amount, openingBank: openingBank.amount,
+      cashIn, bankIn, cashOut, bankOut,
+      cashBalance, bankBalance, total: cashBalance + bankBalance,
+    };
+  }, [payments, expenses, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
