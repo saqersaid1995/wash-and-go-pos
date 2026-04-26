@@ -136,6 +136,7 @@ export type Database = {
           next_run_date: string | null
           parent_recurring_id: string | null
           payment_source: string
+          pl_line: string
           recurring_period: string | null
           updated_at: string
         }
@@ -157,6 +158,7 @@ export type Database = {
           next_run_date?: string | null
           parent_recurring_id?: string | null
           payment_source?: string
+          pl_line?: string
           recurring_period?: string | null
           updated_at?: string
         }
@@ -178,6 +180,7 @@ export type Database = {
           next_run_date?: string | null
           parent_recurring_id?: string | null
           payment_source?: string
+          pl_line?: string
           recurring_period?: string | null
           updated_at?: string
         }
