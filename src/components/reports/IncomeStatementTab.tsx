@@ -337,7 +337,7 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
 
       <DrillDownModal
         open={drill.open}
-        onClose={() => setDrill({ open: false, title: "", cat: null })}
+        onClose={() => setDrill({ open: false, title: "", line: null })}
         title={drill.title}
         expenses={filtered}
       />
