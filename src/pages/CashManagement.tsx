@@ -184,7 +184,7 @@ export default function CashManagement() {
       }
     });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-    let runningCash = 0, runningBank = 0;
+    let runningCash = openingCash.amount, runningBank = openingBank.amount;
     return sorted.map(([date, v]) => {
       runningCash += v.cashIn - v.cashOut;
       runningBank += v.bankIn - v.bankOut;
