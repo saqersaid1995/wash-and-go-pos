@@ -164,6 +164,36 @@ export default function CashManagement() {
     return expenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
   }, [expenses, bounds]);
 
+  // Dynamic opening balance for the selected period:
+  // = stored opening + net flows strictly BEFORE bounds[0]
+  const periodOpening = useMemo(() => {
+    if (!bounds) {
+      return { cash: openingCash.amount, bank: openingBank.amount };
+    }
+    const start = bounds[0];
+    let cash = openingCash.amount;
+    let bank = openingBank.amount;
+    payments.forEach((p) => {
+      const d = p.payment_date.slice(0, 10);
+      if (d < start) {
+        if (p.payment_method === "cash") cash += p.amount;
+        else bank += p.amount;
+      }
+    });
+    expenses.forEach((e) => {
+      if (e.expense_status !== "paid") return;
+      if (e.expense_date < start) {
+        if (e.payment_source === "cash") cash -= e.amount;
+        else if (e.payment_source === "bank") bank -= e.amount;
+        else if (e.payment_source === "mixed") {
+          cash -= Number(e.cash_amount || 0);
+          bank -= Number(e.bank_amount || 0);
+        }
+      }
+    });
+    return { cash, bank };
+  }, [bounds, payments, expenses, openingCash.amount, openingBank.amount]);
+
   const summary = useMemo(() => {
     const inflows = periodPayments.reduce((s, p) => s + p.amount, 0);
     const paidExpenses = periodExpenses.filter((e) => e.expense_status === "paid");
@@ -195,13 +225,13 @@ export default function CashManagement() {
       }
     });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-    let runningCash = openingCash.amount, runningBank = openingBank.amount;
+    let runningCash = periodOpening.cash, runningBank = periodOpening.bank;
     return sorted.map(([date, v]) => {
       runningCash += v.cashIn - v.cashOut;
       runningBank += v.bankIn - v.bankOut;
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse(); // newest first for display
-  }, [periodPayments, periodExpenses, openingCash.amount, openingBank.amount]);
+  }, [periodPayments, periodExpenses, periodOpening.cash, periodOpening.bank]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
