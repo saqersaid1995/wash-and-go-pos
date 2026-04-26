@@ -155,7 +155,7 @@ export default function CashManagement() {
       cashIn, bankIn, cashOut, bankOut,
       cashBalance, bankBalance, total: cashBalance + bankBalance,
     };
-  }, [payments, expenses, openingCash.amount, openingBank.amount]);
+  }, [payments, realExpenses, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
