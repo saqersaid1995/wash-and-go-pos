@@ -291,8 +291,9 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
               <Line label="Salaries" current={s.opexBreakdown.salaries} previous={s.prev.opexBreakdown.salaries} indent negative onClick={() => openDrill("salaries")} />
               <Line label="Rent" current={s.opexBreakdown.rent} previous={s.prev.opexBreakdown.rent} indent negative onClick={() => openDrill("rent")} />
               <Line label="Utilities" current={s.opexBreakdown.utilities} previous={s.prev.opexBreakdown.utilities} indent negative onClick={() => openDrill("utilities")} />
-              <Line label="Marketing" current={s.opexBreakdown.marketing} previous={s.prev.opexBreakdown.marketing} indent negative onClick={() => openDrill("marketing")} />
-              <Line label="Other OPEX" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
+              <Line label="Maintenance" current={s.opexBreakdown.maintenance} previous={s.prev.opexBreakdown.maintenance} indent negative onClick={() => openDrill("maintenance")} />
+              <Line label="Supplies" current={s.opexBreakdown.supplies} previous={s.prev.opexBreakdown.supplies} indent negative onClick={() => openDrill("supplies")} />
+              <Line label="Other Operating Expenses" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
               <Line label="Total Operating Expenses" current={s.opex} previous={s.prev.opex} bold negative />
               <Subtotal label="EBITDA" current={s.ebitda} previous={s.prev.ebitda} pctValue={s.ebitdaPct} accent={s.ebitda >= 0 ? "profit" : "loss"} />
             </Section>
@@ -304,13 +305,12 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
               <Subtotal label="EBIT" current={s.ebit} previous={s.prev.ebit} accent={s.ebit >= 0 ? "profit" : "loss"} />
             </Section>
 
-            {/* NON-OPERATING */}
-            <Section title="Non-operating Income / Expense" defaultOpen={false}>
+            {/* OTHER INCOME */}
+            <Section title="Other Income" defaultOpen={false}>
               <Line
-                label="Non-operating (net)"
-                current={s.nonOperating} previous={s.prev.nonOperating} indent
-                negative={s.nonOperating > 0}
-                onClick={() => openDrill("non_operating")}
+                label="Other Income"
+                current={s.otherIncome} previous={s.prev.otherIncome} indent
+                onClick={() => openDrill("other_income")}
               />
             </Section>
 
