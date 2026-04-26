@@ -204,25 +204,26 @@ function handlePrint(elementId: string) {
 
 // ---------- Main component ----------
 export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: IncomeStatementTabProps) {
+  const emptyOpex: OpexBreakdown = { salaries: 0, rent: 0, utilities: 0, maintenance: 0, supplies: 0, other_opex: 0 };
   const s: Structured = data.structured ?? {
     revenue: 0, cogs: 0, grossProfit: 0, grossProfitPct: 0,
-    opex: 0, opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
+    opex: 0, opexBreakdown: { ...emptyOpex },
     ebitda: 0, ebitdaPct: 0, depreciation: 0, interest: 0, ebit: 0,
-    nonOperating: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
+    otherIncome: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
     prev: { revenue: 0, cogs: 0, grossProfit: 0, opex: 0,
-      opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
-      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, nonOperating: 0, netProfit: 0, cashProfit: 0 },
+      opexBreakdown: { ...emptyOpex },
+      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, otherIncome: 0, netProfit: 0, cashProfit: 0 },
   };
 
-  // Drill-down state
-  const [drill, setDrill] = useState<{ open: boolean; title: string; cat: IncomeCategory | null }>({ open: false, title: "", cat: null });
+  // Drill-down state — filters by pl_line
+  const [drill, setDrill] = useState<{ open: boolean; title: string; line: PLLine | null }>({ open: false, title: "", line: null });
   const filtered = useMemo(
-    () => drill.cat ? expenses.filter((e) => ((e as any).income_category || "other_opex") === drill.cat) : [],
-    [drill.cat, expenses]
+    () => drill.line ? expenses.filter((e) => ((e as any).pl_line || "other_opex") === drill.line) : [],
+    [drill.line, expenses]
   );
-  const openDrill = (cat: IncomeCategory) => {
-    const label = INCOME_CATEGORIES.find((c) => c.value === cat)?.label || cat;
-    setDrill({ open: true, title: label, cat });
+  const openDrill = (line: PLLine) => {
+    const label = PL_LINES.find((p) => p.value === line)?.label || line;
+    setDrill({ open: true, title: label, line });
   };
 
   const isLoss = s.netProfit < 0;
