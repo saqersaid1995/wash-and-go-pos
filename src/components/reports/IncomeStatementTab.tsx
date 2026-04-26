@@ -1,66 +1,178 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Printer, Download, TrendingUp, TrendingDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Printer, Download, ChevronDown, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
-import { EXPENSE_CATEGORIES } from "@/lib/expense-queries";
+import { INCOME_CATEGORIES, type Expense, type IncomeCategory } from "@/lib/expense-queries";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 
-const ALL_REPORT_CATEGORIES = [...EXPENSE_CATEGORIES, "Other"] as const;
+type Structured = {
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  grossProfitPct: number;
+  opex: number;
+  opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+  ebitda: number;
+  ebitdaPct: number;
+  depreciation: number;
+  interest: number;
+  ebit: number;
+  nonOperating: number;
+  netProfit: number;
+  netProfitPct: number;
+  cashProfit: number;
+  prev: {
+    revenue: number; cogs: number; grossProfit: number; opex: number;
+    opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+    ebitda: number; depreciation: number; interest: number; ebit: number;
+    nonOperating: number; netProfit: number; cashProfit: number;
+  };
+};
 
 interface IncomeStatementTabProps {
-  data: {
-    grossSales?: number;
-    totalDiscounts?: number;
-    laundrySales: number;
-    totalRevenue: number;
-    expensesByCategory: Record<string, number>;
-    totalExpenses: number;
-    netProfit: number;
-    profitMargin: number;
-    prevGrossSales?: number;
-    prevTotalDiscounts?: number;
-    prevRevenue: number;
-    prevExpensesByCategory: Record<string, number>;
-    prevTotalExpenses: number;
-    prevNetProfit: number;
-  };
+  data: { structured?: Structured };
   dateRangeLabel: string;
+  expenses?: Expense[];
 }
 
-function Row({ label, amount, prevAmount, bold, indent, negative }: { label: string; amount: number; prevAmount?: number; bold?: boolean; indent?: boolean; negative?: boolean }) {
+const fmt = (n: number) => (n < 0 ? `(${formatOMR(Math.abs(n))})` : formatOMR(n));
+const pct = (n: number) => `${n.toFixed(1)}%`;
+const profitClass = (n: number) => (n >= 0 ? "text-[hsl(142,72%,40%)]" : "text-destructive");
+
+// ---------- Drill-down modal ----------
+function DrillDownModal({
+  open, onClose, title, expenses,
+}: { open: boolean; onClose: () => void; title: string; expenses: Expense[] }) {
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
   return (
-    <div className={`is-row flex items-center justify-between py-2 ${bold ? "font-bold" : ""} ${indent ? "pl-6" : ""}`}>
-      <span className={`text-sm ${bold ? "" : "text-muted-foreground"}`}>{label}</span>
-      <div className="flex items-center gap-6">
-        {prevAmount !== undefined && (
-          <span className="text-xs text-muted-foreground w-28 text-right">{formatOMR(prevAmount)}</span>
-        )}
-        <span className={`text-sm w-28 text-right ${negative ? "text-destructive" : ""} ${bold ? "text-base" : ""}`}>
-          {amount < 0 ? `(${formatOMR(Math.abs(amount))})` : formatOMR(amount)}
-        </span>
-      </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="text-sm text-muted-foreground mb-2">
+          {expenses.length} transaction{expenses.length === 1 ? "" : "s"} • Total: <strong className="text-foreground">{formatOMR(total)}</strong>
+        </div>
+        <div className="max-h-[60vh] overflow-auto rounded border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No transactions in this period.</TableCell></TableRow>
+              ) : expenses.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="whitespace-nowrap">{e.expense_date}</TableCell>
+                  <TableCell>{e.category}</TableCell>
+                  <TableCell className="max-w-xs truncate">{e.description || "—"}</TableCell>
+                  <TableCell className="capitalize">{e.payment_source}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatOMR(e.amount)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- Summary card ----------
+function SummaryCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "profit" | "loss" | "neutral" }) {
+  const color = accent === "profit" ? "text-[hsl(142,72%,40%)]" : accent === "loss" ? "text-destructive" : "";
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className={`text-2xl font-bold mt-1 tabular-nums ${color}`}>{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------- Line row ----------
+function Line({
+  label, current, previous, indent, bold, negative, onClick,
+}: {
+  label: string; current: number; previous: number;
+  indent?: boolean; bold?: boolean; negative?: boolean; onClick?: () => void;
+}) {
+  const interactive = !!onClick;
+  return (
+    <div
+      className={`grid grid-cols-[1fr_auto_auto] items-center gap-6 py-2 px-2 rounded ${indent ? "pl-8" : ""} ${bold ? "font-semibold border-t" : ""} ${interactive ? "cursor-pointer hover:bg-accent/50" : ""}`}
+      onClick={onClick}
+    >
+      <span className={`text-sm ${bold ? "text-foreground" : "text-muted-foreground"} ${interactive ? "underline-offset-2 hover:underline" : ""}`}>
+        {label}
+      </span>
+      <span className="text-xs text-muted-foreground w-28 text-right tabular-nums">{fmt(previous)}</span>
+      <span className={`text-sm w-32 text-right tabular-nums ${negative ? "text-destructive" : bold ? "text-foreground" : ""}`}>
+        {fmt(current)}
+      </span>
     </div>
   );
 }
 
+// ---------- Subtotal row (highlighted) ----------
+function Subtotal({ label, current, previous, pctValue, accent }: { label: string; current: number; previous: number; pctValue?: number; accent?: "profit" | "loss" }) {
+  const color = accent === "profit" ? "text-[hsl(142,72%,40%)]" : accent === "loss" ? "text-destructive" : "";
+  return (
+    <div className={`grid grid-cols-[1fr_auto_auto] items-center gap-6 py-3 px-2 my-1 rounded-md bg-muted/50 border-y`}>
+      <span className="text-sm font-bold flex items-center gap-2">
+        {label}
+        {pctValue !== undefined && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded ${pctValue >= 0 ? "bg-[hsl(142,72%,40%)]/10 text-[hsl(142,72%,40%)]" : "bg-destructive/10 text-destructive"}`}>
+            {pct(pctValue)}
+          </span>
+        )}
+      </span>
+      <span className="text-xs text-muted-foreground w-28 text-right tabular-nums">{fmt(previous)}</span>
+      <span className={`text-base font-bold w-32 text-right tabular-nums ${color}`}>{fmt(current)}</span>
+    </div>
+  );
+}
+
+// ---------- Section wrapper ----------
+function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="border rounded-lg overflow-hidden">
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 text-left">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="p-3">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ---------- PDF / Print ----------
 async function exportPDF(elementId: string, filename: string) {
   const el = document.getElementById(elementId);
   if (!el) return;
   toast.info("Generating PDF…");
   try {
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
     const pdf = new jsPDF("p", "mm", "a4");
     const imgData = canvas.toDataURL("image/png");
-    const A4W = 210;
-    const margin = 15;
+    const A4W = 210, margin = 12;
     const contentW = A4W - margin * 2;
     const imgH = (canvas.height * contentW) / canvas.width;
     pdf.addImage(imgData, "PNG", margin, margin, contentW, imgH);
@@ -76,61 +188,43 @@ function handlePrint(elementId: string) {
   if (!el) return;
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(`
-    <html><head><title>Income Statement</title>
+  win.document.write(`<html><head><title>Income Statement</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: Arial, Helvetica, sans-serif; padding: 30px 40px; color: #1a1a1a; font-size: 13px; }
-      .is-header { text-align: center; margin-bottom: 24px; }
-      .is-header h3 { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
-      .is-header p { font-size: 11px; color: #666; }
-      .is-section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-top: 20px; margin-bottom: 6px; }
-      .is-col-header { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; padding-bottom: 6px; border-bottom: 2px solid #222; margin-bottom: 4px; }
-      .is-col-header .is-amounts { display: flex; gap: 24px; }
-      .is-col-header span.is-amt-col { width: 110px; text-align: right; }
-      .is-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
-      .is-row.is-indent { padding-left: 24px; }
-      .is-row.is-bold { font-weight: 700; }
-      .is-row .is-label { flex: 1; }
-      .is-row .is-amounts { display: flex; gap: 24px; }
-      .is-row .is-amt-col { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
-      .is-row.is-negative .is-current { color: #dc2626; }
-      .is-separator { border: none; border-top: 1px solid #ddd; margin: 4px 0; }
-      .is-separator-bold { border: none; border-top: 2px solid #222; margin: 12px 0; }
-      .is-result { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 6px; margin-top: 8px; }
-      .is-result.is-profit { background: #f0fdf4; }
-      .is-result.is-loss { background: #fef2f2; }
-      .is-result .is-label { font-weight: 700; font-size: 14px; }
-      .is-result .is-amounts { display: flex; gap: 24px; }
-      .is-result .is-amt-col { width: 110px; text-align: right; font-weight: 700; font-size: 14px; }
-      .is-result.is-profit .is-current { color: #16a34a; }
-      .is-result.is-loss .is-current { color: #dc2626; }
-      .is-margin { display: flex; justify-content: space-between; padding: 8px 16px; margin-top: 8px; }
-      .is-margin .is-label { color: #666; font-size: 13px; }
-      .is-margin .is-value { font-weight: 600; }
-      .is-margin .is-value.is-positive { color: #16a34a; }
-      .is-margin .is-value.is-negative { color: #dc2626; }
-      @page { margin: 15mm; }
-    </style></head><body>
-  `);
-  // Build structured HTML for print
-  const clone = el.cloneNode(true) as HTMLElement;
-  win.document.write(clone.innerHTML);
-  win.document.write("</body></html>");
+      body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+      * { box-sizing: border-box; }
+    </style></head><body>${el.innerHTML}</body></html>`);
   win.document.close();
   setTimeout(() => win.print(), 300);
 }
 
-export function IncomeStatementTab({ data, dateRangeLabel }: IncomeStatementTabProps) {
-  const isLoss = data.netProfit < 0;
-  const hasDiscounts = (data.grossSales ?? 0) > 0 && (data.totalDiscounts ?? 0) > 0;
+// ---------- Main component ----------
+export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: IncomeStatementTabProps) {
+  const s: Structured = data.structured ?? {
+    revenue: 0, cogs: 0, grossProfit: 0, grossProfitPct: 0,
+    opex: 0, opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
+    ebitda: 0, ebitdaPct: 0, depreciation: 0, interest: 0, ebit: 0,
+    nonOperating: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
+    prev: { revenue: 0, cogs: 0, grossProfit: 0, opex: 0,
+      opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
+      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, nonOperating: 0, netProfit: 0, cashProfit: 0 },
+  };
 
-  const expenseCategories = [...new Set([...EXPENSE_CATEGORIES, ...Object.keys(data.expensesByCategory)])].filter(
-    (cat) => (data.expensesByCategory[cat] || 0) !== 0 || (data.prevExpensesByCategory[cat] || 0) !== 0
+  // Drill-down state
+  const [drill, setDrill] = useState<{ open: boolean; title: string; cat: IncomeCategory | null }>({ open: false, title: "", cat: null });
+  const filtered = useMemo(
+    () => drill.cat ? expenses.filter((e) => ((e as any).income_category || "other_opex") === drill.cat) : [],
+    [drill.cat, expenses]
   );
+  const openDrill = (cat: IncomeCategory) => {
+    const label = INCOME_CATEGORIES.find((c) => c.value === cat)?.label || cat;
+    setDrill({ open: true, title: label, cat });
+  };
+
+  const isLoss = s.netProfit < 0;
 
   return (
     <div className="space-y-4">
+      {/* Action header */}
       <div className="flex items-center justify-between print:hidden">
         <div>
           <h2 className="text-lg font-bold">Income Statement</h2>
@@ -146,79 +240,101 @@ export function IncomeStatementTab({ data, dateRangeLabel }: IncomeStatementTabP
         </div>
       </div>
 
-      <Card id="income-statement" className="print:shadow-none print:border-none">
-        <CardContent className="p-6 max-w-2xl mx-auto">
-          {/* Print-friendly structured layout */}
-          <div className="is-header text-center mb-6">
-            <h3 className="text-lg font-bold uppercase tracking-wider">LAVANDERIA</h3>
+      {/* Top summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <SummaryCard label="Revenue" value={formatOMR(s.revenue)} sub={`Prev: ${formatOMR(s.prev.revenue)}`} />
+        <SummaryCard label="Gross Profit %" value={pct(s.grossProfitPct)} sub={`GP: ${formatOMR(s.grossProfit)}`} accent={s.grossProfit >= 0 ? "profit" : "loss"} />
+        <SummaryCard label="EBITDA %" value={pct(s.ebitdaPct)} sub={`EBITDA: ${formatOMR(s.ebitda)}`} accent={s.ebitda >= 0 ? "profit" : "loss"} />
+        <SummaryCard label={isLoss ? "Net Loss" : "Net Profit"} value={fmt(s.netProfit)} sub={`Margin: ${pct(s.netProfitPct)}`} accent={isLoss ? "loss" : "profit"} />
+      </div>
+
+      {/* Income Statement body */}
+      <Card id="income-statement">
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-center mb-4">
+            <h3 className="text-base font-bold uppercase tracking-wider">LAVANDERIA</h3>
             <p className="text-xs text-muted-foreground">Income Statement — {dateRangeLabel}</p>
           </div>
 
-          {/* Column headers */}
-          <div className="is-col-header">
-            <div className="flex justify-between w-full text-xs text-muted-foreground uppercase tracking-wider pb-1">
-              <span>Item</span>
-              <div className="is-amounts flex gap-6">
-                <span className="is-amt-col w-28 text-right">Previous</span>
-                <span className="is-amt-col w-28 text-right">Current</span>
+          {/* Column header */}
+          <div className="grid grid-cols-[1fr_auto_auto] gap-6 px-2 pb-2 mb-2 border-b text-xs uppercase tracking-wider text-muted-foreground">
+            <span>Line Item</span>
+            <span className="w-28 text-right">Previous</span>
+            <span className="w-32 text-right">Current</span>
+          </div>
+
+          <div className="space-y-2">
+            {/* REVENUE */}
+            <Section title="Revenue">
+              <Line label="Laundry Sales (Net)" current={s.revenue} previous={s.prev.revenue} indent />
+              <Subtotal label="Total Revenue" current={s.revenue} previous={s.prev.revenue} />
+            </Section>
+
+            {/* COST OF SALES */}
+            <Section title="Cost of Sales">
+              <Line
+                label="COGS — click to view transactions"
+                current={s.cogs} previous={s.prev.cogs} indent negative
+                onClick={() => openDrill("cogs")}
+              />
+              <Subtotal label="Gross Profit" current={s.grossProfit} previous={s.prev.grossProfit} pctValue={s.grossProfitPct} accent={s.grossProfit >= 0 ? "profit" : "loss"} />
+            </Section>
+
+            {/* OPERATING EXPENSES */}
+            <Section title="Operating Expenses">
+              <Line label="Salaries" current={s.opexBreakdown.salaries} previous={s.prev.opexBreakdown.salaries} indent negative onClick={() => openDrill("salaries")} />
+              <Line label="Rent" current={s.opexBreakdown.rent} previous={s.prev.opexBreakdown.rent} indent negative onClick={() => openDrill("rent")} />
+              <Line label="Utilities" current={s.opexBreakdown.utilities} previous={s.prev.opexBreakdown.utilities} indent negative onClick={() => openDrill("utilities")} />
+              <Line label="Marketing" current={s.opexBreakdown.marketing} previous={s.prev.opexBreakdown.marketing} indent negative onClick={() => openDrill("marketing")} />
+              <Line label="Other OPEX" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
+              <Line label="Total Operating Expenses" current={s.opex} previous={s.prev.opex} bold negative />
+              <Subtotal label="EBITDA" current={s.ebitda} previous={s.prev.ebitda} pctValue={s.ebitdaPct} accent={s.ebitda >= 0 ? "profit" : "loss"} />
+            </Section>
+
+            {/* DEPRECIATION & INTEREST */}
+            <Section title="Depreciation & Interest">
+              <Line label="Depreciation" current={s.depreciation} previous={s.prev.depreciation} indent negative onClick={() => openDrill("depreciation")} />
+              <Line label="Interest Expense" current={s.interest} previous={s.prev.interest} indent negative onClick={() => openDrill("interest")} />
+              <Subtotal label="EBIT" current={s.ebit} previous={s.prev.ebit} accent={s.ebit >= 0 ? "profit" : "loss"} />
+            </Section>
+
+            {/* NON-OPERATING */}
+            <Section title="Non-operating Income / Expense" defaultOpen={false}>
+              <Line
+                label="Non-operating (net)"
+                current={s.nonOperating} previous={s.prev.nonOperating} indent
+                negative={s.nonOperating > 0}
+                onClick={() => openDrill("non_operating")}
+              />
+            </Section>
+
+            {/* RESULT */}
+            <div className="pt-4 border-t-2 mt-4">
+              <Subtotal
+                label={isLoss ? "Net Loss" : "Net Profit"}
+                current={s.netProfit} previous={s.prev.netProfit}
+                pctValue={s.netProfitPct}
+                accent={isLoss ? "loss" : "profit"}
+              />
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-6 py-2 px-2 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  {isLoss ? <TrendingDown className="h-4 w-4 text-destructive" /> : <TrendingUp className="h-4 w-4 text-[hsl(142,72%,40%)]" />}
+                  Cash Profit (Net Profit + Depreciation)
+                </span>
+                <span className="text-xs w-28 text-right tabular-nums">{fmt(s.prev.cashProfit)}</span>
+                <span className={`font-semibold w-32 text-right tabular-nums ${profitClass(s.cashProfit)}`}>{fmt(s.cashProfit)}</span>
               </div>
             </div>
           </div>
-          <Separator />
-
-          {/* REVENUE */}
-          <h4 className="is-section-title text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-4 mb-1">Revenue</h4>
-          {hasDiscounts ? (
-            <>
-              <div className="is-row is-indent"><Row label="Gross Sales" amount={data.grossSales!} prevAmount={data.prevGrossSales} indent /></div>
-              <div className="is-row is-indent is-negative"><Row label="Sales Discounts" amount={-(data.totalDiscounts!)} prevAmount={data.prevTotalDiscounts ? -data.prevTotalDiscounts : 0} indent negative /></div>
-              <Separator />
-              <div className="is-row is-bold"><Row label="Net Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold /></div>
-            </>
-          ) : (
-            <>
-              <div className="is-row is-indent"><Row label="Laundry Sales" amount={data.laundrySales} prevAmount={data.prevRevenue} indent /></div>
-              <Separator />
-              <div className="is-row is-bold"><Row label="Total Revenue" amount={data.totalRevenue} prevAmount={data.prevRevenue} bold /></div>
-            </>
-          )}
-
-          {/* EXPENSES */}
-          <h4 className="is-section-title text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-6 mb-1">Expenses</h4>
-          {expenseCategories.map((cat) => (
-            <div key={cat} className="is-row is-indent">
-              <Row label={cat} amount={data.expensesByCategory[cat] || 0} prevAmount={data.prevExpensesByCategory[cat] || 0} indent />
-            </div>
-          ))}
-          <Separator />
-          <div className="is-row is-bold"><Row label="Total Expenses" amount={data.totalExpenses} prevAmount={data.prevTotalExpenses} bold /></div>
-
-          <Separator className="my-4 is-separator-bold" />
-
-          {/* Result */}
-          <div className={`is-result flex items-center justify-between py-3 px-4 rounded-lg ${isLoss ? "is-loss bg-destructive/5" : "is-profit bg-[hsl(142,72%,40%)]/5"}`}>
-            <div className="flex items-center gap-2">
-              {isLoss ? <TrendingDown className="h-5 w-5 text-destructive print:hidden" /> : <TrendingUp className="h-5 w-5 text-[hsl(142,72%,40%)] print:hidden" />}
-              <span className="is-label font-bold">{isLoss ? "Net Loss" : "Net Profit"}</span>
-            </div>
-            <div className="is-amounts flex items-center gap-6">
-              <span className="is-amt-col text-xs text-muted-foreground w-28 text-right">
-                {data.prevNetProfit < 0 ? `(${formatOMR(Math.abs(data.prevNetProfit))})` : formatOMR(data.prevNetProfit)}
-              </span>
-              <span className={`is-amt-col is-current font-bold text-base w-28 text-right ${isLoss ? "text-destructive" : "text-[hsl(142,72%,40%)]"}`}>
-                {data.netProfit < 0 ? `(${formatOMR(Math.abs(data.netProfit))})` : formatOMR(data.netProfit)}
-              </span>
-            </div>
-          </div>
-
-          <div className="is-margin flex items-center justify-between mt-3 px-4">
-            <span className="is-label text-sm text-muted-foreground">Profit Margin</span>
-            <span className={`is-value font-semibold ${data.profitMargin >= 0 ? "is-positive text-[hsl(142,72%,40%)]" : "is-negative text-destructive"}`}>
-              {data.profitMargin.toFixed(1)}%
-            </span>
-          </div>
         </CardContent>
       </Card>
+
+      <DrillDownModal
+        open={drill.open}
+        onClose={() => setDrill({ open: false, title: "", cat: null })}
+        title={drill.title}
+        expenses={filtered}
+      />
     </div>
   );
 }

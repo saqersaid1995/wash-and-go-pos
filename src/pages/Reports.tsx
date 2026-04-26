@@ -137,7 +137,7 @@ const Reports = () => {
             </TabsContent>
 
             <TabsContent value="income-statement">
-              <IncomeStatementTab data={data.incomeStatement} dateRangeLabel={dateRangeLabel} />
+              <IncomeStatementTab data={data.incomeStatement} dateRangeLabel={dateRangeLabel} expenses={data.expenses} />
             </TabsContent>
 
             <TabsContent value="orders">

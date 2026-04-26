@@ -179,27 +179,94 @@ export function useReportsData() {
     const grossSales = orders.reduce((s, o) => s + o.subtotal, 0);
     const totalDiscounts = orders.reduce((s, o) => s + o.discount, 0);
     const netRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
-    const catMap: Record<string, number> = {};
-    expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
-    const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
-    const netProfit = netRevenue - totalExp;
-    const margin = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
+
+    const sumByIncomeCat = (exps: Expense[]) => {
+      const m: Record<string, number> = {
+        cogs: 0, salaries: 0, rent: 0, utilities: 0, marketing: 0,
+        other_opex: 0, depreciation: 0, interest: 0, non_operating: 0,
+      };
+      exps.forEach((e) => {
+        const k = (e as any).income_category || "other_opex";
+        m[k] = (m[k] || 0) + e.amount;
+      });
+      return m;
+    };
+
+    const cur = sumByIncomeCat(expenses);
+    const opex = cur.salaries + cur.rent + cur.utilities + cur.marketing + cur.other_opex;
+    const grossProfit = netRevenue - cur.cogs;
+    const grossProfitPct = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
+    const ebitda = grossProfit - opex;
+    const ebitdaPct = netRevenue > 0 ? (ebitda / netRevenue) * 100 : 0;
+    const ebit = ebitda - cur.depreciation - cur.interest;
+    // Treat non_operating as net (positive = income, negative = expense). Default sign: expense.
+    const nonOp = cur.non_operating;
+    const netProfit = ebit - nonOp;
+    const netProfitPct = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
+    const cashProfit = netProfit + cur.depreciation;
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
     // Previous period
     const prevGrossSales = prevOrders.reduce((s, o) => s + o.subtotal, 0);
     const prevTotalDiscounts = prevOrders.reduce((s, o) => s + o.discount, 0);
     const prevNetRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
+    const prev = sumByIncomeCat(prevExpenses);
+    const prevOpex = prev.salaries + prev.rent + prev.utilities + prev.marketing + prev.other_opex;
+    const prevGrossProfit = prevNetRevenue - prev.cogs;
+    const prevEbitda = prevGrossProfit - prevOpex;
+    const prevEbit = prevEbitda - prev.depreciation - prev.interest;
+    const prevNetProfit = prevEbit - prev.non_operating;
+    const prevCashProfit = prevNetProfit + prev.depreciation;
+    const prevTotalExp = prevExpenses.reduce((s, e) => s + e.amount, 0);
+
+    // Legacy keys kept for older consumers
+    const catMap: Record<string, number> = {};
+    expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
     const prevCatMap: Record<string, number> = {};
     prevExpenses.forEach((e) => { prevCatMap[e.category] = (prevCatMap[e.category] || 0) + e.amount; });
-    const prevTotalExp = prevExpenses.reduce((s, e) => s + e.amount, 0);
-    const prevNetProfit = prevNetRevenue - prevTotalExp;
 
     return {
+      // Legacy
       grossSales, totalDiscounts, laundrySales: netRevenue, totalRevenue: netRevenue,
-      expensesByCategory: catMap, totalExpenses: totalExp,
-      netProfit, profitMargin: margin,
+      expensesByCategory: catMap, totalExpenses,
+      netProfit, profitMargin: netProfitPct,
       prevGrossSales, prevTotalDiscounts, prevRevenue: prevNetRevenue,
       prevExpensesByCategory: prevCatMap, prevTotalExpenses: prevTotalExp, prevNetProfit,
+      // New structured statement
+      structured: {
+        revenue: netRevenue,
+        cogs: cur.cogs,
+        grossProfit, grossProfitPct,
+        opex,
+        opexBreakdown: {
+          salaries: cur.salaries, rent: cur.rent, utilities: cur.utilities,
+          marketing: cur.marketing, other_opex: cur.other_opex,
+        },
+        ebitda, ebitdaPct,
+        depreciation: cur.depreciation,
+        interest: cur.interest,
+        ebit,
+        nonOperating: nonOp,
+        netProfit, netProfitPct,
+        cashProfit,
+        prev: {
+          revenue: prevNetRevenue,
+          cogs: prev.cogs,
+          grossProfit: prevGrossProfit,
+          opex: prevOpex,
+          opexBreakdown: {
+            salaries: prev.salaries, rent: prev.rent, utilities: prev.utilities,
+            marketing: prev.marketing, other_opex: prev.other_opex,
+          },
+          ebitda: prevEbitda,
+          depreciation: prev.depreciation,
+          interest: prev.interest,
+          ebit: prevEbit,
+          nonOperating: prev.non_operating,
+          netProfit: prevNetProfit,
+          cashProfit: prevCashProfit,
+        },
+      },
     };
   }, [orders, expenses, prevOrders, prevExpenses]);
 

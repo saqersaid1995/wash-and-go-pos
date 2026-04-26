@@ -11,7 +11,10 @@ import { toast } from "sonner";
 import {
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
+  INCOME_CATEGORIES,
+  autoMapIncomeCategory,
   createExpense,
+  type IncomeCategory,
 } from "@/lib/expense-queries";
 import { formatOMR } from "@/lib/currency";
 
@@ -33,6 +36,16 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
   const [paymentSource, setPaymentSource] = useState<string>("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("other_opex");
+  const [incomeCategoryTouched, setIncomeCategoryTouched] = useState(false);
+
+  // Auto-map income_category when category changes (unless user manually picked one)
+  useEffect(() => {
+    if (!incomeCategoryTouched) {
+      const finalCategory = category === "Custom" ? customCategory.trim() : category;
+      setIncomeCategory(autoMapIncomeCategory(finalCategory));
+    }
+  }, [category, customCategory, incomeCategoryTouched]);
 
   const amt = parseFloat(amount) || 0;
 
@@ -86,6 +99,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       payment_source: paymentSource,
       cash_amount: finalCash,
       bank_amount: finalBank,
+      income_category: incomeCategory,
     });
     setSaving(false);
 
@@ -98,6 +112,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       setPaymentSource("cash");
       setCashAmount("");
       setBankAmount("");
+      setIncomeCategoryTouched(false);
       await onSaved();
     } else {
       toast.error("Failed to save expense");
@@ -145,6 +160,22 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
               <Label>Amount (OMR)</Label>
               <Input type="number" step="0.001" min="0" placeholder="0.000" value={amount} onChange={(e) => setAmount(e.target.value)} required />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Map to Income Statement</Label>
+            <Select
+              value={incomeCategory}
+              onValueChange={(v) => { setIncomeCategory(v as IncomeCategory); setIncomeCategoryTouched(true); }}
+            >
+              <SelectTrigger className="max-w-md"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {INCOME_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Determines where this expense appears on the Income Statement.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
