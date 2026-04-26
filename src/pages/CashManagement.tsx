@@ -300,12 +300,14 @@ export default function CashManagement() {
                 value={cashPosition.cashBalance}
                 icon={<Banknote className="h-5 w-5" />}
                 tone="success"
+                subtitle={`Opening ${formatOMR(cashPosition.openingCash)} + In ${formatOMR(cashPosition.cashIn)} − Out ${formatOMR(cashPosition.cashOut)}`}
               />
               <PositionCard
                 label="Bank Balance"
                 value={cashPosition.bankBalance}
                 icon={<Building2 className="h-5 w-5" />}
                 tone="primary"
+                subtitle={`Opening ${formatOMR(cashPosition.openingBank)} + In ${formatOMR(cashPosition.bankIn)} − Out ${formatOMR(cashPosition.bankOut)}`}
               />
               <PositionCard
                 label="Total Balance"
