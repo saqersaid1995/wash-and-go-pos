@@ -23,12 +23,14 @@ import {
 } from "@/lib/expense-queries";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { ExpenseTable } from "@/components/expenses/ExpenseTable";
+import { EditExpenseDialog } from "@/components/expenses/EditExpenseDialog";
 import { RecurringPreview } from "@/components/expenses/RecurringPreview";
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const loadExpenses = useCallback(async () => {
     setLoading(true);
@@ -125,10 +127,18 @@ const Expenses = () => {
               loading={loading}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
+              onEdit={(exp) => setEditingExpense(exp)}
             />
           </CardContent>
         </Card>
       </div>
+
+      <EditExpenseDialog
+        expense={editingExpense}
+        open={!!editingExpense}
+        onOpenChange={(open) => { if (!open) setEditingExpense(null); }}
+        onSaved={loadExpenses}
+      />
     </div>
   );
 };

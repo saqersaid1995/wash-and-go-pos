@@ -2,16 +2,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Loader2, Bot } from "lucide-react";
+import { Trash2, Loader2, Bot, Pencil } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
-import type { Expense } from "@/lib/expense-queries";
+import { type Expense, PL_LINES } from "@/lib/expense-queries";
 
 interface ExpenseTableProps {
   expenses: Expense[];
   loading: boolean;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: string) => void;
+  onEdit: (expense: Expense) => void;
 }
+
+const PL_LABEL: Record<string, string> = Object.fromEntries(PL_LINES.map((l) => [l.value, l.label]));
 
 function sourceBadge(source: string) {
   switch (source) {
@@ -22,7 +25,7 @@ function sourceBadge(source: string) {
   }
 }
 
-export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: ExpenseTableProps) {
+export function ExpenseTable({ expenses, loading, onDelete, onStatusChange, onEdit }: ExpenseTableProps) {
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -42,8 +45,9 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: Ex
             <TableHead className="text-right">Amount</TableHead>
             <TableHead>Payment Source</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>P&amp;L Mapping</TableHead>
             <TableHead>Source</TableHead>
-            <TableHead className="w-10"></TableHead>
+            <TableHead className="w-20"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -77,6 +81,11 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: Ex
                 </Select>
               </TableCell>
               <TableCell>
+                <span className="text-[11px] text-muted-foreground">
+                  {PL_LABEL[exp.pl_line] || exp.pl_line || "—"}
+                </span>
+              </TableCell>
+              <TableCell>
                 {exp.is_auto_generated ? (
                   <Badge variant="outline" className="text-xs gap-1">
                     <Bot className="h-3 w-3" /> Auto
@@ -86,9 +95,14 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange }: Ex
                 )}
               </TableCell>
               <TableCell>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(exp.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(exp)} title="Edit expense">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(exp.id)} title="Delete expense">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
