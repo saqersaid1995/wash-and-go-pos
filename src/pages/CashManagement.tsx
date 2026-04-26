@@ -57,12 +57,20 @@ function getRangeBounds(preset: RangePreset): [string, string] | null {
 
 export default function CashManagement() {
   const [preset, setPreset] = useState<RangePreset>("this-month");
+  const [customStart, setCustomStart] = useState<Date>();
+  const [customEnd, setCustomEnd] = useState<Date>();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
-  const bounds = useMemo(() => getRangeBounds(preset), [preset]);
+  const bounds = useMemo(() => {
+    if (preset === "custom") {
+      if (customStart && customEnd) return [toDateStr(customStart), toDateStr(customEnd)] as [string, string];
+      return null;
+    }
+    return getRangeBounds(preset);
+  }, [preset, customStart, customEnd]);
 
   const [openingCash, setOpeningCash] = useState<OpeningBalance>({ account_type: "cash", amount: 0, as_of_date: toDateStr(new Date()) });
   const [openingBank, setOpeningBank] = useState<OpeningBalance>({ account_type: "bank", amount: 0, as_of_date: toDateStr(new Date()) });
