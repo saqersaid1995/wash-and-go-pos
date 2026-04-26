@@ -45,8 +45,9 @@ export function ExpenseTable({ expenses, loading, onDelete, onStatusChange, onEd
             <TableHead className="text-right">Amount</TableHead>
             <TableHead>Payment Source</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>P&amp;L Mapping</TableHead>
             <TableHead>Source</TableHead>
-            <TableHead className="w-10"></TableHead>
+            <TableHead className="w-20"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
