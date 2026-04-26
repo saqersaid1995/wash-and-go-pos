@@ -11,10 +11,11 @@ import { toast } from "sonner";
 import {
   EXPENSE_CATEGORIES,
   RECURRING_PERIODS,
-  INCOME_CATEGORIES,
+  PL_LINES,
   autoMapIncomeCategory,
+  suggestPLLine,
   createExpense,
-  type IncomeCategory,
+  type PLLine,
 } from "@/lib/expense-queries";
 import { formatOMR } from "@/lib/currency";
 
@@ -36,16 +37,16 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
   const [paymentSource, setPaymentSource] = useState<string>("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
-  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("other_opex");
-  const [incomeCategoryTouched, setIncomeCategoryTouched] = useState(false);
+  const [plLine, setPlLine] = useState<PLLine | "">("");
+  const [plLineTouched, setPlLineTouched] = useState(false);
 
-  // Auto-map income_category when category changes (unless user manually picked one)
+  // Auto-suggest pl_line when category changes (only if user hasn't manually overridden it)
   useEffect(() => {
-    if (!incomeCategoryTouched) {
+    if (!plLineTouched) {
       const finalCategory = category === "Custom" ? customCategory.trim() : category;
-      setIncomeCategory(autoMapIncomeCategory(finalCategory));
+      if (finalCategory) setPlLine(suggestPLLine(finalCategory));
     }
-  }, [category, customCategory, incomeCategoryTouched]);
+  }, [category, customCategory, plLineTouched]);
 
   const amt = parseFloat(amount) || 0;
 
@@ -69,6 +70,7 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
     const finalCategory = category === "Custom" ? customCategory.trim() : category;
     if (!finalCategory) { toast.error("Select or enter a category"); return; }
+    if (!plLine) { toast.error("Please map this expense to an Income Statement line"); return; }
 
     if (isRecurring && recurringPeriod === "Monthly") {
       const day = parseInt(billingDay);
@@ -99,7 +101,9 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       payment_source: paymentSource,
       cash_amount: finalCash,
       bank_amount: finalBank,
-      income_category: incomeCategory,
+      // Keep income_category in sync (legacy field) — derived from pl_line
+      income_category: autoMapIncomeCategory(finalCategory),
+      pl_line: plLine,
     });
     setSaving(false);
 
@@ -112,7 +116,8 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
       setPaymentSource("cash");
       setCashAmount("");
       setBankAmount("");
-      setIncomeCategoryTouched(false);
+      setPlLine("");
+      setPlLineTouched(false);
       await onSaved();
     } else {
       toast.error("Failed to save expense");
@@ -163,19 +168,26 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Map to Income Statement</Label>
+            <Label>
+              Map to Income Statement <span className="text-destructive">*</span>
+            </Label>
             <Select
-              value={incomeCategory}
-              onValueChange={(v) => { setIncomeCategory(v as IncomeCategory); setIncomeCategoryTouched(true); }}
+              value={plLine}
+              onValueChange={(v) => { setPlLine(v as PLLine); setPlLineTouched(true); }}
             >
-              <SelectTrigger className="max-w-md"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="max-w-md">
+                <SelectValue placeholder="Select an Income Statement line…" />
+              </SelectTrigger>
               <SelectContent>
-                {INCOME_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                {PL_LINES.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Determines where this expense appears on the Income Statement.</p>
+            <p className="text-xs text-muted-foreground">
+              Required. Determines where this expense appears on the Income Statement.
+              {!plLineTouched && plLine && <> Auto-suggested from category — you can change it.</>}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">

@@ -6,10 +6,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer, Download, ChevronDown, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
-import { INCOME_CATEGORIES, type Expense, type IncomeCategory } from "@/lib/expense-queries";
+import { PL_LINES, type Expense, type PLLine } from "@/lib/expense-queries";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
+
+type OpexBreakdown = {
+  salaries: number; rent: number; utilities: number;
+  maintenance: number; supplies: number; other_opex: number;
+};
 
 type Structured = {
   revenue: number;
@@ -17,21 +22,21 @@ type Structured = {
   grossProfit: number;
   grossProfitPct: number;
   opex: number;
-  opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+  opexBreakdown: OpexBreakdown;
   ebitda: number;
   ebitdaPct: number;
   depreciation: number;
   interest: number;
   ebit: number;
-  nonOperating: number;
+  otherIncome: number;
   netProfit: number;
   netProfitPct: number;
   cashProfit: number;
   prev: {
     revenue: number; cogs: number; grossProfit: number; opex: number;
-    opexBreakdown: { salaries: number; rent: number; utilities: number; marketing: number; other_opex: number };
+    opexBreakdown: OpexBreakdown;
     ebitda: number; depreciation: number; interest: number; ebit: number;
-    nonOperating: number; netProfit: number; cashProfit: number;
+    otherIncome: number; netProfit: number; cashProfit: number;
   };
 };
 
@@ -199,25 +204,26 @@ function handlePrint(elementId: string) {
 
 // ---------- Main component ----------
 export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: IncomeStatementTabProps) {
+  const emptyOpex: OpexBreakdown = { salaries: 0, rent: 0, utilities: 0, maintenance: 0, supplies: 0, other_opex: 0 };
   const s: Structured = data.structured ?? {
     revenue: 0, cogs: 0, grossProfit: 0, grossProfitPct: 0,
-    opex: 0, opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
+    opex: 0, opexBreakdown: { ...emptyOpex },
     ebitda: 0, ebitdaPct: 0, depreciation: 0, interest: 0, ebit: 0,
-    nonOperating: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
+    otherIncome: 0, netProfit: 0, netProfitPct: 0, cashProfit: 0,
     prev: { revenue: 0, cogs: 0, grossProfit: 0, opex: 0,
-      opexBreakdown: { salaries: 0, rent: 0, utilities: 0, marketing: 0, other_opex: 0 },
-      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, nonOperating: 0, netProfit: 0, cashProfit: 0 },
+      opexBreakdown: { ...emptyOpex },
+      ebitda: 0, depreciation: 0, interest: 0, ebit: 0, otherIncome: 0, netProfit: 0, cashProfit: 0 },
   };
 
-  // Drill-down state
-  const [drill, setDrill] = useState<{ open: boolean; title: string; cat: IncomeCategory | null }>({ open: false, title: "", cat: null });
+  // Drill-down state — filters by pl_line
+  const [drill, setDrill] = useState<{ open: boolean; title: string; line: PLLine | null }>({ open: false, title: "", line: null });
   const filtered = useMemo(
-    () => drill.cat ? expenses.filter((e) => ((e as any).income_category || "other_opex") === drill.cat) : [],
-    [drill.cat, expenses]
+    () => drill.line ? expenses.filter((e) => ((e as any).pl_line || "other_opex") === drill.line) : [],
+    [drill.line, expenses]
   );
-  const openDrill = (cat: IncomeCategory) => {
-    const label = INCOME_CATEGORIES.find((c) => c.value === cat)?.label || cat;
-    setDrill({ open: true, title: label, cat });
+  const openDrill = (line: PLLine) => {
+    const label = PL_LINES.find((p) => p.value === line)?.label || line;
+    setDrill({ open: true, title: label, line });
   };
 
   const isLoss = s.netProfit < 0;
@@ -285,8 +291,9 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
               <Line label="Salaries" current={s.opexBreakdown.salaries} previous={s.prev.opexBreakdown.salaries} indent negative onClick={() => openDrill("salaries")} />
               <Line label="Rent" current={s.opexBreakdown.rent} previous={s.prev.opexBreakdown.rent} indent negative onClick={() => openDrill("rent")} />
               <Line label="Utilities" current={s.opexBreakdown.utilities} previous={s.prev.opexBreakdown.utilities} indent negative onClick={() => openDrill("utilities")} />
-              <Line label="Marketing" current={s.opexBreakdown.marketing} previous={s.prev.opexBreakdown.marketing} indent negative onClick={() => openDrill("marketing")} />
-              <Line label="Other OPEX" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
+              <Line label="Maintenance" current={s.opexBreakdown.maintenance} previous={s.prev.opexBreakdown.maintenance} indent negative onClick={() => openDrill("maintenance")} />
+              <Line label="Supplies" current={s.opexBreakdown.supplies} previous={s.prev.opexBreakdown.supplies} indent negative onClick={() => openDrill("supplies")} />
+              <Line label="Other Operating Expenses" current={s.opexBreakdown.other_opex} previous={s.prev.opexBreakdown.other_opex} indent negative onClick={() => openDrill("other_opex")} />
               <Line label="Total Operating Expenses" current={s.opex} previous={s.prev.opex} bold negative />
               <Subtotal label="EBITDA" current={s.ebitda} previous={s.prev.ebitda} pctValue={s.ebitdaPct} accent={s.ebitda >= 0 ? "profit" : "loss"} />
             </Section>
@@ -298,13 +305,12 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
               <Subtotal label="EBIT" current={s.ebit} previous={s.prev.ebit} accent={s.ebit >= 0 ? "profit" : "loss"} />
             </Section>
 
-            {/* NON-OPERATING */}
-            <Section title="Non-operating Income / Expense" defaultOpen={false}>
+            {/* OTHER INCOME */}
+            <Section title="Other Income" defaultOpen={false}>
               <Line
-                label="Non-operating (net)"
-                current={s.nonOperating} previous={s.prev.nonOperating} indent
-                negative={s.nonOperating > 0}
-                onClick={() => openDrill("non_operating")}
+                label="Other Income"
+                current={s.otherIncome} previous={s.prev.otherIncome} indent
+                onClick={() => openDrill("other_income")}
               />
             </Section>
 
@@ -331,7 +337,7 @@ export function IncomeStatementTab({ data, dateRangeLabel, expenses = [] }: Inco
 
       <DrillDownModal
         open={drill.open}
-        onClose={() => setDrill({ open: false, title: "", cat: null })}
+        onClose={() => setDrill({ open: false, title: "", line: null })}
         title={drill.title}
         expenses={filtered}
       />
