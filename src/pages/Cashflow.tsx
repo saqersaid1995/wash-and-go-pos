@@ -424,14 +424,30 @@ export default function Cashflow() {
 
         {/* Transactions Table */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base flex items-center gap-2"><Hash className="h-4 w-4" />Transactions ({filtered.length})</CardTitle>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+                <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                        onCheckedChange={(c) => toggleAll(!!c)}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
                     <TableHead>Payment Date</TableHead>
                     <TableHead>Order #</TableHead>
                     <TableHead>Customer</TableHead>
@@ -442,19 +458,26 @@ export default function Cashflow() {
                 </TableHeader>
                 <TableBody>
                   {loading && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
                   )}
                   {!loading && filtered.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No transactions found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No transactions found</TableCell></TableRow>
                   )}
                   {filtered.map((p) => (
-                    <TableRow key={p.id} className={cn("cursor-pointer hover:bg-muted/50", p.payment_date.split("T")[0] === todayStr && "bg-primary/5")} onClick={() => navigate(`/order/${p.order_id}`)}>
-                      <TableCell className="text-sm">{format(new Date(p.payment_date), "dd/MM/yyyy HH:mm")}</TableCell>
-                      <TableCell className="font-mono text-sm font-medium">{p.order_number}</TableCell>
-                      <TableCell className="text-sm">{p.customer_name}</TableCell>
-                      <TableCell>{methodBadge(p.payment_method)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatOMR(p.amount)}</TableCell>
-                      <TableCell>
+                    <TableRow key={p.id} className={cn("hover:bg-muted/50", p.payment_date.split("T")[0] === todayStr && "bg-primary/5", selectedIds.has(p.id) && "bg-muted/60")}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(p.id)}
+                          onCheckedChange={(c) => toggleOne(p.id, !!c)}
+                          aria-label="Select payment"
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>{format(new Date(p.payment_date), "dd/MM/yyyy HH:mm")}</TableCell>
+                      <TableCell className="font-mono text-sm font-medium cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>{p.order_number}</TableCell>
+                      <TableCell className="text-sm cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>{p.customer_name}</TableCell>
+                      <TableCell className="cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>{methodBadge(p.payment_method)}</TableCell>
+                      <TableCell className="text-right font-medium cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>{formatOMR(p.amount)}</TableCell>
+                      <TableCell className="cursor-pointer" onClick={() => navigate(`/order/${p.order_id}`)}>
                         <Badge variant={p.payment_status === "paid" ? "default" : "secondary"} className="text-[10px]">
                           {p.payment_status === "paid" ? "Paid" : "Partial"}
                         </Badge>
@@ -466,6 +489,24 @@ export default function Cashflow() {
             </div>
           </CardContent>
         </Card>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedIds.size} payment{selectedIds.size > 1 ? "s" : ""}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove the selected payment transactions and recalculate the related orders' paid and remaining amounts. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleBulkDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     </div>
   );
