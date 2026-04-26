@@ -124,6 +124,13 @@ export default function CashManagement() {
     }
   };
 
+  // Real expenses only — exclude recurring templates (they only define schedule,
+  // their auto-generated children are the actual transactions).
+  const realExpenses = useMemo(
+    () => expenses.filter((e) => !e.is_recurring || e.is_auto_generated),
+    [expenses]
+  );
+
   // ========== CASH POSITION (lifetime, all-time + opening balances) ==========
   const cashPosition = useMemo(() => {
     let cashIn = 0, bankIn = 0;
@@ -132,7 +139,7 @@ export default function CashManagement() {
       else bankIn += p.amount;
     });
     let cashOut = 0, bankOut = 0;
-    expenses.forEach((e) => {
+    realExpenses.forEach((e) => {
       if (e.expense_status !== "paid") return;
       if (e.payment_source === "cash") cashOut += e.amount;
       else if (e.payment_source === "bank") bankOut += e.amount;
@@ -148,7 +155,7 @@ export default function CashManagement() {
       cashIn, bankIn, cashOut, bankOut,
       cashBalance, bankBalance, total: cashBalance + bankBalance,
     };
-  }, [payments, expenses, openingCash.amount, openingBank.amount]);
+  }, [payments, realExpenses, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
@@ -160,9 +167,9 @@ export default function CashManagement() {
   }, [payments, bounds]);
 
   const periodExpenses = useMemo(() => {
-    if (!bounds) return expenses;
-    return expenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
-  }, [expenses, bounds]);
+    if (!bounds) return realExpenses;
+    return realExpenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
+  }, [realExpenses, bounds]);
 
   // Dynamic opening balance for the selected period:
   // = stored opening + net flows strictly BEFORE bounds[0]
@@ -181,6 +188,7 @@ export default function CashManagement() {
       }
     });
     expenses.forEach((e) => {
+      if (e.is_recurring && !e.is_auto_generated) return; // skip templates
       if (e.expense_status !== "paid") return;
       if (e.expense_date < start) {
         if (e.payment_source === "cash") cash -= e.amount;
