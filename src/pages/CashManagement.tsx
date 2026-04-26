@@ -190,7 +190,7 @@ export default function CashManagement() {
       runningBank += v.bankIn - v.bankOut;
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse(); // newest first for display
-  }, [periodPayments, periodExpenses]);
+  }, [periodPayments, periodExpenses, openingCash.amount, openingBank.amount]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
