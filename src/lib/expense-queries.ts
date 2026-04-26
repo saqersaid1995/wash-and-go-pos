@@ -144,9 +144,10 @@ export async function createExpense(params: {
   cash_amount: number;
   bank_amount: number;
   income_category?: IncomeCategory;
+  pl_line: PLLine;
 }) {
   const insertData: any = { ...params };
-  
+
   // Calculate next_run_date for recurring expenses
   if (params.is_recurring && params.billing_day) {
     const today = new Date();
@@ -176,6 +177,7 @@ export async function updateExpense(id: string, updates: Partial<{
   cash_amount: number;
   bank_amount: number;
   income_category: IncomeCategory;
+  pl_line: PLLine;
 }>) {
   const patch: any = { ...updates };
   // Recompute next_run_date when billing_day changes for recurring templates
