@@ -17,11 +17,47 @@ export interface Expense {
   payment_source: string;
   cash_amount: number;
   bank_amount: number;
+  income_category: IncomeCategory;
   created_at: string;
   updated_at: string;
 }
 
 export const PAYMENT_SOURCES = ["cash", "bank", "mixed"] as const;
+
+export type IncomeCategory =
+  | "cogs"
+  | "salaries"
+  | "rent"
+  | "utilities"
+  | "marketing"
+  | "other_opex"
+  | "depreciation"
+  | "interest"
+  | "non_operating";
+
+export const INCOME_CATEGORIES: { value: IncomeCategory; label: string; group: "cogs" | "opex" | "below_ebitda" | "non_op" }[] = [
+  { value: "cogs", label: "COGS (Cost of Sales)", group: "cogs" },
+  { value: "salaries", label: "Salaries (OPEX)", group: "opex" },
+  { value: "rent", label: "Rent (OPEX)", group: "opex" },
+  { value: "utilities", label: "Utilities (OPEX)", group: "opex" },
+  { value: "marketing", label: "Marketing (OPEX)", group: "opex" },
+  { value: "other_opex", label: "Other OPEX", group: "opex" },
+  { value: "depreciation", label: "Depreciation", group: "below_ebitda" },
+  { value: "interest", label: "Interest", group: "below_ebitda" },
+  { value: "non_operating", label: "Non-operating Income/Expense", group: "non_op" },
+];
+
+export function autoMapIncomeCategory(category: string): IncomeCategory {
+  switch (category) {
+    case "Salaries": return "salaries";
+    case "Rent": return "rent";
+    case "Utilities": return "utilities";
+    case "Marketing": return "marketing";
+    case "Loan": return "interest";
+    case "Supplies": return "cogs";
+    default: return "other_opex";
+  }
+}
 
 export const EXPENSE_CATEGORIES = [
   "Rent",
@@ -80,6 +116,7 @@ export async function createExpense(params: {
   payment_source: string;
   cash_amount: number;
   bank_amount: number;
+  income_category?: IncomeCategory;
 }) {
   const insertData: any = { ...params };
   
@@ -111,6 +148,7 @@ export async function updateExpense(id: string, updates: Partial<{
   payment_source: string;
   cash_amount: number;
   bank_amount: number;
+  income_category: IncomeCategory;
 }>) {
   const patch: any = { ...updates };
   // Recompute next_run_date when billing_day changes for recurring templates
