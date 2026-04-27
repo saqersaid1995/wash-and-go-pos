@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
-  CreditCard, Truck, FileText, AlertTriangle,
+  CreditCard, Truck, FileText, AlertTriangle, Eye, Printer, Banknote,
 } from "lucide-react";
 import type { WorkflowOrder } from "@/types/workflow";
 import { WORKFLOW_STAGES } from "@/types/workflow";
@@ -15,6 +15,9 @@ import { updateOrderStatus } from "@/lib/supabase-queries";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import MultiOrderCheckoutModal from "@/components/payment/MultiOrderCheckoutModal";
+import PaymentModal from "@/components/payment/PaymentModal";
+import InvoiceViewModal from "@/components/scan/InvoiceViewModal";
+import { printInvoices } from "@/lib/print-invoice";
 
 interface PhoneSearchResultsProps {
   customerName: string;
@@ -30,6 +33,8 @@ export default function PhoneSearchResults({
   const [showAll, setShowAll] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [delivering, setDelivering] = useState(false);
+  const [invoiceOrder, setInvoiceOrder] = useState<WorkflowOrder | null>(null);
+  const [payOrder, setPayOrder] = useState<WorkflowOrder | null>(null);
 
   const today = toLocalDateStr();
 
@@ -90,7 +95,16 @@ export default function PhoneSearchResults({
 
   const handlePaymentComplete = () => {
     setSelectedIds(new Set());
+    setPayOrder(null);
     onRefresh();
+  };
+
+  const handlePrintSelected = async () => {
+    if (selectedOrders.length === 0) {
+      toast.error("Select at least one order to print.");
+      return;
+    }
+    await printInvoices(selectedOrders);
   };
 
   return (
@@ -131,20 +145,20 @@ export default function PhoneSearchResults({
           const isReady = order.currentStatus === "ready-for-pickup";
           const isDelivered = order.currentStatus === "delivered";
           const stageLabel = WORKFLOW_STAGES.find((s) => s.id === order.currentStatus)?.label || order.currentStatus;
+          const hasBalance = order.remainingBalance > 0;
 
           return (
             <div
               key={order.id}
-              className={`pos-section p-3 space-y-2 cursor-pointer transition-colors ${
+              className={`pos-section p-3 space-y-2 cursor-pointer transition-colors hover:border-primary/40 ${
                 isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""
-              } ${isDelivered ? "opacity-60" : ""}`}
-              onClick={() => !isDelivered && toggleSelect(order.id)}
+              } ${isDelivered ? "opacity-70" : ""}`}
+              onClick={() => setInvoiceOrder(order)}
             >
               <div className="flex items-start gap-3">
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => toggleSelect(order.id)}
-                  disabled={isDelivered}
                   className="mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -164,7 +178,7 @@ export default function PhoneSearchResults({
                     <span>Items: <strong className="text-foreground">{order.itemCount}</strong></span>
                     <span>Total: <strong className="text-foreground">{formatOMR(order.totalAmount)}</strong></span>
                   </div>
-                  {order.remainingBalance > 0 && (
+                  {hasBalance && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-destructive font-medium">
                       <AlertTriangle className="h-3 w-3" />
                       Balance: {formatOMR(order.remainingBalance)}
@@ -172,13 +186,40 @@ export default function PhoneSearchResults({
                   )}
                 </div>
               </div>
+
               {/* Quick actions */}
-              <div className="flex gap-2 pl-7" onClick={(e) => e.stopPropagation()}>
-                <Link to={`/order/${order.id}`}>
-                  <Button variant="ghost" size="sm" className="h-7 text-[0.65rem] gap-1 px-2">
-                    <FileText className="h-3 w-3" /> Details
+              <div className="flex gap-1.5 pl-7" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 flex-1 text-[0.7rem] gap-1 px-2"
+                  onClick={() => setInvoiceOrder(order)}
+                >
+                  <Eye className="h-3.5 w-3.5" /> View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 flex-1 text-[0.7rem] gap-1 px-2"
+                  onClick={() => printInvoices([order])}
+                >
+                  <Printer className="h-3.5 w-3.5" /> Print
+                </Button>
+                {hasBalance ? (
+                  <Button
+                    size="sm"
+                    className="h-8 flex-1 text-[0.7rem] gap-1 px-2 bg-success hover:bg-success/90 text-success-foreground"
+                    onClick={() => setPayOrder(order)}
+                  >
+                    <Banknote className="h-3.5 w-3.5" /> Pay
                   </Button>
-                </Link>
+                ) : (
+                  <Link to={`/order/${order.id}`} className="flex-1" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-8 w-full text-[0.7rem] gap-1 px-2">
+                      <FileText className="h-3.5 w-3.5" /> Details
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           );
@@ -195,11 +236,19 @@ export default function PhoneSearchResults({
             <InfoCell label="Selected Remaining" value={formatOMR(summary.remaining)} highlight={summary.remaining > 0} />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-10 text-xs gap-1.5 min-w-[140px]"
+              onClick={handlePrintSelected}
+            >
+              <Printer className="h-3.5 w-3.5" /> Print Selected ({summary.count})
+            </Button>
             {summary.remaining > 0 ? (
               <Button
                 size="sm"
-                className="flex-1 h-10 text-xs gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex-1 h-10 text-xs gap-1.5 min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => setCheckoutOpen(true)}
                 disabled={!allReadyForPickup}
                 title={!allReadyForPickup ? "Only Ready for Pickup orders can be processed" : ""}
@@ -209,13 +258,13 @@ export default function PhoneSearchResults({
             ) : (
               <Button
                 size="sm"
-                className="flex-1 h-10 text-xs gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+                className="flex-1 h-10 text-xs gap-1.5 min-w-[140px] bg-success hover:bg-success/90 text-success-foreground"
                 onClick={handleDeliverOnly}
                 disabled={!canDeliverDirectly || delivering}
                 title={!allReadyForPickup ? "Only Ready for Pickup orders can be delivered" : ""}
               >
                 <Truck className="h-3.5 w-3.5" />
-                {delivering ? "Delivering..." : "Deliver Selected Orders"}
+                {delivering ? "Delivering..." : "Deliver Selected"}
               </Button>
             )}
           </div>
@@ -237,6 +286,21 @@ export default function PhoneSearchResults({
         onPaymentComplete={handlePaymentComplete}
         autoDeliver
       />
+
+      <InvoiceViewModal
+        open={!!invoiceOrder}
+        onOpenChange={(o) => !o && setInvoiceOrder(null)}
+        order={invoiceOrder}
+      />
+
+      {payOrder && (
+        <PaymentModal
+          open={!!payOrder}
+          onOpenChange={(o) => !o && setPayOrder(null)}
+          order={payOrder}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </div>
   );
 }
