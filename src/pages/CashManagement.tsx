@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllExpenses, type Expense } from "@/lib/expense-queries";
+import { fetchAllExpenses, fetchAllExpensePayments, type Expense, type ExpensePayment } from "@/lib/expense-queries";
 import { toast } from "sonner";
 
 interface OpeningBalance {
@@ -61,6 +61,7 @@ export default function CashManagement() {
   const [customEnd, setCustomEnd] = useState<Date>();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expensePayments, setExpensePayments] = useState<ExpensePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
@@ -77,11 +78,19 @@ export default function CashManagement() {
   const [editingOpening, setEditingOpening] = useState(false);
   const [savingOpening, setSavingOpening] = useState(false);
 
+  // Index expense payment_source split (mixed → keep full split via expense link)
+  const expenseSourceMap = useMemo(() => {
+    const m = new Map<string, Expense>();
+    expenses.forEach((e) => m.set(e.id, e));
+    return m;
+  }, [expenses]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: payData }, allExpenses, { data: openingData }] = await Promise.all([
+    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
+      fetchAllExpensePayments(),
       supabase.from("opening_balances" as any).select("*"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
@@ -92,6 +101,7 @@ export default function CashManagement() {
     }));
     setPayments(mapped);
     setExpenses(allExpenses);
+    setExpensePayments(allExpensePayments);
     const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
     const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
     if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
