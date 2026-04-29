@@ -547,7 +547,7 @@ export default function WhatsAppInbox() {
 
         {/* ─── CHAT (70%) ─── */}
         {showChatView && (
-          <main className="flex-1 flex flex-col min-w-0 bg-muted/20">
+          <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-muted/20">
             {selectedConversation ? (
               <>
                 {/* Chat header */}
