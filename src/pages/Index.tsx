@@ -140,15 +140,9 @@ const Index = () => {
         title="New Order"
         subtitle={pos.orderNumber}
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setScanOpen(true)}>
-              <ScanBarcode className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Scan Order</span>
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {pos.items.length} Items • {formatOMR(pos.total)}
-            </span>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            {pos.items.length} Items • {formatOMR(pos.total)}
+          </span>
         }
       />
 
