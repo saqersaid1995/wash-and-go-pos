@@ -212,7 +212,58 @@ export default function WhatsAppInbox() {
       });
   }, [selectedConversation?.messages.length]);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [selectedConversation?.messages.length]);
+  // Smart scroll: jump to bottom on conversation open; otherwise only auto-scroll
+  // when user is already near bottom OR they sent the message themselves.
+  useEffect(() => {
+    if (!selectedConversation) {
+      prevMsgCountRef.current = 0;
+      prevPhoneRef.current = null;
+      setNewMessagesCount(0);
+      return;
+    }
+    const count = selectedConversation.messages.length;
+    const phoneChanged = prevPhoneRef.current !== selectedConversation.phone;
+
+    if (phoneChanged) {
+      // Opening a conversation: jump instantly to bottom (no smooth scroll)
+      prevPhoneRef.current = selectedConversation.phone;
+      prevMsgCountRef.current = count;
+      setNewMessagesCount(0);
+      requestAnimationFrame(() => {
+        const el = messagesScrollRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+        setIsAtBottom(true);
+      });
+      return;
+    }
+
+    if (count > prevMsgCountRef.current) {
+      const lastMsg = selectedConversation.messages[count - 1];
+      const isOwn = lastMsg?.type === "outgoing";
+      if (isOwn || isAtBottom) {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        setNewMessagesCount(0);
+      } else {
+        setNewMessagesCount((n) => n + (count - prevMsgCountRef.current));
+      }
+      prevMsgCountRef.current = count;
+    }
+  }, [selectedConversation?.messages.length, selectedConversation?.phone]);
+
+  // Track scroll position to know whether user is at bottom
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 60;
+    setIsAtBottom(atBottom);
+    if (atBottom && newMessagesCount > 0) setNewMessagesCount(0);
+  };
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setNewMessagesCount(0);
+  };
+
   useEffect(() => { if (selectedPhone) setTimeout(() => replyInputRef.current?.focus(), 100); }, [selectedPhone]);
 
   const formatPhone = (p: string) => p.length === 11 && p.startsWith("968") ? `+${p.slice(0, 3)} ${p.slice(3)}` : p;
