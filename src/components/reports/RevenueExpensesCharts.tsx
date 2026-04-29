@@ -7,9 +7,10 @@ import {
   Legend, ReferenceLine, Tooltip,
 } from "recharts";
 import { formatOMR } from "@/lib/currency";
-import { TrendingUp, TrendingDown, DollarSign, Receipt, BarChart3, Filter } from "lucide-react";
+import { Filter, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const FIXED_CATEGORIES = ["Rent", "Loan", "Salaries"];
 
