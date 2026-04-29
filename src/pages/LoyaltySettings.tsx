@@ -170,6 +170,65 @@ export default function LoyaltySettings() {
                 <span className="text-sm text-muted-foreground">% of order total</span>
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <CalendarClock className="w-3 h-3" /> Loyalty Start Date
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="date"
+                  value={currentStart || ""}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pos-input w-44"
+                />
+                {currentStart && (
+                  <button
+                    type="button"
+                    onClick={() => setStartDate("")}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Clear
+                  </button>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  Points earned only from payments on/after this date
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Hourglass className="w-3 h-3" /> Points Validity Period
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={currentValidity ?? ""}
+                  placeholder="Never"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setValidityDays(v === "" ? 0 : Number(v));
+                  }}
+                  className="pos-input w-24 text-center"
+                />
+                <span className="text-sm text-muted-foreground">days (leave empty = never expires)</span>
+              </div>
+              <div className="flex gap-1.5 mt-1">
+                {[30, 60, 90, 180].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setValidityDays(d)}
+                    className="px-2 py-0.5 text-[11px] rounded border border-border hover:bg-muted"
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <Button onClick={handleSaveRules} disabled={saving} className="w-full">
