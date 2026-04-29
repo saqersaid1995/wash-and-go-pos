@@ -8,6 +8,8 @@ export interface LoyaltySettings {
   redeem_points_rate: number;
   max_redemption_percent: number;
   min_redeem_points: number;
+  loyalty_start_date: string | null;
+  points_validity_days: number | null;
 }
 
 export function useLoyaltySettings() {
