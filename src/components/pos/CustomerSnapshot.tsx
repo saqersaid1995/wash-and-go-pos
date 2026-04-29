@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, AlertCircle, Sparkles, UserCheck, ExternalLink, Loader2 } from "lucide-react";
+import { Crown, AlertCircle, Sparkles, UserCheck, ExternalLink, Loader2, Clock } from "lucide-react";
 import { fetchCustomerSnapshot, type CustomerSnapshot as Snapshot } from "@/lib/supabase-queries";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import { formatOMR } from "@/lib/currency";
@@ -114,6 +114,15 @@ export default function CustomerSnapshot({ customerId }: Props) {
               tone="info"
             />
           )}
+        </div>
+      )}
+
+      {!isNew && loyaltyEnabled && snapshot.loyaltyExpiringSoon > 0 && (
+        <div className="flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
+          <Clock className="w-3 h-3" />
+          <span>
+            {snapshot.loyaltyExpiringSoon.toFixed(0)} pts expire in {snapshot.loyaltyExpiringSoonDays} days
+          </span>
         </div>
       )}
     </div>
