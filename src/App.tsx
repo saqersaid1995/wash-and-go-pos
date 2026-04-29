@@ -14,7 +14,7 @@ import Customers from "./pages/Customers.tsx";
 import CustomerProfile from "./pages/CustomerProfile.tsx";
 import Reports from "./pages/Reports.tsx";
 import Expenses from "./pages/Expenses.tsx";
-import Scanner from "./pages/Scanner.tsx";
+
 import ServicesPricing from "./pages/ServicesPricing.tsx";
 import WhatsAppSettings from "./pages/WhatsAppSettings.tsx";
 import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
@@ -46,7 +46,7 @@ const App = () => (
             <Route path="/order/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
             <Route path="/customer/:customerId" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
-            <Route path="/scan" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+            
             <Route path="/offline" element={<ProtectedRoute><OfflineMode /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin"]}><Reports /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute allowedRoles={["admin"]}><Expenses /></ProtectedRoute>} />

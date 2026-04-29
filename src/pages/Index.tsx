@@ -13,6 +13,7 @@ import ActionButtons from "@/components/pos/ActionButtons";
 import InvoiceModal from "@/components/pos/InvoiceModal";
 import QuickOrderPanel from "@/components/pos/QuickOrderPanel";
 import ScanOrderModal from "@/components/pos/ScanOrderModal";
+import SmartSearchBar from "@/components/pos/SmartSearchBar";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
@@ -152,7 +153,20 @@ const Index = () => {
       />
 
       {/* Main Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 p-4 max-w-[1600px] mx-auto">
+      <div className="flex flex-col gap-4 p-4 max-w-[1600px] mx-auto">
+        <SmartSearchBar
+          onScanClick={() => setScanOpen(true)}
+          onOpenOrder={(code) => {
+            setScanCode(code);
+            setScanOpen(true);
+          }}
+          onUseCustomer={(phone, name) => {
+            pos.setCustomerPhone(phone);
+            if (name) pos.setCustomerName(name);
+          }}
+        />
+      </div>
+      <div className="flex flex-col lg:flex-row gap-4 px-4 pb-4 max-w-[1600px] mx-auto">
         <div className="lg:w-[65%] space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CustomerSection
