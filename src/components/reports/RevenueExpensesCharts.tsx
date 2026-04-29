@@ -122,32 +122,37 @@ export function RevenueExpensesCharts({ orders, expenses }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* KPI Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1"><DollarSign className="h-3.5 w-3.5 text-[hsl(142,72%,40%)]" /><span className="text-xs text-muted-foreground">Avg {viewLabel} Revenue</span></div>
-          <p className="text-lg font-bold">{formatOMR(avgRevenue)}</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1"><Receipt className="h-3.5 w-3.5 text-destructive" /><span className="text-xs text-muted-foreground">Avg {viewLabel} Expenses</span></div>
-          <p className="text-lg font-bold">{formatOMR(avgExpenses)}</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">{avgProfit >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-[hsl(230,60%,50%)]" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}<span className="text-xs text-muted-foreground">Avg {viewLabel} Profit</span></div>
-          <p className="text-lg font-bold">{formatOMR(avgProfit)}</p>
-        </CardContent></Card>
-        {!includeFixed && fixedTotal > 0 && (
-          <Card className="border-dashed"><CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1"><BarChart3 className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Fixed Expenses (excl.)</span></div>
-            <p className="text-lg font-bold">{formatOMR(fixedTotal)}</p>
-            <div className="mt-1 space-y-0.5">
-              {Object.entries(fixedByCategory).map(([cat, amt]) => (
-                <p key={cat} className="text-[10px] text-muted-foreground flex justify-between"><span>{cat}</span><span>{formatOMR(amt)}</span></p>
-              ))}
-            </div>
-          </CardContent></Card>
-        )}
-      </div>
+      {/* Fixed Expenses — collapsible */}
+      {!includeFixed && fixedTotal > 0 && (
+        <Collapsible>
+          <Card className="border-dashed">
+            <CollapsibleTrigger asChild>
+              <button className="w-full text-left">
+                <CardContent className="p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Fixed Expenses (excluded from chart)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold">{formatOMR(fixedTotal)}</span>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                  </div>
+                </CardContent>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-3 px-3 space-y-1">
+                {Object.entries(fixedByCategory).map(([cat, amt]) => (
+                  <div key={cat} className="text-xs flex justify-between">
+                    <span className="text-muted-foreground">{cat}</span>
+                    <span className="font-medium">{formatOMR(amt)}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
