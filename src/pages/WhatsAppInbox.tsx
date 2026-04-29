@@ -10,7 +10,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import {
   MessageCircle, User, Package, Search, ArrowLeft, ExternalLink,
   Send, Loader2, Trash2, Image as ImageIcon, FileText, Mic, AlertCircle,
-  Paperclip, Camera, X, Receipt, CheckCircle2, BellRing, Zap, Circle,
+  Paperclip, Camera, X, Receipt, CheckCircle2, BellRing, Zap, Circle, ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -87,9 +87,14 @@ export default function WhatsAppInbox() {
   const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
   const [imageCaption, setImageCaption] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const prevMsgCountRef = useRef<number>(0);
+  const prevPhoneRef = useRef<string | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role: userRole } = useAuth();
@@ -207,7 +212,58 @@ export default function WhatsAppInbox() {
       });
   }, [selectedConversation?.messages.length]);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [selectedConversation?.messages.length]);
+  // Smart scroll: jump to bottom on conversation open; otherwise only auto-scroll
+  // when user is already near bottom OR they sent the message themselves.
+  useEffect(() => {
+    if (!selectedConversation) {
+      prevMsgCountRef.current = 0;
+      prevPhoneRef.current = null;
+      setNewMessagesCount(0);
+      return;
+    }
+    const count = selectedConversation.messages.length;
+    const phoneChanged = prevPhoneRef.current !== selectedConversation.phone;
+
+    if (phoneChanged) {
+      // Opening a conversation: jump instantly to bottom (no smooth scroll)
+      prevPhoneRef.current = selectedConversation.phone;
+      prevMsgCountRef.current = count;
+      setNewMessagesCount(0);
+      requestAnimationFrame(() => {
+        const el = messagesScrollRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+        setIsAtBottom(true);
+      });
+      return;
+    }
+
+    if (count > prevMsgCountRef.current) {
+      const lastMsg = selectedConversation.messages[count - 1];
+      const isOwn = lastMsg?.type === "outgoing";
+      if (isOwn || isAtBottom) {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        setNewMessagesCount(0);
+      } else {
+        setNewMessagesCount((n) => n + (count - prevMsgCountRef.current));
+      }
+      prevMsgCountRef.current = count;
+    }
+  }, [selectedConversation?.messages.length, selectedConversation?.phone]);
+
+  // Track scroll position to know whether user is at bottom
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 60;
+    setIsAtBottom(atBottom);
+    if (atBottom && newMessagesCount > 0) setNewMessagesCount(0);
+  };
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setNewMessagesCount(0);
+  };
+
   useEffect(() => { if (selectedPhone) setTimeout(() => replyInputRef.current?.focus(), 100); }, [selectedPhone]);
 
   const formatPhone = (p: string) => p.length === 11 && p.startsWith("968") ? `+${p.slice(0, 3)} ${p.slice(3)}` : p;
@@ -390,7 +446,7 @@ export default function WhatsAppInbox() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <AppHeader title="Inbox" />
 
       <div className="flex-1 flex overflow-hidden w-full">
@@ -491,7 +547,7 @@ export default function WhatsAppInbox() {
 
         {/* ─── CHAT (70%) ─── */}
         {showChatView && (
-          <main className="flex-1 flex flex-col min-w-0 bg-muted/20">
+          <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-muted/20">
             {selectedConversation ? (
               <>
                 {/* Chat header */}
@@ -562,48 +618,71 @@ export default function WhatsAppInbox() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1">
-                  <div className="px-4 py-4 space-y-1.5 max-w-[760px] mx-auto">
-                    {selectedConversation.messages.map((msg, i) => {
-                      const prev = selectedConversation.messages[i - 1];
-                      const showDateSep = !prev || format(new Date(prev.created_at), "yyyy-MM-dd") !== format(new Date(msg.created_at), "yyyy-MM-dd");
-                      const isOutgoing = msg.type === "outgoing";
-                      return (
-                        <div key={msg.id}>
-                          {showDateSep && (
-                            <div className="flex items-center justify-center my-3">
-                              <span className="text-[10px] text-muted-foreground bg-card border border-border px-3 py-1 rounded-full font-medium">
-                                {format(new Date(msg.created_at), "MMM d, yyyy")}
-                              </span>
-                            </div>
-                          )}
-                          <div className={cn("flex", isOutgoing ? "justify-end" : "justify-start")}>
-                            <div className={cn(
-                              "max-w-[78%] rounded-2xl px-3 py-2 shadow-sm",
-                              isOutgoing
-                                ? "bg-primary text-primary-foreground rounded-br-md"
-                                : "bg-card border border-border rounded-bl-md"
-                            )}>
-                              {renderMessageContent(msg)}
-                              <div className={cn("flex items-center gap-1 mt-0.5 justify-end")}>
-                                <span className={cn(
-                                  "text-[10px] leading-none",
-                                  isOutgoing ? "text-primary-foreground/70" : "text-muted-foreground"
-                                )}>
-                                  {format(new Date(msg.message_timestamp || msg.created_at), "HH:mm")}
+                <div className="relative flex-1 min-h-0">
+                  <div
+                    ref={messagesScrollRef}
+                    onScroll={handleMessagesScroll}
+                    className="absolute inset-0 overflow-y-auto overscroll-contain"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
+                    <div className="px-4 py-4 space-y-1.5 max-w-[760px] mx-auto">
+                      {selectedConversation.messages.map((msg, i) => {
+                        const prev = selectedConversation.messages[i - 1];
+                        const showDateSep = !prev || format(new Date(prev.created_at), "yyyy-MM-dd") !== format(new Date(msg.created_at), "yyyy-MM-dd");
+                        const isOutgoing = msg.type === "outgoing";
+                        return (
+                          <div key={msg.id}>
+                            {showDateSep && (
+                              <div className="flex items-center justify-center my-3">
+                                <span className="text-[10px] text-muted-foreground bg-card border border-border px-3 py-1 rounded-full font-medium">
+                                  {format(new Date(msg.created_at), "MMM d, yyyy")}
                                 </span>
-                                {isOutgoing && msg.send_status === "failed" && (
-                                  <AlertCircle className="h-3 w-3 text-destructive" />
-                                )}
+                              </div>
+                            )}
+                            <div className={cn("flex", isOutgoing ? "justify-end" : "justify-start")}>
+                              <div className={cn(
+                                "max-w-[78%] rounded-2xl px-3 py-2 shadow-sm",
+                                isOutgoing
+                                  ? "bg-primary text-primary-foreground rounded-br-md"
+                                  : "bg-card border border-border rounded-bl-md"
+                              )}>
+                                {renderMessageContent(msg)}
+                                <div className={cn("flex items-center gap-1 mt-0.5 justify-end")}>
+                                  <span className={cn(
+                                    "text-[10px] leading-none",
+                                    isOutgoing ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  )}>
+                                    {format(new Date(msg.message_timestamp || msg.created_at), "HH:mm")}
+                                  </span>
+                                  {isOutgoing && msg.send_status === "failed" && (
+                                    <AlertCircle className="h-3 w-3 text-destructive" />
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={chatEndRef} />
+                        );
+                      })}
+                      <div ref={chatEndRef} />
+                    </div>
                   </div>
-                </ScrollArea>
+
+                  {/* "New messages ↓" floating button */}
+                  {!isAtBottom && (
+                    <button
+                      onClick={scrollToBottom}
+                      className={cn(
+                        "absolute bottom-3 left-1/2 -translate-x-1/2 z-10",
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg",
+                        "bg-primary text-primary-foreground text-xs font-medium",
+                        "hover:bg-primary/90 transition-colors animate-in fade-in slide-in-from-bottom-2"
+                      )}
+                    >
+                      {newMessagesCount > 0 ? `${newMessagesCount} new message${newMessagesCount > 1 ? "s" : ""}` : "Jump to latest"}
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
 
                 {/* Quick actions bar */}
                 <div className="border-t border-border bg-card px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto">
