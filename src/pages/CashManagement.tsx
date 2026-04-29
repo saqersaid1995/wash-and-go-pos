@@ -258,18 +258,19 @@ export default function CashManagement() {
   const futurePayments = useMemo(() => {
     const today = toDateStr(new Date());
     const upcoming = expenses.filter((e) => {
-      // Recurring with a next_run_date in the future
-      if (e.is_recurring && e.next_run_date && e.next_run_date >= today) return true;
-      // One-off pending/scheduled expenses with date >= today
-      if (e.expense_status !== "paid" && e.expense_date >= today) return true;
-      return false;
+      if (e.is_recurring && !e.is_auto_generated) {
+        // Recurring template with future next_run_date
+        return e.next_run_date && e.next_run_date >= today;
+      }
+      // Outstanding (accrued/partial) expenses still owe money
+      return e.remaining_amount > 0.001;
     }).map((e) => ({
       id: e.id,
-      date: e.is_recurring && e.next_run_date ? e.next_run_date : e.expense_date,
+      date: e.is_recurring && e.next_run_date ? e.next_run_date : (e.due_date || e.expense_date),
       description: e.description || e.category,
       category: e.category,
-      amount: e.amount,
-      recurring: e.is_recurring,
+      amount: e.is_recurring && !e.is_auto_generated ? e.amount : e.remaining_amount,
+      recurring: e.is_recurring && !e.is_auto_generated,
     })).sort((a, b) => a.date.localeCompare(b.date));
 
     const totalUpcoming = upcoming.reduce((s, x) => s + x.amount, 0);
