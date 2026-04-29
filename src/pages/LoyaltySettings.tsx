@@ -3,7 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
-import { Loader2, Gift, Star, Percent, ArrowRight } from "lucide-react";
+import { Loader2, Gift, Star, Percent, ArrowRight, CalendarClock, Hourglass } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LoyaltySettings() {
@@ -13,6 +13,8 @@ export default function LoyaltySettings() {
   const [redeemRate, setRedeemRate] = useState<number | null>(null);
   const [maxPercent, setMaxPercent] = useState<number | null>(null);
   const [minRedeem, setMinRedeem] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [validityDays, setValidityDays] = useState<number | null>(null);
 
   if (loading || !settings) {
     return (
@@ -29,6 +31,8 @@ export default function LoyaltySettings() {
   const currentRedeem = redeemRate ?? settings.redeem_points_rate;
   const currentMax = maxPercent ?? settings.max_redemption_percent;
   const currentMinRedeem = minRedeem ?? settings.min_redeem_points;
+  const currentStart = startDate ?? settings.loyalty_start_date ?? "";
+  const currentValidity = validityDays ?? settings.points_validity_days ?? null;
 
   const handleToggle = async (enabled: boolean) => {
     setSaving(true);
@@ -42,12 +46,24 @@ export default function LoyaltySettings() {
   };
 
   const handleSaveRules = async () => {
+    // Validation
+    if (currentValidity !== null && currentValidity !== undefined && currentValidity < 1) {
+      toast.error("Validity period must be at least 1 day");
+      return;
+    }
+    if (currentStart && isNaN(new Date(currentStart).getTime())) {
+      toast.error("Invalid start date");
+      return;
+    }
+
     setSaving(true);
     const res = await update({
       earn_points_rate: currentEarn,
       redeem_points_rate: currentRedeem,
       max_redemption_percent: currentMax,
       min_redeem_points: currentMinRedeem,
+      loyalty_start_date: currentStart ? currentStart : null,
+      points_validity_days: currentValidity && currentValidity > 0 ? currentValidity : null,
     });
     setSaving(false);
     if (res?.error) {
@@ -57,6 +73,8 @@ export default function LoyaltySettings() {
       setRedeemRate(null);
       setMaxPercent(null);
       setMinRedeem(null);
+      setStartDate(null);
+      setValidityDays(null);
       toast.success("Loyalty rules updated");
     }
   };
