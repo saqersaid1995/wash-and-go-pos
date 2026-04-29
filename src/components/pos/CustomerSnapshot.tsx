@@ -87,7 +87,7 @@ export default function CustomerSnapshot({ customerId }: Props) {
           <StatusBadge status={snapshot.status} />
         </div>
         <Link
-          to={`/customers/${snapshot.customerId}`}
+          to={`/customer/${snapshot.customerId}`}
           className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
         >
           View Profile <ExternalLink className="w-3 h-3" />

@@ -8,6 +8,7 @@ import {
   searchCustomerSuggestions,
   type CustomerSuggestion,
 } from "@/lib/supabase-queries";
+import CustomerSnapshot from "./CustomerSnapshot";
 import { formatOMR } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
@@ -282,6 +283,7 @@ export default function CustomerSection({
         rows={2}
         className="pos-input w-full resize-none py-2"
       />
+      <CustomerSnapshot customerId={matchedCustomer?.id ?? null} />
     </div>
   );
 }
