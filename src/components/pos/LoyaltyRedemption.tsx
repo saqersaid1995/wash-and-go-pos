@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Gift, Loader2 } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
+import { fetchLoyaltyBalance } from "@/lib/loyalty-balance";
 import type { LoyaltySettings } from "@/hooks/useLoyaltySettings";
 
 interface Props {
@@ -29,15 +29,10 @@ export default function LoyaltyRedemption({
       return;
     }
     setLoading(true);
-    supabase
-      .from("customer_loyalty")
-      .select("points_balance")
-      .eq("customer_id", customerId)
-      .maybeSingle()
-      .then(({ data }) => {
-        setBalance((data as any)?.points_balance ?? 0);
-        setLoading(false);
-      });
+    fetchLoyaltyBalance(customerId).then((b) => {
+      setBalance(b.available);
+      setLoading(false);
+    });
   }, [customerId, loyaltySettings.is_enabled]);
 
   if (!loyaltySettings.is_enabled || !customerId) return null;

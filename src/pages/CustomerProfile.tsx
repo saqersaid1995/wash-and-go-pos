@@ -12,6 +12,7 @@ import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
+import { fetchLoyaltyBalance, type LoyaltyBalance } from "@/lib/loyalty-balance";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
@@ -54,7 +55,7 @@ export default function CustomerProfile() {
   const nav = useNavigate();
   const { settings: loyaltySettings } = useLoyaltySettings();
   const [customer, setCustomer] = useState<CustomerWithStats | null>(null);
-  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<LoyaltyBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
@@ -72,13 +73,9 @@ export default function CustomerProfile() {
     ]);
     if (cust) {
       setCustomer(buildStats(cust, orders));
-      // Fetch loyalty balance
-      const { data: loyaltyData } = await supabase
-        .from("customer_loyalty")
-        .select("points_balance")
-        .eq("customer_id", customerId)
-        .maybeSingle();
-      setLoyaltyBalance((loyaltyData as any)?.points_balance ?? 0);
+      // Fetch loyalty balance breakdown (available / expired / expiring soon)
+      const bal = await fetchLoyaltyBalance(customerId);
+      setLoyaltyBalance(bal);
     }
     setLoading(false);
   }, [customerId]);
@@ -194,8 +191,44 @@ export default function CustomerProfile() {
             <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={formatOMR(customer.outstandingBalance)} warning={customer.outstandingBalance > 0} />
             <MiniCard icon={<FileText className="w-4 h-4" />} label="Unpaid Orders" value={customer.unpaidOrderCount} warning={customer.unpaidOrderCount > 0} />
             <MiniCard icon={<Clock className="w-4 h-4" />} label="Last Order" value={customer.lastOrderDate ?? "—"} />
-            {loyaltySettings?.is_enabled && (
-              <MiniCard icon={<Gift className="w-4 h-4" />} label="Loyalty Points" value={loyaltyBalance} accent={loyaltyBalance > 0} />
+            {loyaltySettings?.is_enabled && loyaltyBalance && (
+              <>
+                <MiniCard
+                  icon={<Gift className="w-4 h-4" />}
+                  label="Available Points"
+                  value={loyaltyBalance.available.toFixed(0)}
+                  accent={loyaltyBalance.available > 0}
+                />
+                {loyaltyBalance.expiringSoon > 0 && (
+                  <MiniCard
+                    icon={<Clock className="w-4 h-4" />}
+                    label={`Expiring in ${loyaltyBalance.expiringSoonDays}d`}
+                    value={loyaltyBalance.expiringSoon.toFixed(0)}
+                    warning
+                  />
+                )}
+                {loyaltyBalance.expired > 0 && (
+                  <MiniCard
+                    icon={<AlertCircle className="w-4 h-4" />}
+                    label="Expired Points"
+                    value={loyaltyBalance.expired.toFixed(0)}
+                  />
+                )}
+                {loyaltyBalance.lastEarnedAt && (
+                  <MiniCard
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="Last Earned"
+                    value={new Date(loyaltyBalance.lastEarnedAt).toLocaleDateString()}
+                  />
+                )}
+                {loyaltyBalance.nextExpiryAt && (
+                  <MiniCard
+                    icon={<Clock className="w-4 h-4" />}
+                    label="Next Expiry"
+                    value={new Date(loyaltyBalance.nextExpiryAt).toLocaleDateString()}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

@@ -409,12 +409,16 @@ export interface CustomerSnapshot {
   outstandingBalance: number;
   lastOrderDate: string | null;
   loyaltyPoints: number;
+  loyaltyExpiringSoon: number;
+  loyaltyExpiringSoonDays: number;
+  loyaltyNextExpiryAt: string | null;
   customerType: "regular" | "vip";
   status: "new" | "regular" | "vip" | "at_risk";
 }
 
 export async function fetchCustomerSnapshot(customerId: string): Promise<CustomerSnapshot | null> {
-  const [{ data: cust }, { data: orders }, { data: loyalty }] = await Promise.all([
+  const { fetchLoyaltyBalance } = await import("./loyalty-balance");
+  const [{ data: cust }, { data: orders }, loyalty] = await Promise.all([
     supabase.from("customers").select("customer_type").eq("id", customerId).maybeSingle(),
     supabase
       .from("orders")
@@ -422,7 +426,7 @@ export async function fetchCustomerSnapshot(customerId: string): Promise<Custome
       .eq("customer_id", customerId)
       .eq("is_deleted", false)
       .eq("is_draft", false),
-    supabase.from("customer_loyalty").select("points_balance").eq("customer_id", customerId).maybeSingle(),
+    fetchLoyaltyBalance(customerId),
   ]);
 
   const totalOrders = orders?.length || 0;
@@ -440,7 +444,6 @@ export async function fetchCustomerSnapshot(customerId: string): Promise<Custome
 
   const customerType = ((cust?.customer_type || "Regular").toLowerCase()) as "regular" | "vip";
 
-  // Status logic: VIP > At Risk (>60 days since last visit & had orders) > Regular (>=3 orders) > New
   let status: CustomerSnapshot["status"] = "new";
   if (customerType === "vip") {
     status = "vip";
@@ -462,7 +465,10 @@ export async function fetchCustomerSnapshot(customerId: string): Promise<Custome
     totalPaid,
     outstandingBalance,
     lastOrderDate,
-    loyaltyPoints: Number(loyalty?.points_balance) || 0,
+    loyaltyPoints: loyalty.available,
+    loyaltyExpiringSoon: loyalty.expiringSoon,
+    loyaltyExpiringSoonDays: loyalty.expiringSoonDays,
+    loyaltyNextExpiryAt: loyalty.nextExpiryAt,
     customerType,
     status,
   };
