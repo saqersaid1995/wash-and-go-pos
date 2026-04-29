@@ -191,8 +191,44 @@ export default function CustomerProfile() {
             <MiniCard icon={<AlertCircle className="w-4 h-4" />} label="Outstanding" value={formatOMR(customer.outstandingBalance)} warning={customer.outstandingBalance > 0} />
             <MiniCard icon={<FileText className="w-4 h-4" />} label="Unpaid Orders" value={customer.unpaidOrderCount} warning={customer.unpaidOrderCount > 0} />
             <MiniCard icon={<Clock className="w-4 h-4" />} label="Last Order" value={customer.lastOrderDate ?? "—"} />
-            {loyaltySettings?.is_enabled && (
-              <MiniCard icon={<Gift className="w-4 h-4" />} label="Loyalty Points" value={loyaltyBalance} accent={loyaltyBalance > 0} />
+            {loyaltySettings?.is_enabled && loyaltyBalance && (
+              <>
+                <MiniCard
+                  icon={<Gift className="w-4 h-4" />}
+                  label="Available Points"
+                  value={loyaltyBalance.available.toFixed(0)}
+                  accent={loyaltyBalance.available > 0}
+                />
+                {loyaltyBalance.expiringSoon > 0 && (
+                  <MiniCard
+                    icon={<Clock className="w-4 h-4" />}
+                    label={`Expiring in ${loyaltyBalance.expiringSoonDays}d`}
+                    value={loyaltyBalance.expiringSoon.toFixed(0)}
+                    warning
+                  />
+                )}
+                {loyaltyBalance.expired > 0 && (
+                  <MiniCard
+                    icon={<AlertCircle className="w-4 h-4" />}
+                    label="Expired Points"
+                    value={loyaltyBalance.expired.toFixed(0)}
+                  />
+                )}
+                {loyaltyBalance.lastEarnedAt && (
+                  <MiniCard
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="Last Earned"
+                    value={new Date(loyaltyBalance.lastEarnedAt).toLocaleDateString()}
+                  />
+                )}
+                {loyaltyBalance.nextExpiryAt && (
+                  <MiniCard
+                    icon={<Clock className="w-4 h-4" />}
+                    label="Next Expiry"
+                    value={new Date(loyaltyBalance.nextExpiryAt).toLocaleDateString()}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
