@@ -260,8 +260,10 @@ export type Database = {
           earn_points_rate: number
           id: string
           is_enabled: boolean
+          loyalty_start_date: string | null
           max_redemption_percent: number
           min_redeem_points: number
+          points_validity_days: number | null
           redeem_points_rate: number
           updated_at: string
         }
@@ -270,8 +272,10 @@ export type Database = {
           earn_points_rate?: number
           id?: string
           is_enabled?: boolean
+          loyalty_start_date?: string | null
           max_redemption_percent?: number
           min_redeem_points?: number
+          points_validity_days?: number | null
           redeem_points_rate?: number
           updated_at?: string
         }
@@ -280,8 +284,10 @@ export type Database = {
           earn_points_rate?: number
           id?: string
           is_enabled?: boolean
+          loyalty_start_date?: string | null
           max_redemption_percent?: number
           min_redeem_points?: number
+          points_validity_days?: number | null
           redeem_points_rate?: number
           updated_at?: string
         }
@@ -292,27 +298,33 @@ export type Database = {
           created_at: string
           customer_id: string
           description: string | null
+          expires_at: string | null
           id: string
           order_id: string | null
           points: number
+          remaining_points: number
           type: string
         }
         Insert: {
           created_at?: string
           customer_id: string
           description?: string | null
+          expires_at?: string | null
           id?: string
           order_id?: string | null
           points?: number
+          remaining_points?: number
           type?: string
         }
         Update: {
           created_at?: string
           customer_id?: string
           description?: string | null
+          expires_at?: string | null
           id?: string
           order_id?: string | null
           points?: number
+          remaining_points?: number
           type?: string
         }
         Relationships: [
