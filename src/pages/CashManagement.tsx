@@ -255,23 +255,27 @@ export default function CashManagement() {
   }, [actualBank, cashPosition.bankBalance]);
 
   // ========== FUTURE PAYMENTS ==========
+  // Only count REAL outstanding obligations (accrued/partial expenses with remaining balance).
+  // Recurring TEMPLATES are excluded — they only define a schedule and have not yet generated
+  // an actual liability. Once "Generate Missing Entries" runs, the resulting accrued instance
+  // will appear here automatically.
   const futurePayments = useMemo(() => {
-    const today = toDateStr(new Date());
-    const upcoming = expenses.filter((e) => {
-      if (e.is_recurring && !e.is_auto_generated) {
-        // Recurring template with future next_run_date
-        return e.next_run_date && e.next_run_date >= today;
-      }
-      // Outstanding (accrued/partial) expenses still owe money
-      return e.remaining_amount > 0.001;
-    }).map((e) => ({
-      id: e.id,
-      date: e.is_recurring && e.next_run_date ? e.next_run_date : (e.due_date || e.expense_date),
-      description: e.description || e.category,
-      category: e.category,
-      amount: e.is_recurring && !e.is_auto_generated ? e.amount : e.remaining_amount,
-      recurring: e.is_recurring && !e.is_auto_generated,
-    })).sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = expenses
+      .filter((e) => {
+        // Skip recurring templates entirely
+        if (e.is_recurring && !e.is_auto_generated) return false;
+        // Outstanding (accrued/partial) expenses still owe money
+        return e.remaining_amount > 0.001;
+      })
+      .map((e) => ({
+        id: e.id,
+        date: e.due_date || e.expense_date,
+        description: e.description || e.category,
+        category: e.category,
+        amount: e.remaining_amount,
+        recurring: false,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     const totalUpcoming = upcoming.reduce((s, x) => s + x.amount, 0);
     const remainingAfter = cashPosition.total - totalUpcoming;
