@@ -12,6 +12,7 @@ import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
+import { fetchLoyaltyBalance, type LoyaltyBalance } from "@/lib/loyalty-balance";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
@@ -54,7 +55,7 @@ export default function CustomerProfile() {
   const nav = useNavigate();
   const { settings: loyaltySettings } = useLoyaltySettings();
   const [customer, setCustomer] = useState<CustomerWithStats | null>(null);
-  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<LoyaltyBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
@@ -72,13 +73,9 @@ export default function CustomerProfile() {
     ]);
     if (cust) {
       setCustomer(buildStats(cust, orders));
-      // Fetch loyalty balance
-      const { data: loyaltyData } = await supabase
-        .from("customer_loyalty")
-        .select("points_balance")
-        .eq("customer_id", customerId)
-        .maybeSingle();
-      setLoyaltyBalance((loyaltyData as any)?.points_balance ?? 0);
+      // Fetch loyalty balance breakdown (available / expired / expiring soon)
+      const bal = await fetchLoyaltyBalance(customerId);
+      setLoyaltyBalance(bal);
     }
     setLoading(false);
   }, [customerId]);
