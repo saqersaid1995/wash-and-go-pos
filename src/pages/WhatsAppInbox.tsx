@@ -87,9 +87,14 @@ export default function WhatsAppInbox() {
   const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
   const [imageCaption, setImageCaption] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const prevMsgCountRef = useRef<number>(0);
+  const prevPhoneRef = useRef<string | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role: userRole } = useAuth();
