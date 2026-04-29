@@ -10,7 +10,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import {
   MessageCircle, User, Package, Search, ArrowLeft, ExternalLink,
   Send, Loader2, Trash2, Image as ImageIcon, FileText, Mic, AlertCircle,
-  Paperclip, Camera, X, Receipt, CheckCircle2, BellRing, Zap, Circle,
+  Paperclip, Camera, X, Receipt, CheckCircle2, BellRing, Zap, Circle, ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
