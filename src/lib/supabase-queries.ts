@@ -401,6 +401,73 @@ export async function fetchOrdersByCustomerId(customerId: string): Promise<Workf
   return (data || []).map(mapDbOrderToWorkflow);
 }
 
+export interface CustomerSnapshot {
+  customerId: string;
+  totalOrders: number;
+  totalSpent: number;
+  totalPaid: number;
+  outstandingBalance: number;
+  lastOrderDate: string | null;
+  loyaltyPoints: number;
+  customerType: "regular" | "vip";
+  status: "new" | "regular" | "vip" | "at_risk";
+}
+
+export async function fetchCustomerSnapshot(customerId: string): Promise<CustomerSnapshot | null> {
+  const [{ data: cust }, { data: orders }, { data: loyalty }] = await Promise.all([
+    supabase.from("customers").select("customer_type").eq("id", customerId).maybeSingle(),
+    supabase
+      .from("orders")
+      .select("total_amount, paid_amount, remaining_amount, order_date, created_at")
+      .eq("customer_id", customerId)
+      .eq("is_deleted", false)
+      .eq("is_draft", false),
+    supabase.from("customer_loyalty").select("points_balance").eq("customer_id", customerId).maybeSingle(),
+  ]);
+
+  const totalOrders = orders?.length || 0;
+  let totalSpent = 0;
+  let totalPaid = 0;
+  let outstandingBalance = 0;
+  let lastOrderDate: string | null = null;
+  (orders || []).forEach((o: any) => {
+    totalSpent += Number(o.total_amount) || 0;
+    totalPaid += Number(o.paid_amount) || 0;
+    outstandingBalance += Number(o.remaining_amount) || 0;
+    const d = o.order_date || o.created_at;
+    if (d && (!lastOrderDate || d > lastOrderDate)) lastOrderDate = d;
+  });
+
+  const customerType = ((cust?.customer_type || "Regular").toLowerCase()) as "regular" | "vip";
+
+  // Status logic: VIP > At Risk (>60 days since last visit & had orders) > Regular (>=3 orders) > New
+  let status: CustomerSnapshot["status"] = "new";
+  if (customerType === "vip") {
+    status = "vip";
+  } else if (totalOrders === 0) {
+    status = "new";
+  } else {
+    const daysSince = lastOrderDate
+      ? (Date.now() - new Date(lastOrderDate).getTime()) / (1000 * 60 * 60 * 24)
+      : Infinity;
+    if (daysSince > 60) status = "at_risk";
+    else if (totalOrders >= 3) status = "regular";
+    else status = "new";
+  }
+
+  return {
+    customerId,
+    totalOrders,
+    totalSpent,
+    totalPaid,
+    outstandingBalance,
+    lastOrderDate,
+    loyaltyPoints: Number(loyalty?.points_balance) || 0,
+    customerType,
+    status,
+  };
+}
+
 export async function addCustomerNote(customerId: string, text: string, createdBy?: string) {
   const { error } = await supabase.from("customer_notes").insert({
     customer_id: customerId,
