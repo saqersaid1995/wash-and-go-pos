@@ -17,8 +17,6 @@ import SmartSearchBar from "@/components/pos/SmartSearchBar";
 import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import AppHeader from "@/components/AppHeader";
-import { Button } from "@/components/ui/button";
-import { ScanBarcode } from "lucide-react";
 import { awardLoyaltyPoints, redeemLoyaltyPoints } from "@/lib/loyalty";
 import { triggerLoyaltyWhatsApp } from "@/lib/loyalty-whatsapp";
 
