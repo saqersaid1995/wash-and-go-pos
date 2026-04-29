@@ -324,6 +324,68 @@ export async function fetchCustomerByPhone(phone: string): Promise<CustomerRecor
   return mapDbCustomer(data, data.customer_notes || []);
 }
 
+export interface CustomerSuggestion {
+  id: string;
+  name: string;
+  phone: string;
+  customerType: "regular" | "vip";
+  orderCount: number;
+  totalSpent: number;
+}
+
+export async function searchCustomerSuggestions(
+  query: string,
+  limit = 8
+): Promise<CustomerSuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  // Escape % and _ for ILIKE
+  const safe = q.replace(/[%_]/g, (m) => `\\${m}`);
+  const pattern = `%${safe}%`;
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, full_name, phone_number, customer_type")
+    .eq("is_active", true)
+    .or(`phone_number.ilike.${pattern},full_name.ilike.${pattern}`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    if (error) console.error("searchCustomerSuggestions error:", error);
+    return [];
+  }
+
+  const ids = data.map((c: any) => c.id);
+  let statsByCustomer: Record<string, { count: number; total: number }> = {};
+  if (ids.length) {
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("customer_id, total_amount")
+      .in("customer_id", ids)
+      .eq("is_deleted", false)
+      .eq("is_draft", false);
+    (orders || []).forEach((o: any) => {
+      const s = statsByCustomer[o.customer_id] || { count: 0, total: 0 };
+      s.count += 1;
+      s.total += Number(o.total_amount) || 0;
+      statsByCustomer[o.customer_id] = s;
+    });
+  }
+
+  return data.map((c: any) => {
+    const s = statsByCustomer[c.id] || { count: 0, total: 0 };
+    return {
+      id: c.id,
+      name: c.full_name,
+      phone: c.phone_number,
+      customerType: ((c.customer_type || "Regular").toLowerCase()) as "regular" | "vip",
+      orderCount: s.count,
+      totalSpent: s.total,
+    };
+  });
+}
+
 export async function fetchOrdersByCustomerId(customerId: string): Promise<WorkflowOrder[]> {
   const { data, error } = await supabase
     .from("orders")
