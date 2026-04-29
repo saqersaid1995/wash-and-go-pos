@@ -76,10 +76,16 @@ export function useReportsData() {
   const bounds = useMemo(() => getDateBounds(dateRange, customStart, customEnd), [dateRange, customStart, customEnd]);
   const prevBounds = useMemo(() => getPreviousBounds(bounds), [bounds]);
 
+  // Exclude recurring templates (only count real entries: manual + auto-generated instances)
+  const realExpenses = useMemo(
+    () => allExpenses.filter((e) => !e.is_recurring || e.is_auto_generated),
+    [allExpenses]
+  );
+
   const orders = useMemo(() => filterByBounds(allOrders, (o) => o.orderDate, bounds), [allOrders, bounds]);
-  const expenses = useMemo(() => filterByBounds(allExpenses, (e) => e.expense_date, bounds), [allExpenses, bounds]);
+  const expenses = useMemo(() => filterByBounds(realExpenses, (e) => e.expense_date, bounds), [realExpenses, bounds]);
   const prevOrders = useMemo(() => filterByBounds(allOrders, (o) => o.orderDate, prevBounds), [allOrders, prevBounds]);
-  const prevExpenses = useMemo(() => filterByBounds(allExpenses, (e) => e.expense_date, prevBounds), [allExpenses, prevBounds]);
+  const prevExpenses = useMemo(() => filterByBounds(realExpenses, (e) => e.expense_date, prevBounds), [realExpenses, prevBounds]);
 
   const today = todayStr();
 
