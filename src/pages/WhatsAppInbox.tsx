@@ -446,7 +446,7 @@ export default function WhatsAppInbox() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <AppHeader title="Inbox" />
 
       <div className="flex-1 flex overflow-hidden w-full">
