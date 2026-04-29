@@ -117,6 +117,44 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          expense_id: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_source: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          expense_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_source?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expense_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_payments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -126,6 +164,7 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          due_date: string | null
           expense_date: string
           expense_status: string
           id: string
@@ -134,10 +173,12 @@ export type Database = {
           is_recurring: boolean
           last_run_date: string | null
           next_run_date: string | null
+          paid_amount: number
           parent_recurring_id: string | null
           payment_source: string
           pl_line: string
           recurring_period: string | null
+          remaining_amount: number
           updated_at: string
         }
         Insert: {
@@ -148,6 +189,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          due_date?: string | null
           expense_date?: string
           expense_status?: string
           id?: string
@@ -156,10 +198,12 @@ export type Database = {
           is_recurring?: boolean
           last_run_date?: string | null
           next_run_date?: string | null
+          paid_amount?: number
           parent_recurring_id?: string | null
           payment_source?: string
           pl_line?: string
           recurring_period?: string | null
+          remaining_amount?: number
           updated_at?: string
         }
         Update: {
@@ -170,6 +214,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          due_date?: string | null
           expense_date?: string
           expense_status?: string
           id?: string
@@ -178,10 +223,12 @@ export type Database = {
           is_recurring?: boolean
           last_run_date?: string | null
           next_run_date?: string | null
+          paid_amount?: number
           parent_recurring_id?: string | null
           payment_source?: string
           pl_line?: string
           recurring_period?: string | null
+          remaining_amount?: number
           updated_at?: string
         }
         Relationships: []
@@ -1065,6 +1112,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      recompute_expense_lifecycle: {
+        Args: { _expense_id: string }
+        Returns: undefined
       }
     }
     Enums: {

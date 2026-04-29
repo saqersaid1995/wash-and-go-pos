@@ -10,7 +10,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarClock, ArrowRight, Pencil, Trash2, Loader2 } from "lucide-react";
+import { CalendarClock, ArrowRight, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import {
@@ -24,6 +24,8 @@ import {
 interface RecurringPreviewProps {
   templates: Expense[];
   onChanged?: () => Promise<void> | void;
+  onGenerate?: () => Promise<void> | void;
+  generating?: boolean;
 }
 
 const ordinalSuffix = (n: number) => {
@@ -32,7 +34,7 @@ const ordinalSuffix = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-export function RecurringPreview({ templates, onChanged }: RecurringPreviewProps) {
+export function RecurringPreview({ templates, onChanged, onGenerate, generating }: RecurringPreviewProps) {
   const [editing, setEditing] = useState<Expense | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -106,10 +108,16 @@ export function RecurringPreview({ templates, onChanged }: RecurringPreviewProps
   return (
     <>
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
             <CalendarClock className="h-4 w-4" /> Recurring Expense Templates
           </CardTitle>
+          {onGenerate && (
+            <Button variant="outline" size="sm" onClick={() => onGenerate()} disabled={generating}>
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${generating ? "animate-spin" : ""}`} />
+              Generate Missing Entries
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-2">

@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { formatOMR } from "@/lib/currency";
 import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllExpenses, type Expense } from "@/lib/expense-queries";
+import { fetchAllExpenses, fetchAllExpensePayments, type Expense, type ExpensePayment } from "@/lib/expense-queries";
 import { toast } from "sonner";
 
 interface OpeningBalance {
@@ -61,6 +61,7 @@ export default function CashManagement() {
   const [customEnd, setCustomEnd] = useState<Date>();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expensePayments, setExpensePayments] = useState<ExpensePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
@@ -77,11 +78,19 @@ export default function CashManagement() {
   const [editingOpening, setEditingOpening] = useState(false);
   const [savingOpening, setSavingOpening] = useState(false);
 
+  // Index expense payment_source split (mixed → keep full split via expense link)
+  const expenseSourceMap = useMemo(() => {
+    const m = new Map<string, Expense>();
+    expenses.forEach((e) => m.set(e.id, e));
+    return m;
+  }, [expenses]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: payData }, allExpenses, { data: openingData }] = await Promise.all([
+    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
+      fetchAllExpensePayments(),
       supabase.from("opening_balances" as any).select("*"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
@@ -92,6 +101,7 @@ export default function CashManagement() {
     }));
     setPayments(mapped);
     setExpenses(allExpenses);
+    setExpensePayments(allExpensePayments);
     const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
     const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
     if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
@@ -131,7 +141,20 @@ export default function CashManagement() {
     [expenses]
   );
 
-  // ========== CASH POSITION (lifetime, all-time + opening balances) ==========
+  // Helper: split a payment row into cash/bank using its source (and parent expense for 'mixed')
+  function splitPayment(amt: number, source: string, parentExpenseId?: string): { cash: number; bank: number } {
+    if (source === "cash") return { cash: amt, bank: 0 };
+    if (source === "bank") return { cash: 0, bank: amt };
+    // mixed → use parent expense ratio if available
+    const parent = parentExpenseId ? expenseSourceMap.get(parentExpenseId) : null;
+    if (parent && parent.amount > 0) {
+      const ratio = Number(parent.cash_amount || 0) / parent.amount;
+      return { cash: amt * ratio, bank: amt * (1 - ratio) };
+    }
+    return { cash: amt, bank: 0 };
+  }
+
+  // ========== CASH POSITION (lifetime) ==========
   const cashPosition = useMemo(() => {
     let cashIn = 0, bankIn = 0;
     payments.forEach((p) => {
@@ -139,14 +162,9 @@ export default function CashManagement() {
       else bankIn += p.amount;
     });
     let cashOut = 0, bankOut = 0;
-    realExpenses.forEach((e) => {
-      if (e.expense_status !== "paid") return;
-      if (e.payment_source === "cash") cashOut += e.amount;
-      else if (e.payment_source === "bank") bankOut += e.amount;
-      else if (e.payment_source === "mixed") {
-        cashOut += Number(e.cash_amount || 0);
-        bankOut += Number(e.bank_amount || 0);
-      }
+    expensePayments.forEach((p) => {
+      const { cash, bank } = splitPayment(p.amount, p.payment_source, p.expense_id);
+      cashOut += cash; bankOut += bank;
     });
     const cashBalance = openingCash.amount + cashIn - cashOut;
     const bankBalance = openingBank.amount + bankIn - bankOut;
@@ -155,7 +173,8 @@ export default function CashManagement() {
       cashIn, bankIn, cashOut, bankOut,
       cashBalance, bankBalance, total: cashBalance + bankBalance,
     };
-  }, [payments, realExpenses, openingCash.amount, openingBank.amount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
@@ -166,48 +185,38 @@ export default function CashManagement() {
     });
   }, [payments, bounds]);
 
-  const periodExpenses = useMemo(() => {
-    if (!bounds) return realExpenses;
-    return realExpenses.filter((e) => e.expense_date >= bounds[0] && e.expense_date <= bounds[1]);
-  }, [realExpenses, bounds]);
+  const periodExpensePayments = useMemo(() => {
+    if (!bounds) return expensePayments;
+    return expensePayments.filter((p) => p.payment_date >= bounds[0] && p.payment_date <= bounds[1]);
+  }, [expensePayments, bounds]);
 
-  // Dynamic opening balance for the selected period:
-  // = stored opening + net flows strictly BEFORE bounds[0]
+  // Dynamic opening balance for the selected period
   const periodOpening = useMemo(() => {
-    if (!bounds) {
-      return { cash: openingCash.amount, bank: openingBank.amount };
-    }
+    if (!bounds) return { cash: openingCash.amount, bank: openingBank.amount };
     const start = bounds[0];
     let cash = openingCash.amount;
     let bank = openingBank.amount;
     payments.forEach((p) => {
-      const d = p.payment_date.slice(0, 10);
-      if (d < start) {
+      if (p.payment_date.slice(0, 10) < start) {
         if (p.payment_method === "cash") cash += p.amount;
         else bank += p.amount;
       }
     });
-    expenses.forEach((e) => {
-      if (e.is_recurring && !e.is_auto_generated) return; // skip templates
-      if (e.expense_status !== "paid") return;
-      if (e.expense_date < start) {
-        if (e.payment_source === "cash") cash -= e.amount;
-        else if (e.payment_source === "bank") bank -= e.amount;
-        else if (e.payment_source === "mixed") {
-          cash -= Number(e.cash_amount || 0);
-          bank -= Number(e.bank_amount || 0);
-        }
+    expensePayments.forEach((p) => {
+      if (p.payment_date < start) {
+        const s = splitPayment(p.amount, p.payment_source, p.expense_id);
+        cash -= s.cash; bank -= s.bank;
       }
     });
     return { cash, bank };
-  }, [bounds, payments, expenses, openingCash.amount, openingBank.amount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds, payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   const summary = useMemo(() => {
     const inflows = periodPayments.reduce((s, p) => s + p.amount, 0);
-    const paidExpenses = periodExpenses.filter((e) => e.expense_status === "paid");
-    const outflows = paidExpenses.reduce((s, e) => s + e.amount, 0);
+    const outflows = periodExpensePayments.reduce((s, p) => s + p.amount, 0);
     return { inflows, outflows, net: inflows - outflows };
-  }, [periodPayments, periodExpenses]);
+  }, [periodPayments, periodExpensePayments]);
 
   // ========== DAILY MOVEMENT TABLE ==========
   const dailyMovements = useMemo(() => {
@@ -222,15 +231,10 @@ export default function CashManagement() {
       if (p.payment_method === "cash") row.cashIn += p.amount;
       else row.bankIn += p.amount;
     });
-    periodExpenses.forEach((e) => {
-      if (e.expense_status !== "paid") return;
-      const row = ensure(e.expense_date);
-      if (e.payment_source === "cash") row.cashOut += e.amount;
-      else if (e.payment_source === "bank") row.bankOut += e.amount;
-      else if (e.payment_source === "mixed") {
-        row.cashOut += Number(e.cash_amount || 0);
-        row.bankOut += Number(e.bank_amount || 0);
-      }
+    periodExpensePayments.forEach((p) => {
+      const row = ensure(p.payment_date);
+      const s = splitPayment(p.amount, p.payment_source, p.expense_id);
+      row.cashOut += s.cash; row.bankOut += s.bank;
     });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
     let runningCash = periodOpening.cash, runningBank = periodOpening.bank;
@@ -238,8 +242,9 @@ export default function CashManagement() {
       runningCash += v.cashIn - v.cashOut;
       runningBank += v.bankIn - v.bankOut;
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
-    }).reverse(); // newest first for display
-  }, [periodPayments, periodExpenses, periodOpening.cash, periodOpening.bank]);
+    }).reverse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodPayments, periodExpensePayments, periodOpening.cash, periodOpening.bank]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
@@ -253,18 +258,19 @@ export default function CashManagement() {
   const futurePayments = useMemo(() => {
     const today = toDateStr(new Date());
     const upcoming = expenses.filter((e) => {
-      // Recurring with a next_run_date in the future
-      if (e.is_recurring && e.next_run_date && e.next_run_date >= today) return true;
-      // One-off pending/scheduled expenses with date >= today
-      if (e.expense_status !== "paid" && e.expense_date >= today) return true;
-      return false;
+      if (e.is_recurring && !e.is_auto_generated) {
+        // Recurring template with future next_run_date
+        return e.next_run_date && e.next_run_date >= today;
+      }
+      // Outstanding (accrued/partial) expenses still owe money
+      return e.remaining_amount > 0.001;
     }).map((e) => ({
       id: e.id,
-      date: e.is_recurring && e.next_run_date ? e.next_run_date : e.expense_date,
+      date: e.is_recurring && e.next_run_date ? e.next_run_date : (e.due_date || e.expense_date),
       description: e.description || e.category,
       category: e.category,
-      amount: e.amount,
-      recurring: e.is_recurring,
+      amount: e.is_recurring && !e.is_auto_generated ? e.amount : e.remaining_amount,
+      recurring: e.is_recurring && !e.is_auto_generated,
     })).sort((a, b) => a.date.localeCompare(b.date));
 
     const totalUpcoming = upcoming.reduce((s, x) => s + x.amount, 0);

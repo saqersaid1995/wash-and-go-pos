@@ -91,19 +91,20 @@ export function ExpenseForm({ onSaved }: ExpenseFormProps) {
     setSaving(true);
     const ok = await createExpense({
       expense_date: date,
+      due_date: date,
       category: finalCategory,
       description: description.trim(),
       amount: amt,
       is_recurring: isRecurring,
       recurring_period: isRecurring ? recurringPeriod : null,
       billing_day: isRecurring ? parseInt(billingDay) || 1 : null,
-      expense_status: expenseStatus,
       payment_source: paymentSource,
       cash_amount: finalCash,
       bank_amount: finalBank,
-      // Keep income_category in sync (legacy field) — derived from pl_line
       income_category: autoMapIncomeCategory(finalCategory),
       pl_line: plLine,
+      // If user marks it Paid, create an initial payment record for the full amount
+      initialPaid: !isRecurring && expenseStatus === "paid" ? amt : 0,
     });
     setSaving(false);
 
