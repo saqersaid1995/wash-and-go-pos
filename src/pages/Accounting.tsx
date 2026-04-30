@@ -18,6 +18,8 @@ import { ReceivablesTab } from "@/components/accounting/ReceivablesTab";
 import { PayablesTab } from "@/components/accounting/PayablesTab";
 import { OpeningBalancesTab } from "@/components/accounting/OpeningBalancesTab";
 import { FixedAssetsTab } from "@/components/accounting/FixedAssetsTab";
+import { TrialBalanceTab } from "@/components/accounting/TrialBalanceTab";
+import { DiagnosticsTab } from "@/components/accounting/DiagnosticsTab";
 
 export default function Accounting() {
   const [loading, setLoading] = useState(true);
