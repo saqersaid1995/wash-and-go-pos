@@ -47,7 +47,7 @@ export function NewLoanDialog({ open, onOpenChange, onCreated }: Props) {
     const inst = installment ? parseFloat(installment) : 0;
 
     setSaving(true);
-    const id = await createLoan({
+    const { id, error } = await createLoan({
       loan_name: name.trim(),
       bank_name: bank.trim(),
       principal: p,
@@ -58,7 +58,7 @@ export function NewLoanDialog({ open, onOpenChange, onCreated }: Props) {
       notes: notes.trim(),
     });
     setSaving(false);
-    if (!id) return toast.error("Failed to create loan");
+    if (!id) return toast.error(error || "Failed to create loan");
     toast.success("Loan created and journal posted");
     onCreated();
     onOpenChange(false);

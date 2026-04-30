@@ -102,14 +102,20 @@ export async function createLoan(p: {
   installment_amount?: number;
   disbursement_account_code?: string;
   notes?: string;
-}) {
-  const { data, error } = await supabase.from("loans" as any).insert({
+}): Promise<{ id: string | null; error: string | null }> {
+  const payload = {
     ...p,
     installment_amount: p.installment_amount ?? 0,
     disbursement_account_code: p.disbursement_account_code ?? "1020",
-  }).select("id").single();
-  if (error) { console.error(error); return null; }
-  return (data as any)?.id as string;
+  };
+  console.log("[createLoan] payload:", payload);
+  const { data, error } = await supabase.from("loans" as any).insert(payload).select("id").single();
+  if (error) {
+    console.error("[createLoan] error:", error);
+    const msg = [error.message, (error as any).details, (error as any).hint].filter(Boolean).join(" — ");
+    return { id: null, error: msg || "Unknown error" };
+  }
+  return { id: (data as any)?.id as string, error: null };
 }
 
 export async function updateLoan(id: string, patch: Partial<Loan>) {
