@@ -4,19 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatOMR } from "@/lib/currency";
-import { Loader2, Plus, Play, FileText, Trash2 } from "lucide-react";
+import { Loader2, Plus, Play, FileText, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchFixedAssets, fetchDepreciationEntries, enrichAssets, runDepreciation,
   softDeleteFixedAsset, getInvoiceSignedUrl, type FixedAssetWithDepreciation,
 } from "@/lib/fixed-assets-queries";
 import { NewFixedAssetDialog } from "./NewFixedAssetDialog";
+import { EditFixedAssetDialog } from "./EditFixedAssetDialog";
 
 export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [assets, setAssets] = useState<FixedAssetWithDepreciation[]>([]);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<FixedAssetWithDepreciation | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -135,6 +137,9 @@ export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
                             <FileText className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(a)} title="Edit asset">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(a.id, a.asset_name)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -148,6 +153,12 @@ export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
         )}
 
         <NewFixedAssetDialog open={open} onOpenChange={setOpen} onCreated={() => { load(); onChanged(); }} />
+        <EditFixedAssetDialog
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null); }}
+          asset={editing}
+          onSaved={() => { load(); onChanged(); }}
+        />
       </CardContent>
     </Card>
   );
