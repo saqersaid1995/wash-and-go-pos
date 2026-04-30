@@ -1568,6 +1568,14 @@ export type Database = {
       }
     }
     Functions: {
+      backfill_missing_asset_purchase_jes: {
+        Args: never
+        Returns: {
+          asset_id: string
+          asset_name: string
+          posted: boolean
+        }[]
+      }
       calc_loan_installment: {
         Args: { _annual_rate: number; _months: number; _principal: number }
         Returns: number

@@ -124,7 +124,17 @@ export async function createFixedAsset(p: CreateAssetPayload): Promise<string | 
     .select("id")
     .single();
   if (error) { console.error(error); return null; }
-  return (data as any).id;
+  const newId = (data as any).id as string;
+
+  // Defensive: ensure the purchase journal entry exists even if the
+  // database trigger somehow didn't fire (e.g. mid-migration state).
+  try {
+    await supabase.rpc("post_fixed_asset_purchase_je" as any, { _asset_id: newId });
+  } catch (e) {
+    console.warn("post_fixed_asset_purchase_je fallback failed:", e);
+  }
+
+  return newId;
 }
 
 export async function updateFixedAsset(id: string, patch: Partial<FixedAsset> & { category?: FixedAssetCategory }) {
