@@ -2,14 +2,18 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, RefreshCw, Hammer } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
+import { toast } from "@/hooks/use-toast";
 import {
   type Account, type AccountBalance,
   buildBalanceSheet, isContraAsset,
   fetchUnbalancedEntries, type UnbalancedEntry,
   fetchLoansOutstandingTotal, fetchFixedAssetsTotals,
   fetchCustomersOutstandingTotal, fetchSuppliersOutstandingTotal,
+  auditLoanJournalEntries, type LoanAuditRow,
+  detectDuplicateLoanPostings, type DupLoanPosting,
+  rebuildAccountingWithSummary,
 } from "@/lib/accounting-queries";
 
 interface Props {
@@ -33,21 +37,26 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
   const [arMod, setArMod] = useState(0);
   const [apGL, setApGL] = useState(0);
   const [apMod, setApMod] = useState(0);
+  const [loanAudit, setLoanAudit] = useState<LoanAuditRow[]>([]);
+  const [dupLoans, setDupLoans] = useState<DupLoanPosting[]>([]);
+  const [rebuilding, setRebuilding] = useState(false);
 
   const reload = async () => {
     setLoading(true);
-    const arAcct = balances.find((a) => a.code === "1110"); // AR
+    const arAcct = balances.find((a) => a.code === "1100"); // AR (matches posting functions)
     const apAcct = balances.find((a) => a.code === "2010"); // AP
     const loanAcct = balances.find((a) => a.code === "2110"); // Bank Loan
     const faCostAcct = balances.find((a) => a.code === "1510"); // Fixed Asset cost
     const faAccumAcct = balances.find((a) => a.code === "1515"); // Accumulated Depreciation
 
-    const [u, loanM, fa, arM, apM] = await Promise.all([
+    const [u, loanM, fa, arM, apM, audit, dup] = await Promise.all([
       fetchUnbalancedEntries(),
       fetchLoansOutstandingTotal(),
       fetchFixedAssetsTotals(),
       fetchCustomersOutstandingTotal(cutoff),
       fetchSuppliersOutstandingTotal(cutoff),
+      auditLoanJournalEntries(),
+      detectDuplicateLoanPostings(),
     ]);
     setUnbalanced(u);
     setLoanGL(loanAcct?.balance || 0);
@@ -60,7 +69,21 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
     setArMod(arM);
     setApGL(apAcct?.balance || 0);
     setApMod(apM);
+    setLoanAudit(audit);
+    setDupLoans(dup);
     setLoading(false);
+  };
+
+  const runRebuild = async () => {
+    setRebuilding(true);
+    const summary = await rebuildAccountingWithSummary();
+    setRebuilding(false);
+    if (!summary) { toast({ title: "Rebuild failed", variant: "destructive" }); return; }
+    toast({
+      title: "Rebuild complete",
+      description: `Entries: ${summary.entries_before} → ${summary.entries_after}. Unbalanced: ${summary.unbalanced}.`,
+    });
+    reload();
   };
 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [cutoff]);
@@ -106,7 +129,12 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center justify-between">
             <span>Reconciliation Summary</span>
-            <Button size="sm" variant="outline" onClick={reload} className="gap-1"><RefreshCw className="h-3 w-3" /> Refresh</Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={runRebuild} disabled={rebuilding} className="gap-1">
+                {rebuilding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Hammer className="h-3 w-3" />} Rebuild Journal
+              </Button>
+              <Button size="sm" variant="outline" onClick={reload} className="gap-1"><RefreshCw className="h-3 w-3" /> Refresh</Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -194,6 +222,49 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
             ))}
           </tbody>
         </table>
+      </DiagSection>
+
+      {/* F. Loan Audit */}
+      <DiagSection
+        title="Loan Postings Audit"
+        ok={dupLoans.length === 0}
+        okText={`${loanAudit.length} loan-related journal entries posted. No duplicate disbursement+opening conflicts.`}
+      >
+        {dupLoans.length > 0 && (
+          <div className="mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm">
+            <div className="font-medium text-destructive mb-1">Loans with BOTH disbursement and opening entries (must be only one):</div>
+            <ul className="list-disc pl-5">
+              {dupLoans.map((d) => <li key={d.loan_id}>{d.loan_name}</li>)}
+            </ul>
+          </div>
+        )}
+        <div className="text-xs text-muted-foreground mb-2">All loan-related journal entries ({loanAudit.length}):</div>
+        <div className="max-h-80 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="text-xs text-muted-foreground border-b sticky top-0 bg-background">
+              <tr>
+                <th className="text-left p-2">Date</th>
+                <th className="text-left p-2">Loan</th>
+                <th className="text-left p-2">Type</th>
+                <th className="text-left p-2">Description</th>
+                <th className="text-right p-2">Debit</th>
+                <th className="text-right p-2">Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loanAudit.slice(0, 200).map((r) => (
+                <tr key={r.entry_id} className="border-b">
+                  <td className="p-2 font-mono text-xs">{r.entry_date}</td>
+                  <td className="p-2 text-xs">{r.loan_name || "—"}</td>
+                  <td className="p-2 text-xs"><Badge variant="outline" className="text-xs">{r.source_type}</Badge></td>
+                  <td className="p-2 text-xs">{r.description}</td>
+                  <td className="p-2 text-right tabular-nums">{formatOMR(r.debit_amount)}</td>
+                  <td className="p-2 text-right tabular-nums">{formatOMR(r.credit_amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </DiagSection>
     </div>
   );
