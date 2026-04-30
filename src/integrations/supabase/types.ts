@@ -1432,6 +1432,13 @@ export type Database = {
       post_order_replay: { Args: { _id: string }; Returns: undefined }
       post_payment_replay: { Args: { _id: string }; Returns: undefined }
       rebuild_accounting_from_cutoff: { Args: never; Returns: undefined }
+      recalculate_asset_depreciation: {
+        Args: { _asset_id: string; _up_to_month?: string }
+        Returns: {
+          posted_count: number
+          total_amount: number
+        }[]
+      }
       recompute_expense_lifecycle: {
         Args: { _expense_id: string }
         Returns: undefined
