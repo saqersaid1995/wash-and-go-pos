@@ -1535,11 +1535,14 @@ export type Database = {
           account_name: string | null
           account_type: string | null
           balance: number | null
+          classification_type: string | null
           code: string | null
           credit_total: number | null
           debit_total: number | null
+          description: string | null
           id: string | null
           is_active: boolean | null
+          is_system: boolean | null
           normal_balance: string | null
           sub_type: string | null
         }
