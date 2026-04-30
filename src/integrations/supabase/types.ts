@@ -183,6 +183,41 @@ export type Database = {
         }
         Relationships: []
       }
+      depreciation_entries: {
+        Row: {
+          amount: number
+          asset_id: string
+          created_at: string
+          id: string
+          journal_entry_id: string | null
+          period_month: string
+        }
+        Insert: {
+          amount?: number
+          asset_id: string
+          created_at?: string
+          id?: string
+          journal_entry_id?: string | null
+          period_month: string
+        }
+        Update: {
+          amount?: number
+          asset_id?: string
+          created_at?: string
+          id?: string
+          journal_entry_id?: string | null
+          period_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "depreciation_entries_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_payments: {
         Row: {
           amount: number
@@ -296,6 +331,69 @@ export type Database = {
           recurring_period?: string | null
           remaining_amount?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      fixed_assets: {
+        Row: {
+          asset_account_code: string
+          asset_name: string
+          category: string
+          contra_account_code: string
+          cost: number
+          created_at: string
+          depreciation_method: string
+          expense_account_code: string
+          funding_source: string
+          id: string
+          invoice_url: string | null
+          is_deleted: boolean
+          notes: string | null
+          purchase_date: string
+          residual_value: number
+          status: string
+          updated_at: string
+          useful_life_years: number
+        }
+        Insert: {
+          asset_account_code?: string
+          asset_name: string
+          category?: string
+          contra_account_code?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          expense_account_code?: string
+          funding_source?: string
+          id?: string
+          invoice_url?: string | null
+          is_deleted?: boolean
+          notes?: string | null
+          purchase_date?: string
+          residual_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_years?: number
+        }
+        Update: {
+          asset_account_code?: string
+          asset_name?: string
+          category?: string
+          contra_account_code?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          expense_account_code?: string
+          funding_source?: string
+          id?: string
+          invoice_url?: string | null
+          is_deleted?: boolean
+          notes?: string | null
+          purchase_date?: string
+          residual_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_years?: number
         }
         Relationships: []
       }
@@ -1293,6 +1391,17 @@ export type Database = {
         Args: { _category: string }
         Returns: string
       }
+      fixed_asset_category_to_codes: {
+        Args: { _category: string }
+        Returns: {
+          asset_code: string
+          contra_code: string
+        }[]
+      }
+      funding_source_to_account_code: {
+        Args: { _source: string }
+        Returns: string
+      }
       get_account_id: { Args: { _code: string }; Returns: string }
       get_accounting_start_date: { Args: never; Returns: string }
       get_opening_balances: {
@@ -1315,6 +1424,10 @@ export type Database = {
       }
       post_expense_payment_replay: { Args: { _id: string }; Returns: undefined }
       post_expense_replay: { Args: { _id: string }; Returns: undefined }
+      post_fixed_asset_purchase_je: {
+        Args: { _asset_id: string }
+        Returns: string
+      }
       post_opening_balances: { Args: { _payload: Json }; Returns: string }
       post_order_replay: { Args: { _id: string }; Returns: undefined }
       post_payment_replay: { Args: { _id: string }; Returns: undefined }
@@ -1322,6 +1435,14 @@ export type Database = {
       recompute_expense_lifecycle: {
         Args: { _expense_id: string }
         Returns: undefined
+      }
+      run_depreciation: {
+        Args: { _up_to_month?: string }
+        Returns: {
+          asset_id: string
+          posted_count: number
+          total_amount: number
+        }[]
       }
     }
     Enums: {
