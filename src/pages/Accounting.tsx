@@ -99,6 +99,7 @@ export default function Accounting() {
           <TabsContent value="receivables"><ReceivablesTab rows={ar} /></TabsContent>
           <TabsContent value="payables"><PayablesTab rows={ap} /></TabsContent>
           <TabsContent value="opening"><OpeningBalancesTab accounts={accounts} settings={settings} onChanged={reload} /></TabsContent>
+          <TabsContent value="fixed-assets"><FixedAssetsTab onChanged={reload} /></TabsContent>
           <TabsContent value="coa"><ChartOfAccountsTab accounts={accounts} balances={balances} onChanged={reload} /></TabsContent>
           <TabsContent value="journal"><JournalTab entries={entries} linesByEntry={linesByEntry} accounts={accounts} /></TabsContent>
         </Tabs>
