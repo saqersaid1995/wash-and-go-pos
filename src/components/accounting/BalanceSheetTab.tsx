@@ -49,6 +49,44 @@ function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-xs font-bold tracking-wider uppercase text-foreground/80 mt-1 mb-1">{title}</h3>;
 }
 
+/** Contra-asset group: shows balances as negative (parenthesized) and reduces the asset section. */
+function ContraGroup({ title, accounts, total }: { title: string; accounts: AccountBalance[]; total: number }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="border-l-2 border-muted pl-2">
+      <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 px-2 hover:bg-muted/40 rounded text-sm font-medium">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {title}
+        </span>
+        <span className="tabular-nums text-destructive">({formatOMR(Math.abs(total))})</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="py-1">
+          {accounts.map((a) => (
+            <div key={a.id} className="flex justify-between items-center px-4 py-1.5 rounded hover:bg-muted/40 text-sm">
+              <span className="text-muted-foreground">
+                <span className="font-mono text-xs mr-2 text-muted-foreground/70">{a.code}</span>
+                {a.account_name}
+              </span>
+              <span className="font-medium tabular-nums text-destructive">({formatOMR(Math.abs(a.balance))})</span>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function SubTotalRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between items-center px-2 py-1.5 ml-2 border-t border-foreground/10 text-sm font-semibold">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{formatOMR(value)}</span>
+    </div>
+  );
+}
+
 function GrandTotal({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {
   return (
     <div className={`flex justify-between items-center px-2 py-2 mt-1 border-t-2 ${accent ? "border-foreground/30 text-base font-bold" : "border-foreground/15 font-semibold"}`}>
