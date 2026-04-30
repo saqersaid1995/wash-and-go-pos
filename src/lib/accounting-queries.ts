@@ -82,6 +82,27 @@ export async function rebuildAccounting() {
   return !error;
 }
 
+// ============= Opening Balances =============
+export interface OpeningBalanceLine { account_id: string; amount: number }
+
+export async function fetchOpeningBalances(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc("get_opening_balances" as any);
+  if (error) { console.error(error); return {}; }
+  const map: Record<string, number> = {};
+  for (const r of (data || []) as any[]) {
+    map[r.account_id] = Number(r.amount);
+  }
+  return map;
+}
+
+export async function postOpeningBalances(lines: OpeningBalanceLine[], equityAccountId: string) {
+  const { error } = await supabase.rpc("post_opening_balances" as any, {
+    _payload: { lines, equity_account_id: equityAccountId } as any,
+  });
+  if (error) console.error(error);
+  return !error;
+}
+
 // ============= Chart of Accounts =============
 export async function fetchAccounts(): Promise<Account[]> {
   const { data, error } = await supabase
