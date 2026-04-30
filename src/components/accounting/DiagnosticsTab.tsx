@@ -2,14 +2,18 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, RefreshCw, Hammer } from "lucide-react";
 import { formatOMR } from "@/lib/currency";
+import { toast } from "@/hooks/use-toast";
 import {
   type Account, type AccountBalance,
   buildBalanceSheet, isContraAsset,
   fetchUnbalancedEntries, type UnbalancedEntry,
   fetchLoansOutstandingTotal, fetchFixedAssetsTotals,
   fetchCustomersOutstandingTotal, fetchSuppliersOutstandingTotal,
+  auditLoanJournalEntries, type LoanAuditRow,
+  detectDuplicateLoanPostings, type DupLoanPosting,
+  rebuildAccountingWithSummary,
 } from "@/lib/accounting-queries";
 
 interface Props {
@@ -33,6 +37,9 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
   const [arMod, setArMod] = useState(0);
   const [apGL, setApGL] = useState(0);
   const [apMod, setApMod] = useState(0);
+  const [loanAudit, setLoanAudit] = useState<LoanAuditRow[]>([]);
+  const [dupLoans, setDupLoans] = useState<DupLoanPosting[]>([]);
+  const [rebuilding, setRebuilding] = useState(false);
 
   const reload = async () => {
     setLoading(true);
@@ -42,12 +49,14 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
     const faCostAcct = balances.find((a) => a.code === "1510"); // Fixed Asset cost
     const faAccumAcct = balances.find((a) => a.code === "1515"); // Accumulated Depreciation
 
-    const [u, loanM, fa, arM, apM] = await Promise.all([
+    const [u, loanM, fa, arM, apM, audit, dup] = await Promise.all([
       fetchUnbalancedEntries(),
       fetchLoansOutstandingTotal(),
       fetchFixedAssetsTotals(),
       fetchCustomersOutstandingTotal(cutoff),
       fetchSuppliersOutstandingTotal(cutoff),
+      auditLoanJournalEntries(),
+      detectDuplicateLoanPostings(),
     ]);
     setUnbalanced(u);
     setLoanGL(loanAcct?.balance || 0);
@@ -60,7 +69,21 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
     setArMod(arM);
     setApGL(apAcct?.balance || 0);
     setApMod(apM);
+    setLoanAudit(audit);
+    setDupLoans(dup);
     setLoading(false);
+  };
+
+  const runRebuild = async () => {
+    setRebuilding(true);
+    const summary = await rebuildAccountingWithSummary();
+    setRebuilding(false);
+    if (!summary) { toast({ title: "Rebuild failed", variant: "destructive" }); return; }
+    toast({
+      title: "Rebuild complete",
+      description: `Entries: ${summary.entries_before} → ${summary.entries_after}. Unbalanced: ${summary.unbalanced}.`,
+    });
+    reload();
   };
 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [cutoff]);
