@@ -90,8 +90,25 @@ export function BalanceSheetTab({ balances }: { balances: AccountBalance[] }) {
         {/* ===== ASSETS ===== */}
         <div className="space-y-1">
           <SectionHeader title="Assets" />
-          <SubGroup title="Current Assets" accounts={bs.currentAssets} total={bs.totalCurrentAssets} />
-          <SubGroup title="Non-Current Assets" accounts={bs.nonCurrentAssets} total={bs.totalNonCurrentAssets} />
+
+          {/* Current Assets (gross + contra) */}
+          <SubGroup title="Current Assets" accounts={bs.currentAssets} total={bs.totalCurrentAssetsGross} />
+          {bs.contraCurrentAssets.length > 0 && Math.abs(bs.totalContraCurrentAssets) > 0.001 && (
+            <ContraGroup title="Less: Contra Current Assets" accounts={bs.contraCurrentAssets} total={bs.totalContraCurrentAssets} />
+          )}
+          {Math.abs(bs.totalContraCurrentAssets) > 0.001 && (
+            <SubTotalRow label="Net Current Assets" value={bs.totalCurrentAssets} />
+          )}
+
+          {/* Non-Current Assets (gross + accumulated depreciation) */}
+          <SubGroup title="Non-Current Assets" accounts={bs.nonCurrentAssets} total={bs.totalNonCurrentAssetsGross} />
+          {bs.contraNonCurrentAssets.length > 0 && Math.abs(bs.totalContraNonCurrentAssets) > 0.001 && (
+            <ContraGroup title="Less: Accumulated Depreciation" accounts={bs.contraNonCurrentAssets} total={bs.totalContraNonCurrentAssets} />
+          )}
+          {Math.abs(bs.totalContraNonCurrentAssets) > 0.001 && (
+            <SubTotalRow label="Net Non-Current Assets" value={bs.totalNonCurrentAssets} />
+          )}
+
           <GrandTotal label="Total Assets" value={bs.totalAssets} accent />
         </div>
 
