@@ -10,13 +10,29 @@ import { Plus, Trash2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import {
-  type Account, type AccountBalance, type AccountType, type NormalBalance,
+  type Account, type AccountBalance, type AccountType, type NormalBalance, type ClassificationType,
   createAccount, deleteAccount,
 } from "@/lib/accounting-queries";
 
 const TYPES: AccountType[] = ["Asset", "Liability", "Equity", "Revenue", "Expense"];
 const DEFAULT_BALANCE: Record<AccountType, NormalBalance> = {
   Asset: "debit", Expense: "debit", Liability: "credit", Equity: "credit", Revenue: "credit",
+};
+const CLASSIFICATIONS_BY_TYPE: Record<AccountType, ClassificationType[]> = {
+  Asset: ["current_asset", "non_current_asset"],
+  Liability: ["current_liability", "non_current_liability"],
+  Equity: ["equity"],
+  Revenue: ["revenue"],
+  Expense: ["expense"],
+};
+const CLASSIFICATION_LABEL: Record<ClassificationType, string> = {
+  current_asset: "Current Asset",
+  non_current_asset: "Non-Current Asset",
+  current_liability: "Current Liability",
+  non_current_liability: "Non-Current Liability",
+  equity: "Equity",
+  revenue: "Revenue",
+  expense: "Expense",
 };
 
 export function ChartOfAccountsTab({
@@ -25,14 +41,22 @@ export function ChartOfAccountsTab({
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(""); const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("Expense");
+  const [classification, setClassification] = useState<ClassificationType>("expense");
   const [subType, setSubType] = useState("");
   const balanceMap = new Map(balances.map((b) => [b.id, b.balance]));
+
+  // When type changes, reset classification to first valid option
+  const handleTypeChange = (v: AccountType) => {
+    setType(v);
+    setClassification(CLASSIFICATIONS_BY_TYPE[v][0]);
+  };
 
   const handleAdd = async () => {
     if (!code.trim() || !name.trim()) { toast.error("Code and name are required"); return; }
     const ok = await createAccount({
       code: code.trim(), account_name: name.trim(), account_type: type,
       sub_type: subType.trim(), normal_balance: DEFAULT_BALANCE[type],
+      classification_type: classification,
     });
     if (ok) { toast.success("Account added"); setOpen(false); setCode(""); setName(""); setSubType(""); onChanged(); }
     else toast.error("Failed (code may already exist)");
@@ -58,9 +82,19 @@ export function ChartOfAccountsTab({
               <div><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. 5100" /></div>
               <div><Label>Account Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
               <div><Label>Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v as AccountType)}>
+                <Select value={type} onValueChange={(v) => handleTypeChange(v as AccountType)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Classification</Label>
+                <Select value={classification} onValueChange={(v) => setClassification(v as ClassificationType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CLASSIFICATIONS_BY_TYPE[type].map((c) => (
+                      <SelectItem key={c} value={c}>{CLASSIFICATION_LABEL[c]}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div><Label>Sub-type (optional)</Label><Input value={subType} onChange={(e) => setSubType(e.target.value)} placeholder="e.g. Operating Expense" /></div>
@@ -79,6 +113,7 @@ export function ChartOfAccountsTab({
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs text-muted-foreground w-12">{a.code}</span>
                     <span>{a.account_name}</span>
+                    <Badge variant="secondary" className="text-[10px]">{CLASSIFICATION_LABEL[a.classification_type]}</Badge>
                     {a.sub_type && <Badge variant="outline" className="text-[10px]">{a.sub_type}</Badge>}
                     {a.is_system && <Lock className="h-3 w-3 text-muted-foreground" aria-label="System account" />}
                   </div>
