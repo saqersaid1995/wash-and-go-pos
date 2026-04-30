@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 // ============= Types =============
 export type AccountType = "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
 export type NormalBalance = "debit" | "credit";
+export type ClassificationType =
+  | "current_asset"
+  | "non_current_asset"
+  | "current_liability"
+  | "non_current_liability"
+  | "equity"
+  | "revenue"
+  | "expense";
 
 export interface Account {
   id: string;
@@ -11,6 +19,7 @@ export interface Account {
   account_type: AccountType;
   sub_type: string;
   normal_balance: NormalBalance;
+  classification_type: ClassificationType;
   is_system: boolean;
   is_active: boolean;
   description?: string;
