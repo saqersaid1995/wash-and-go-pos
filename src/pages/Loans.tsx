@@ -113,7 +113,12 @@ export default function Loans() {
                       <>
                         <TableRow key={l.id} className="cursor-pointer" onClick={() => toggle(l.id)}>
                           <TableCell>{isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</TableCell>
-                          <TableCell className="font-medium">{l.loan_name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {l.loan_name}
+                              {l.loan_type === "existing" && <Badge variant="outline" className="text-[10px]">Opening</Badge>}
+                            </div>
+                          </TableCell>
                           <TableCell>{l.bank_name}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{formatOMR(l.principal)}</TableCell>
                           <TableCell className="text-right">{l.annual_interest_rate}%</TableCell>
