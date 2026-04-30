@@ -17,6 +17,7 @@ import { CashflowTab } from "@/components/accounting/CashflowTab";
 import { ReceivablesTab } from "@/components/accounting/ReceivablesTab";
 import { PayablesTab } from "@/components/accounting/PayablesTab";
 import { OpeningBalancesTab } from "@/components/accounting/OpeningBalancesTab";
+import { FixedAssetsTab } from "@/components/accounting/FixedAssetsTab";
 
 export default function Accounting() {
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,7 @@ export default function Accounting() {
               ["receivables", "Receivables (AR)"],
               ["payables", "Payables (AP)"],
               ["opening", "Opening Balances"],
+              ["fixed-assets", "Fixed Assets"],
               ["coa", "Chart of Accounts"],
               ["journal", "Journal"],
             ].map(([v, l]) => (
@@ -97,6 +99,7 @@ export default function Accounting() {
           <TabsContent value="receivables"><ReceivablesTab rows={ar} /></TabsContent>
           <TabsContent value="payables"><PayablesTab rows={ap} /></TabsContent>
           <TabsContent value="opening"><OpeningBalancesTab accounts={accounts} settings={settings} onChanged={reload} /></TabsContent>
+          <TabsContent value="fixed-assets"><FixedAssetsTab onChanged={reload} /></TabsContent>
           <TabsContent value="coa"><ChartOfAccountsTab accounts={accounts} balances={balances} onChanged={reload} /></TabsContent>
           <TabsContent value="journal"><JournalTab entries={entries} linesByEntry={linesByEntry} accounts={accounts} /></TabsContent>
         </Tabs>
