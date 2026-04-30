@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatOMR } from "@/lib/currency";
-import { Loader2, Plus, Play, FileText, Trash2 } from "lucide-react";
+import { Loader2, Plus, Play, FileText, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchFixedAssets, fetchDepreciationEntries, enrichAssets, runDepreciation,
   softDeleteFixedAsset, getInvoiceSignedUrl, type FixedAssetWithDepreciation,
 } from "@/lib/fixed-assets-queries";
 import { NewFixedAssetDialog } from "./NewFixedAssetDialog";
+import { EditFixedAssetDialog } from "./EditFixedAssetDialog";
 
 export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
   const [loading, setLoading] = useState(true);
