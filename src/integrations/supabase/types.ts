@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_settings: {
+        Row: {
+          accounting_start_date: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          accounting_start_date?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          accounting_start_date?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_name: string
+          account_type: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          normal_balance: string
+          sub_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_type: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          normal_balance: string
+          sub_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_type?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          normal_balance?: string
+          sub_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_loyalty: {
         Row: {
           created_at: string
@@ -300,6 +363,105 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          is_system: boolean
+          source_id: string | null
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          is_system?: boolean
+          source_id?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          is_system?: boolean
+          source_id?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      journal_entry_lines: {
+        Row: {
+          amount: number
+          created_at: string
+          credit_account_id: string | null
+          debit_account_id: string | null
+          entry_id: string
+          id: string
+          line_description: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          credit_account_id?: string | null
+          debit_account_id?: string | null
+          entry_id: string
+          id?: string
+          line_description?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          credit_account_id?: string | null
+          debit_account_id?: string | null
+          entry_id?: string
+          id?: string
+          line_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_debit_account_id_fkey"
+            columns: ["debit_account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_debit_account_id_fkey"
+            columns: ["debit_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loyalty_settings: {
         Row: {
@@ -1103,9 +1265,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      account_balances: {
+        Row: {
+          account_name: string | null
+          account_type: string | null
+          balance: number | null
+          code: string | null
+          credit_total: number | null
+          debit_total: number | null
+          id: string | null
+          is_active: boolean | null
+          normal_balance: string | null
+          sub_type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      delete_system_entries: {
+        Args: { _source_id: string; _source_type: string }
+        Returns: undefined
+      }
+      expense_category_to_account_code: {
+        Args: { _category: string }
+        Returns: string
+      }
+      get_account_id: { Args: { _code: string }; Returns: string }
+      get_accounting_start_date: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1113,6 +1299,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      payment_method_to_account_code: {
+        Args: { _method: string }
+        Returns: string
+      }
+      post_expense_payment_replay: { Args: { _id: string }; Returns: undefined }
+      post_expense_replay: { Args: { _id: string }; Returns: undefined }
+      post_order_replay: { Args: { _id: string }; Returns: undefined }
+      post_payment_replay: { Args: { _id: string }; Returns: undefined }
+      rebuild_accounting_from_cutoff: { Args: never; Returns: undefined }
       recompute_expense_lifecycle: {
         Args: { _expense_id: string }
         Returns: undefined
