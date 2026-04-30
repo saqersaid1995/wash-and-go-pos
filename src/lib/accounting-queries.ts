@@ -112,6 +112,7 @@ export async function createAccount(p: {
   account_type: AccountType;
   sub_type?: string;
   normal_balance: NormalBalance;
+  classification_type: ClassificationType;
   description?: string;
 }) {
   const { error } = await supabase.from("chart_of_accounts" as any).insert(p);
