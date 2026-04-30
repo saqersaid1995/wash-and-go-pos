@@ -1,72 +1,145 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatOMR } from "@/lib/currency";
-import { buildBalanceSheet, type AccountBalance } from "@/lib/accounting-queries";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { buildBalanceSheet, buildIncomeStatement, type AccountBalance } from "@/lib/accounting-queries";
+import { CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 
-function Section({ title, accounts, total }: { title: string; accounts: AccountBalance[]; total: number }) {
+function AccountRow({ a }: { a: AccountBalance }) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{title}</h3>
-      <div className="space-y-1">
-        {accounts.length === 0 && <div className="text-xs text-muted-foreground italic px-2">No balances</div>}
-        {accounts.filter((a) => Math.abs(a.balance) > 0.001).map((a) => (
-          <div key={a.id} className="flex justify-between items-center px-2 py-1.5 rounded hover:bg-muted/50 text-sm">
-            <span className="text-muted-foreground"><span className="font-mono text-xs mr-2">{a.code}</span>{a.account_name}</span>
-            <span className="font-medium tabular-nums">{formatOMR(a.balance)}</span>
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-between items-center px-2 py-2 border-t font-semibold">
-        <span>Total {title}</span>
+    <div className="flex justify-between items-center px-4 py-1.5 rounded hover:bg-muted/40 text-sm">
+      <span className="text-muted-foreground">
+        <span className="font-mono text-xs mr-2 text-muted-foreground/70">{a.code}</span>
+        {a.account_name}
+      </span>
+      <span className="font-medium tabular-nums">{formatOMR(a.balance)}</span>
+    </div>
+  );
+}
+
+function SubGroup({
+  title, accounts, total, defaultOpen = true,
+}: { title: string; accounts: AccountBalance[]; total: number; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const visible = accounts.filter((a) => Math.abs(a.balance) > 0.001);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="border-l-2 border-muted pl-2">
+      <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 px-2 hover:bg-muted/40 rounded text-sm font-medium">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {title}
+        </span>
         <span className="tabular-nums">{formatOMR(total)}</span>
-      </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="py-1">
+          {visible.length === 0 ? (
+            <div className="text-xs text-muted-foreground italic px-4 py-1">No balances</div>
+          ) : (
+            visible.map((a) => <AccountRow key={a.id} a={a} />)
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return <h3 className="text-xs font-bold tracking-wider uppercase text-foreground/80 mt-1 mb-1">{title}</h3>;
+}
+
+function GrandTotal({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className={`flex justify-between items-center px-2 py-2 mt-1 border-t-2 ${accent ? "border-foreground/30 text-base font-bold" : "border-foreground/15 font-semibold"}`}>
+      <span>{label}</span>
+      <span className="tabular-nums">{formatOMR(value)}</span>
     </div>
   );
 }
 
 export function BalanceSheetTab({ balances }: { balances: AccountBalance[] }) {
   const bs = useMemo(() => buildBalanceSheet(balances), [balances]);
+  const is = useMemo(() => buildIncomeStatement(balances), [balances]);
+
+  // Equity broken down: Owner's capital, Retained Earnings, Net Income (current period)
+  const ownerEquity = bs.equity.filter((a) => /capital|owner/i.test(a.account_name) || a.code === "3010");
+  const retained = bs.equity.filter((a) => /retain/i.test(a.account_name) || a.code === "3020");
+  const otherEquity = bs.equity.filter((a) => !ownerEquity.includes(a) && !retained.includes(a));
+  const ownerTotal = ownerEquity.reduce((s, a) => s + a.balance, 0);
+  const retainedTotal = retained.reduce((s, a) => s + a.balance, 0);
+  const otherTotal = otherEquity.reduce((s, a) => s + a.balance, 0);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span>Balance Sheet</span>
-            {bs.isBalanced ? (
-              <Badge className="bg-success/10 text-success border-success/30 gap-1"><CheckCircle2 className="h-3 w-3" /> Balanced</Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Off by {formatOMR(Math.abs(bs.difference))}</Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left: Assets */}
-          <Section title="Assets" accounts={bs.assets} total={bs.totalAssets} />
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center justify-between">
+          <span>Balance Sheet</span>
+          {bs.isBalanced ? (
+            <Badge className="bg-success/10 text-success border-success/30 gap-1">
+              <CheckCircle2 className="h-3 w-3" /> Balanced
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" /> Off by {formatOMR(Math.abs(bs.difference))}
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ===== ASSETS ===== */}
+        <div className="space-y-1">
+          <SectionHeader title="Assets" />
+          <SubGroup title="Current Assets" accounts={bs.currentAssets} total={bs.totalCurrentAssets} />
+          <SubGroup title="Non-Current Assets" accounts={bs.nonCurrentAssets} total={bs.totalNonCurrentAssets} />
+          <GrandTotal label="Total Assets" value={bs.totalAssets} accent />
+        </div>
 
-          {/* Right: Liabilities + Equity */}
-          <div className="space-y-6">
-            <Section title="Liabilities" accounts={bs.liabilities} total={bs.totalLiabilities} />
-            <div>
-              <Section title="Equity" accounts={bs.equity} total={bs.totalEquity - bs.retainedEarningsCalc} />
-              <div className="flex justify-between items-center px-2 py-1.5 rounded text-sm mt-1">
-                <span className="text-muted-foreground italic">Net Income (current period)</span>
-                <span className="font-medium tabular-nums">{formatOMR(bs.retainedEarningsCalc)}</span>
-              </div>
-              <div className="flex justify-between items-center px-2 py-2 border-t font-semibold mt-1">
-                <span>Total Equity</span>
-                <span className="tabular-nums">{formatOMR(bs.totalEquity)}</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center px-2 py-2 border-t-2 border-foreground/20 font-bold text-base">
-              <span>Liabilities + Equity</span>
-              <span className="tabular-nums">{formatOMR(bs.totalLiabilities + bs.totalEquity)}</span>
-            </div>
+        {/* ===== LIABILITIES + EQUITY ===== */}
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <SectionHeader title="Liabilities" />
+            <SubGroup title="Current Liabilities" accounts={bs.currentLiabilities} total={bs.totalCurrentLiabilities} />
+            <SubGroup title="Non-Current Liabilities" accounts={bs.nonCurrentLiabilities} total={bs.totalNonCurrentLiabilities} />
+            <GrandTotal label="Total Liabilities" value={bs.totalLiabilities} />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          <div className="space-y-1">
+            <SectionHeader title="Equity" />
+            <div className="border-l-2 border-muted pl-2">
+              {ownerEquity.length > 0 && (
+                <div className="py-1">
+                  <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Owner's Equity</div>
+                  {ownerEquity.map((a) => <AccountRow key={a.id} a={a} />)}
+                </div>
+              )}
+              {(retained.length > 0 || Math.abs(retainedTotal) > 0.001) && (
+                <div className="py-1">
+                  <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Retained Earnings</div>
+                  {retained.length > 0
+                    ? retained.map((a) => <AccountRow key={a.id} a={a} />)
+                    : <div className="text-xs text-muted-foreground italic px-4 py-1">—</div>}
+                </div>
+              )}
+              {otherEquity.length > 0 && (
+                <div className="py-1">
+                  {otherEquity.map((a) => <AccountRow key={a.id} a={a} />)}
+                </div>
+              )}
+              <div className="py-1">
+                <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Net Income (current period)</div>
+                <div className="flex justify-between items-center px-4 py-1.5 text-sm">
+                  <span className="text-muted-foreground italic">From Income Statement</span>
+                  <span className="font-medium tabular-nums">{formatOMR(is.netIncome)}</span>
+                </div>
+              </div>
+            </div>
+            <GrandTotal label="Total Equity" value={bs.totalEquity} />
+          </div>
+
+          <GrandTotal label="Total Liabilities + Equity" value={bs.totalLiabilities + bs.totalEquity} accent />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
