@@ -36,7 +36,7 @@ export function DiagnosticsTab({ accounts, balances, cutoff }: Props) {
 
   const reload = async () => {
     setLoading(true);
-    const arAcct = balances.find((a) => a.code === "1110"); // AR
+    const arAcct = balances.find((a) => a.code === "1100"); // AR (matches posting functions)
     const apAcct = balances.find((a) => a.code === "2010"); // AP
     const loanAcct = balances.find((a) => a.code === "2110"); // Bank Loan
     const faCostAcct = balances.find((a) => a.code === "1510"); // Fixed Asset cost

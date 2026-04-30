@@ -82,6 +82,36 @@ export async function rebuildAccounting() {
   return !error;
 }
 
+export interface RebuildSummary { entries_before: number; entries_after: number; unbalanced: number }
+export async function rebuildAccountingWithSummary(): Promise<RebuildSummary | null> {
+  const { data, error } = await supabase.rpc("rebuild_accounting_with_summary" as any);
+  if (error) { console.error(error); return null; }
+  return data as any;
+}
+
+// ============= Loan Audit =============
+export interface LoanAuditRow {
+  loan_id: string; loan_name: string; source_type: string;
+  entry_id: string; entry_date: string; description: string;
+  debit_amount: number; credit_amount: number;
+}
+export async function auditLoanJournalEntries(): Promise<LoanAuditRow[]> {
+  const { data, error } = await supabase.rpc("audit_loan_journal_entries" as any);
+  if (error) { console.error(error); return []; }
+  return ((data || []) as any[]).map((r) => ({
+    ...r,
+    debit_amount: Number(r.debit_amount || 0),
+    credit_amount: Number(r.credit_amount || 0),
+  }));
+}
+
+export interface DupLoanPosting { loan_id: string; loan_name: string; has_disbursement: boolean; has_opening: boolean }
+export async function detectDuplicateLoanPostings(): Promise<DupLoanPosting[]> {
+  const { data, error } = await supabase.rpc("detect_duplicate_loan_postings" as any);
+  if (error) { console.error(error); return []; }
+  return (data || []) as any;
+}
+
 // ============= Opening Balances =============
 export interface OpeningBalanceLine { account_id: string; amount: number }
 
