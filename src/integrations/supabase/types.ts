@@ -1295,6 +1295,13 @@ export type Database = {
       }
       get_account_id: { Args: { _code: string }; Returns: string }
       get_accounting_start_date: { Args: never; Returns: string }
+      get_opening_balances: {
+        Args: never
+        Returns: {
+          account_id: string
+          amount: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1308,6 +1315,7 @@ export type Database = {
       }
       post_expense_payment_replay: { Args: { _id: string }; Returns: undefined }
       post_expense_replay: { Args: { _id: string }; Returns: undefined }
+      post_opening_balances: { Args: { _payload: Json }; Returns: string }
       post_order_replay: { Args: { _id: string }; Returns: undefined }
       post_payment_replay: { Args: { _id: string }; Returns: undefined }
       rebuild_accounting_from_cutoff: { Args: never; Returns: undefined }
