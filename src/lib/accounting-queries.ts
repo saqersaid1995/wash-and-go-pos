@@ -226,6 +226,124 @@ export interface APRow {
   status: string;
 }
 
+// ============= Account Ledger (drill-down) =============
+export interface LedgerRow {
+  entry_id: string;
+  entry_date: string;
+  source_type: string;
+  description: string;
+  line_description: string;
+  debit: number;
+  credit: number;
+}
+
+export async function fetchAccountLedger(accountId: string): Promise<LedgerRow[]> {
+  const { data, error } = await supabase
+    .from("journal_entry_lines" as any)
+    .select("id, amount, line_description, debit_account_id, credit_account_id, journal_entries!inner(id, entry_date, description, source_type)")
+    .or(`debit_account_id.eq.${accountId},credit_account_id.eq.${accountId}`);
+  if (error) { console.error(error); return []; }
+  const rows = ((data || []) as any[]).map((r) => {
+    const isDebit = r.debit_account_id === accountId;
+    return {
+      entry_id: r.journal_entries.id,
+      entry_date: r.journal_entries.entry_date,
+      source_type: r.journal_entries.source_type,
+      description: r.journal_entries.description,
+      line_description: r.line_description || "",
+      debit: isDebit ? Number(r.amount) : 0,
+      credit: isDebit ? 0 : Number(r.amount),
+    } as LedgerRow;
+  });
+  rows.sort((a, b) =>
+    a.entry_date === b.entry_date ? a.entry_id.localeCompare(b.entry_id) : a.entry_date.localeCompare(b.entry_date)
+  );
+  return rows;
+}
+
+// ============= Reconciliation helpers (Diagnostics) =============
+export interface ReconRow {
+  label: string;
+  glAmount: number;
+  moduleAmount: number;
+  difference: number;
+  ok: boolean;
+}
+
+export async function fetchLoansOutstandingTotal(): Promise<number> {
+  const { data, error } = await supabase
+    .from("loans" as any)
+    .select("outstanding_balance, is_deleted, status")
+    .eq("is_deleted", false);
+  if (error) { console.error(error); return 0; }
+  return ((data || []) as any[])
+    .filter((l) => l.status !== "closed")
+    .reduce((s, l) => s + Number(l.outstanding_balance || 0), 0);
+}
+
+export async function fetchFixedAssetsTotals(): Promise<{ cost: number; accumDep: number }> {
+  const [{ data: assets }, { data: deps }] = await Promise.all([
+    supabase.from("fixed_assets" as any).select("cost, is_deleted, status"),
+    supabase.from("depreciation_entries" as any).select("amount"),
+  ]);
+  const cost = ((assets || []) as any[])
+    .filter((a) => !a.is_deleted && a.status !== "disposed")
+    .reduce((s, a) => s + Number(a.cost || 0), 0);
+  const accumDep = ((deps || []) as any[]).reduce((s, d) => s + Number(d.amount || 0), 0);
+  return { cost, accumDep };
+}
+
+export async function fetchCustomersOutstandingTotal(cutoff: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("remaining_amount, is_draft, is_deleted, order_date")
+    .eq("is_draft", false)
+    .eq("is_deleted", false)
+    .gte("order_date", cutoff);
+  if (error) { console.error(error); return 0; }
+  return ((data || []) as any[]).reduce((s, o) => s + Number(o.remaining_amount || 0), 0);
+}
+
+export async function fetchSuppliersOutstandingTotal(cutoff: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("remaining_amount, expense_date, is_recurring, is_auto_generated")
+    .gte("expense_date", cutoff);
+  if (error) { console.error(error); return 0; }
+  return ((data || []) as any[])
+    .filter((e) => !(e.is_recurring && !e.is_auto_generated))
+    .reduce((s, e) => s + Number(e.remaining_amount || 0), 0);
+}
+
+// ============= Journal integrity =============
+export interface UnbalancedEntry { entry_id: string; entry_date: string; description: string; debit: number; credit: number; diff: number }
+
+export async function fetchUnbalancedEntries(): Promise<UnbalancedEntry[]> {
+  const [{ data: entries }, { data: lines }] = await Promise.all([
+    supabase.from("journal_entries" as any).select("id, entry_date, description").order("entry_date", { ascending: false }).limit(2000),
+    supabase.from("journal_entry_lines" as any).select("entry_id, amount, debit_account_id, credit_account_id").limit(20000),
+  ]);
+  const totals = new Map<string, { d: number; c: number; bad: boolean }>();
+  for (const ln of (lines || []) as any[]) {
+    const t = totals.get(ln.entry_id) || { d: 0, c: 0, bad: false };
+    if (ln.debit_account_id) t.d += Number(ln.amount);
+    if (ln.credit_account_id) t.c += Number(ln.amount);
+    if (!ln.debit_account_id && !ln.credit_account_id) t.bad = true;
+    if (Number(ln.amount) === 0) t.bad = true;
+    totals.set(ln.entry_id, t);
+  }
+  const out: UnbalancedEntry[] = [];
+  for (const e of (entries || []) as any[]) {
+    const t = totals.get(e.id);
+    if (!t) continue;
+    const diff = Number((t.d - t.c).toFixed(3));
+    if (Math.abs(diff) > 0.001 || t.bad) {
+      out.push({ entry_id: e.id, entry_date: e.entry_date, description: e.description, debit: t.d, credit: t.c, diff });
+    }
+  }
+  return out;
+}
+
 export async function fetchAccountsPayable(cutoff: string): Promise<APRow[]> {
   const { data, error } = await supabase
     .from("expenses")

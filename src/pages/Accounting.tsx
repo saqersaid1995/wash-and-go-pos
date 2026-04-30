@@ -18,6 +18,8 @@ import { ReceivablesTab } from "@/components/accounting/ReceivablesTab";
 import { PayablesTab } from "@/components/accounting/PayablesTab";
 import { OpeningBalancesTab } from "@/components/accounting/OpeningBalancesTab";
 import { FixedAssetsTab } from "@/components/accounting/FixedAssetsTab";
+import { TrialBalanceTab } from "@/components/accounting/TrialBalanceTab";
+import { DiagnosticsTab } from "@/components/accounting/DiagnosticsTab";
 
 export default function Accounting() {
   const [loading, setLoading] = useState(true);
@@ -78,6 +80,8 @@ export default function Accounting() {
             {[
               ["balance-sheet", "Balance Sheet"],
               ["income-statement", "Income Statement"],
+              ["trial-balance", "Trial Balance"],
+              ["diagnostics", "Diagnostics"],
               ["cashflow", "Cashflow"],
               ["receivables", "Receivables (AR)"],
               ["payables", "Payables (AP)"],
@@ -95,6 +99,8 @@ export default function Accounting() {
 
           <TabsContent value="balance-sheet"><BalanceSheetTab balances={balances} /></TabsContent>
           <TabsContent value="income-statement"><IncomeStatementTab balances={balances} /></TabsContent>
+          <TabsContent value="trial-balance"><TrialBalanceTab balances={balances} /></TabsContent>
+          <TabsContent value="diagnostics"><DiagnosticsTab accounts={accounts} balances={balances} cutoff={settings?.accounting_start_date || new Date().toISOString().split("T")[0]} /></TabsContent>
           <TabsContent value="cashflow"><CashflowTab balances={balances} /></TabsContent>
           <TabsContent value="receivables"><ReceivablesTab rows={ar} /></TabsContent>
           <TabsContent value="payables"><PayablesTab rows={ap} /></TabsContent>
