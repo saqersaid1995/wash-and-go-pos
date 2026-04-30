@@ -16,6 +16,12 @@ export interface Loan {
   notes: string;
   status: "active" | "closed";
   is_deleted: boolean;
+  loan_type: "new" | "existing";
+  original_principal: number;
+  outstanding_balance: number;
+  first_disbursement_date: string | null;
+  next_payment_date: string | null;
+  attachment_url: string;
 }
 
 export interface LoanInstallment {
