@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCustomerState } from "@/hooks/useCustomerState";
+import { formatOMR } from "@/lib/currency";
 import { toast } from "sonner";
 import type { CustomerWithStats } from "@/types/customer";
 
@@ -66,7 +67,7 @@ export default function Customers() {
               <SummaryCard icon={<Users className="w-4 h-4" />} label="Total Customers" value={state.totals.total} />
               <SummaryCard icon={<Crown className="w-4 h-4" />} label="VIP Customers" value={state.totals.vip} accent />
               <SummaryCard icon={<AlertCircle className="w-4 h-4" />} label="With Balance" value={state.totals.withBalance} warning={state.totals.withBalance > 0} />
-              <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="Total Revenue" value={`$${state.totals.totalRevenue.toFixed(2)}`} />
+              <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="Total Revenue" value={formatOMR(state.totals.totalRevenue)} />
             </div>
 
             {/* Filters */}
@@ -144,12 +145,12 @@ export default function Customers() {
                       </td>
                       <td className="p-3 text-muted-foreground hidden sm:table-cell">{c.phone}</td>
                       <td className="p-3 text-center font-medium">{c.totalOrders}</td>
-                      <td className="p-3 text-right font-medium hidden md:table-cell">${c.totalSpent.toFixed(2)}</td>
+                      <td className="p-3 text-right font-medium hidden md:table-cell">{formatOMR(c.totalSpent)}</td>
                       <td className="p-3 text-right">
                         {c.outstandingBalance > 0 ? (
-                          <span className="text-destructive font-semibold">${c.outstandingBalance.toFixed(2)}</span>
+                          <span className="text-destructive font-semibold">{formatOMR(c.outstandingBalance)}</span>
                         ) : (
-                          <span className="text-muted-foreground">$0.00</span>
+                          <span className="text-muted-foreground">{formatOMR(0)}</span>
                         )}
                       </td>
                       <td className="p-3 text-muted-foreground hidden lg:table-cell">{c.lastOrderDate ?? "—"}</td>
