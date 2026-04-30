@@ -137,6 +137,9 @@ export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
                             <FileText className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(a)} title="Edit asset">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(a.id, a.asset_name)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
