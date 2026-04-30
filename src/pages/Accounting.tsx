@@ -17,6 +17,7 @@ import { CashflowTab } from "@/components/accounting/CashflowTab";
 import { ReceivablesTab } from "@/components/accounting/ReceivablesTab";
 import { PayablesTab } from "@/components/accounting/PayablesTab";
 import { OpeningBalancesTab } from "@/components/accounting/OpeningBalancesTab";
+import { FixedAssetsTab } from "@/components/accounting/FixedAssetsTab";
 
 export default function Accounting() {
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,7 @@ export default function Accounting() {
               ["receivables", "Receivables (AR)"],
               ["payables", "Payables (AP)"],
               ["opening", "Opening Balances"],
+              ["fixed-assets", "Fixed Assets"],
               ["coa", "Chart of Accounts"],
               ["journal", "Journal"],
             ].map(([v, l]) => (
