@@ -267,14 +267,29 @@ export function buildIncomeStatement(balances: AccountBalance[]): IncomeStatemen
   return { revenue, expenses, totalRevenue, totalExpenses, netIncome: totalRevenue - totalExpenses };
 }
 
+export function isContraAsset(a: AccountBalance | Account): boolean {
+  // Contra-assets are classified under assets but have a credit normal balance
+  // (e.g. Accumulated Depreciation). They REDUCE asset value on the Balance Sheet.
+  return (
+    (a.classification_type === "non_current_asset" || a.classification_type === "current_asset") &&
+    a.normal_balance === "credit"
+  );
+}
+
 export interface BalanceSheet {
-  currentAssets: AccountBalance[];
-  nonCurrentAssets: AccountBalance[];
+  currentAssets: AccountBalance[];          // gross (debit-normal) current assets
+  nonCurrentAssets: AccountBalance[];       // gross (debit-normal) non-current assets
+  contraCurrentAssets: AccountBalance[];    // credit-normal classified as current asset
+  contraNonCurrentAssets: AccountBalance[]; // e.g. Accumulated Depreciation
   currentLiabilities: AccountBalance[];
   nonCurrentLiabilities: AccountBalance[];
   equity: AccountBalance[];
-  totalCurrentAssets: number;
-  totalNonCurrentAssets: number;
+  totalCurrentAssetsGross: number;
+  totalNonCurrentAssetsGross: number;
+  totalContraCurrentAssets: number;     // positive number, displayed as (x)
+  totalContraNonCurrentAssets: number;  // positive number, displayed as (x)
+  totalCurrentAssets: number;     // net (gross - contra)
+  totalNonCurrentAssets: number;  // net (gross - contra)
   totalAssets: number;
   totalCurrentLiabilities: number;
   totalNonCurrentLiabilities: number;
@@ -287,15 +302,27 @@ export interface BalanceSheet {
 
 export function buildBalanceSheet(balances: AccountBalance[]): BalanceSheet {
   const sum = (arr: AccountBalance[]) => arr.reduce((s, a) => s + a.balance, 0);
-  const currentAssets = balances.filter((a) => a.classification_type === "current_asset");
-  const nonCurrentAssets = balances.filter((a) => a.classification_type === "non_current_asset");
+
+  const allCurrent = balances.filter((a) => a.classification_type === "current_asset");
+  const allNonCurrent = balances.filter((a) => a.classification_type === "non_current_asset");
+
+  const currentAssets = allCurrent.filter((a) => !isContraAsset(a));
+  const contraCurrentAssets = allCurrent.filter((a) => isContraAsset(a));
+  const nonCurrentAssets = allNonCurrent.filter((a) => !isContraAsset(a));
+  const contraNonCurrentAssets = allNonCurrent.filter((a) => isContraAsset(a));
+
   const currentLiabilities = balances.filter((a) => a.classification_type === "current_liability");
   const nonCurrentLiabilities = balances.filter((a) => a.classification_type === "non_current_liability");
   const equity = balances.filter((a) => a.account_type === "Equity");
 
-  const totalCurrentAssets = sum(currentAssets);
-  const totalNonCurrentAssets = sum(nonCurrentAssets);
+  const totalCurrentAssetsGross = sum(currentAssets);
+  const totalNonCurrentAssetsGross = sum(nonCurrentAssets);
+  const totalContraCurrentAssets = sum(contraCurrentAssets);       // positive
+  const totalContraNonCurrentAssets = sum(contraNonCurrentAssets); // positive
+  const totalCurrentAssets = totalCurrentAssetsGross - totalContraCurrentAssets;
+  const totalNonCurrentAssets = totalNonCurrentAssetsGross - totalContraNonCurrentAssets;
   const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
+
   const totalCurrentLiabilities = sum(currentLiabilities);
   const totalNonCurrentLiabilities = sum(nonCurrentLiabilities);
   const totalLiabilities = totalCurrentLiabilities + totalNonCurrentLiabilities;
@@ -303,8 +330,13 @@ export function buildBalanceSheet(balances: AccountBalance[]): BalanceSheet {
   const is = buildIncomeStatement(balances);
   const totalEquity = equityFromAccounts + is.netIncome;
   const difference = totalAssets - (totalLiabilities + totalEquity);
+
   return {
-    currentAssets, nonCurrentAssets, currentLiabilities, nonCurrentLiabilities, equity,
+    currentAssets, nonCurrentAssets,
+    contraCurrentAssets, contraNonCurrentAssets,
+    currentLiabilities, nonCurrentLiabilities, equity,
+    totalCurrentAssetsGross, totalNonCurrentAssetsGross,
+    totalContraCurrentAssets, totalContraNonCurrentAssets,
     totalCurrentAssets, totalNonCurrentAssets, totalAssets,
     totalCurrentLiabilities, totalNonCurrentLiabilities, totalLiabilities,
     totalEquity, retainedEarningsCalc: is.netIncome,
