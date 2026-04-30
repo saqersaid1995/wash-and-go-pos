@@ -247,31 +247,46 @@ export function buildIncomeStatement(balances: AccountBalance[]): IncomeStatemen
 }
 
 export interface BalanceSheet {
-  assets: AccountBalance[];
-  liabilities: AccountBalance[];
+  currentAssets: AccountBalance[];
+  nonCurrentAssets: AccountBalance[];
+  currentLiabilities: AccountBalance[];
+  nonCurrentLiabilities: AccountBalance[];
   equity: AccountBalance[];
+  totalCurrentAssets: number;
+  totalNonCurrentAssets: number;
   totalAssets: number;
+  totalCurrentLiabilities: number;
+  totalNonCurrentLiabilities: number;
   totalLiabilities: number;
   totalEquity: number;
-  retainedEarningsCalc: number; // net income added to equity
+  retainedEarningsCalc: number;
   isBalanced: boolean;
   difference: number;
 }
 
 export function buildBalanceSheet(balances: AccountBalance[]): BalanceSheet {
-  const assets = balances.filter((a) => a.account_type === "Asset");
-  const liabilities = balances.filter((a) => a.account_type === "Liability");
+  const sum = (arr: AccountBalance[]) => arr.reduce((s, a) => s + a.balance, 0);
+  const currentAssets = balances.filter((a) => a.classification_type === "current_asset");
+  const nonCurrentAssets = balances.filter((a) => a.classification_type === "non_current_asset");
+  const currentLiabilities = balances.filter((a) => a.classification_type === "current_liability");
+  const nonCurrentLiabilities = balances.filter((a) => a.classification_type === "non_current_liability");
   const equity = balances.filter((a) => a.account_type === "Equity");
-  const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
-  const totalLiabilities = liabilities.reduce((s, a) => s + a.balance, 0);
-  const equityFromAccounts = equity.reduce((s, a) => s + a.balance, 0);
+
+  const totalCurrentAssets = sum(currentAssets);
+  const totalNonCurrentAssets = sum(nonCurrentAssets);
+  const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
+  const totalCurrentLiabilities = sum(currentLiabilities);
+  const totalNonCurrentLiabilities = sum(nonCurrentLiabilities);
+  const totalLiabilities = totalCurrentLiabilities + totalNonCurrentLiabilities;
+  const equityFromAccounts = sum(equity);
   const is = buildIncomeStatement(balances);
   const totalEquity = equityFromAccounts + is.netIncome;
   const difference = totalAssets - (totalLiabilities + totalEquity);
   return {
-    assets, liabilities, equity,
-    totalAssets, totalLiabilities, totalEquity,
-    retainedEarningsCalc: is.netIncome,
+    currentAssets, nonCurrentAssets, currentLiabilities, nonCurrentLiabilities, equity,
+    totalCurrentAssets, totalNonCurrentAssets, totalAssets,
+    totalCurrentLiabilities, totalNonCurrentLiabilities, totalLiabilities,
+    totalEquity, retainedEarningsCalc: is.netIncome,
     isBalanced: Math.abs(difference) < 0.01,
     difference,
   };
