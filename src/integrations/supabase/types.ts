@@ -671,16 +671,22 @@ export type Database = {
       loans: {
         Row: {
           annual_interest_rate: number
+          attachment_url: string | null
           bank_name: string
           created_at: string
           disbursement_account_code: string
+          first_disbursement_date: string | null
           id: string
           installment_amount: number
           interest_expense_code: string
           is_deleted: boolean
           liability_account_code: string
           loan_name: string
+          loan_type: string
+          next_payment_date: string | null
           notes: string | null
+          original_principal: number
+          outstanding_balance: number
           payment_frequency: string
           principal: number
           start_date: string
@@ -690,16 +696,22 @@ export type Database = {
         }
         Insert: {
           annual_interest_rate?: number
+          attachment_url?: string | null
           bank_name?: string
           created_at?: string
           disbursement_account_code?: string
+          first_disbursement_date?: string | null
           id?: string
           installment_amount?: number
           interest_expense_code?: string
           is_deleted?: boolean
           liability_account_code?: string
           loan_name: string
+          loan_type?: string
+          next_payment_date?: string | null
           notes?: string | null
+          original_principal?: number
+          outstanding_balance?: number
           payment_frequency?: string
           principal?: number
           start_date?: string
@@ -709,16 +721,22 @@ export type Database = {
         }
         Update: {
           annual_interest_rate?: number
+          attachment_url?: string | null
           bank_name?: string
           created_at?: string
           disbursement_account_code?: string
+          first_disbursement_date?: string | null
           id?: string
           installment_amount?: number
           interest_expense_code?: string
           is_deleted?: boolean
           liability_account_code?: string
           loan_name?: string
+          loan_type?: string
+          next_payment_date?: string | null
           notes?: string | null
+          original_principal?: number
+          outstanding_balance?: number
           payment_frequency?: string
           principal?: number
           start_date?: string

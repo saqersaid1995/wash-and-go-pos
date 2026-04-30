@@ -16,6 +16,12 @@ export interface Loan {
   notes: string;
   status: "active" | "closed";
   is_deleted: boolean;
+  loan_type: "new" | "existing";
+  original_principal: number;
+  outstanding_balance: number;
+  first_disbursement_date: string | null;
+  next_payment_date: string | null;
+  attachment_url: string;
 }
 
 export interface LoanInstallment {
@@ -102,11 +108,18 @@ export async function createLoan(p: {
   installment_amount?: number;
   disbursement_account_code?: string;
   notes?: string;
+  loan_type?: "new" | "existing";
+  original_principal?: number;
+  outstanding_balance?: number;
+  first_disbursement_date?: string | null;
+  next_payment_date?: string | null;
+  attachment_url?: string;
 }): Promise<{ id: string | null; error: string | null }> {
   const payload = {
     ...p,
     installment_amount: p.installment_amount ?? 0,
     disbursement_account_code: p.disbursement_account_code ?? "1020",
+    loan_type: p.loan_type ?? "new",
   };
   console.log("[createLoan] payload:", payload);
   const { data, error } = await supabase.from("loans" as any).insert(payload).select("id").single();
