@@ -1568,6 +1568,23 @@ export type Database = {
       }
     }
     Functions: {
+      assert_journal_entry_balanced: {
+        Args: { _entry_id: string }
+        Returns: undefined
+      }
+      audit_loan_journal_entries: {
+        Args: never
+        Returns: {
+          credit_amount: number
+          debit_amount: number
+          description: string
+          entry_date: string
+          entry_id: string
+          loan_id: string
+          loan_name: string
+          source_type: string
+        }[]
+      }
       backfill_missing_asset_purchase_jes: {
         Args: never
         Returns: {
@@ -1583,6 +1600,15 @@ export type Database = {
       delete_system_entries: {
         Args: { _source_id: string; _source_type: string }
         Returns: undefined
+      }
+      detect_duplicate_loan_postings: {
+        Args: never
+        Returns: {
+          has_disbursement: boolean
+          has_opening: boolean
+          loan_id: string
+          loan_name: string
+        }[]
       }
       expense_category_to_account_code: {
         Args: { _category: string }
@@ -1639,6 +1665,7 @@ export type Database = {
       post_order_replay: { Args: { _id: string }; Returns: undefined }
       post_payment_replay: { Args: { _id: string }; Returns: undefined }
       rebuild_accounting_from_cutoff: { Args: never; Returns: undefined }
+      rebuild_accounting_with_summary: { Args: never; Returns: Json }
       recalculate_asset_depreciation: {
         Args: { _asset_id: string; _up_to_month?: string }
         Returns: {
