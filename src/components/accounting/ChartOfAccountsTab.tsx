@@ -10,13 +10,29 @@ import { Plus, Trash2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { formatOMR } from "@/lib/currency";
 import {
-  type Account, type AccountBalance, type AccountType, type NormalBalance,
+  type Account, type AccountBalance, type AccountType, type NormalBalance, type ClassificationType,
   createAccount, deleteAccount,
 } from "@/lib/accounting-queries";
 
 const TYPES: AccountType[] = ["Asset", "Liability", "Equity", "Revenue", "Expense"];
 const DEFAULT_BALANCE: Record<AccountType, NormalBalance> = {
   Asset: "debit", Expense: "debit", Liability: "credit", Equity: "credit", Revenue: "credit",
+};
+const CLASSIFICATIONS_BY_TYPE: Record<AccountType, ClassificationType[]> = {
+  Asset: ["current_asset", "non_current_asset"],
+  Liability: ["current_liability", "non_current_liability"],
+  Equity: ["equity"],
+  Revenue: ["revenue"],
+  Expense: ["expense"],
+};
+const CLASSIFICATION_LABEL: Record<ClassificationType, string> = {
+  current_asset: "Current Asset",
+  non_current_asset: "Non-Current Asset",
+  current_liability: "Current Liability",
+  non_current_liability: "Non-Current Liability",
+  equity: "Equity",
+  revenue: "Revenue",
+  expense: "Expense",
 };
 
 export function ChartOfAccountsTab({
