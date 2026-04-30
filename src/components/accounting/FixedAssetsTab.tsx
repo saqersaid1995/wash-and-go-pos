@@ -153,6 +153,12 @@ export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
         )}
 
         <NewFixedAssetDialog open={open} onOpenChange={setOpen} onCreated={() => { load(); onChanged(); }} />
+        <EditFixedAssetDialog
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null); }}
+          asset={editing}
+          onSaved={() => { load(); onChanged(); }}
+        />
       </CardContent>
     </Card>
   );
