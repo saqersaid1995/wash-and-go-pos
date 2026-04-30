@@ -18,6 +18,7 @@ export function FixedAssetsTab({ onChanged }: { onChanged: () => void }) {
   const [running, setRunning] = useState(false);
   const [assets, setAssets] = useState<FixedAssetWithDepreciation[]>([]);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<FixedAssetWithDepreciation | null>(null);
 
   const load = async () => {
     setLoading(true);
