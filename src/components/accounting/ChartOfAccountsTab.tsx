@@ -113,6 +113,7 @@ export function ChartOfAccountsTab({
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs text-muted-foreground w-12">{a.code}</span>
                     <span>{a.account_name}</span>
+                    <Badge variant="secondary" className="text-[10px]">{CLASSIFICATION_LABEL[a.classification_type]}</Badge>
                     {a.sub_type && <Badge variant="outline" className="text-[10px]">{a.sub_type}</Badge>}
                     {a.is_system && <Lock className="h-3 w-3 text-muted-foreground" aria-label="System account" />}
                   </div>
