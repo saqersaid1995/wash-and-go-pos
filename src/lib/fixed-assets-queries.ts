@@ -127,10 +127,25 @@ export async function createFixedAsset(p: CreateAssetPayload): Promise<string | 
   return (data as any).id;
 }
 
-export async function updateFixedAsset(id: string, patch: Partial<FixedAsset>) {
-  const { error } = await supabase.from("fixed_assets" as any).update(patch as any).eq("id", id);
+export async function updateFixedAsset(id: string, patch: Partial<FixedAsset> & { category?: FixedAssetCategory }) {
+  const next: any = { ...patch };
+  if (patch.category) {
+    const codes = CATEGORY_TO_CODES[patch.category as FixedAssetCategory];
+    next.asset_account_code = codes.asset;
+    next.contra_account_code = codes.contra;
+  }
+  const { error } = await supabase.from("fixed_assets" as any).update(next).eq("id", id);
   if (error) console.error(error);
   return !error;
+}
+
+export async function recalculateAssetDepreciation(assetId: string, upToMonth?: string) {
+  const { data, error } = await supabase.rpc("recalculate_asset_depreciation" as any, {
+    _asset_id: assetId,
+    _up_to_month: upToMonth || new Date().toISOString().split("T")[0],
+  });
+  if (error) { console.error(error); return null; }
+  return (data as any[])?.[0] || { posted_count: 0, total_amount: 0 };
 }
 
 export async function softDeleteFixedAsset(id: string) {
