@@ -26,6 +26,7 @@ import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import Cashflow from "./pages/Cashflow.tsx";
 import CashManagement from "./pages/CashManagement.tsx";
 import Accounting from "./pages/Accounting.tsx";
+import Loans from "./pages/Loans.tsx";
 import ScanLite from "./pages/ScanLite.tsx";
 import SupportLite from "./pages/SupportLite.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/cashflow" element={<ProtectedRoute allowedRoles={["admin"]}><Cashflow /></ProtectedRoute>} />
             <Route path="/cash-management" element={<ProtectedRoute allowedRoles={["admin"]}><CashManagement /></ProtectedRoute>} />
             <Route path="/accounting" element={<ProtectedRoute allowedRoles={["admin"]}><Accounting /></ProtectedRoute>} />
+            <Route path="/loans" element={<ProtectedRoute allowedRoles={["admin"]}><Loans /></ProtectedRoute>} />
             <Route path="/scan-lite" element={<ProtectedRoute><ScanLite /></ProtectedRoute>} />
             <Route path="/support-lite" element={<ProtectedRoute><SupportLite /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

@@ -564,6 +564,170 @@ export type Database = {
           },
         ]
       }
+      loan_installments: {
+        Row: {
+          created_at: string
+          due_date: string
+          id: string
+          installment_no: number
+          interest_amount: number
+          is_paid: boolean
+          loan_id: string
+          paid_amount: number
+          principal_amount: number
+          remaining_balance: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_no: number
+          interest_amount?: number
+          is_paid?: boolean
+          loan_id: string
+          paid_amount?: number
+          principal_amount?: number
+          remaining_balance?: number
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_no?: number
+          interest_amount?: number
+          is_paid?: boolean
+          loan_id?: string
+          paid_amount?: number
+          principal_amount?: number
+          remaining_balance?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_installments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          installment_id: string | null
+          interest_portion: number
+          loan_id: string
+          notes: string | null
+          payment_date: string
+          payment_source: string
+          principal_portion: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          installment_id?: string | null
+          interest_portion?: number
+          loan_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_source?: string
+          principal_portion?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          installment_id?: string | null
+          interest_portion?: number
+          loan_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_source?: string
+          principal_portion?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_payments_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "loan_installments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          annual_interest_rate: number
+          bank_name: string
+          created_at: string
+          disbursement_account_code: string
+          id: string
+          installment_amount: number
+          interest_expense_code: string
+          is_deleted: boolean
+          liability_account_code: string
+          loan_name: string
+          notes: string | null
+          payment_frequency: string
+          principal: number
+          start_date: string
+          status: string
+          term_months: number
+          updated_at: string
+        }
+        Insert: {
+          annual_interest_rate?: number
+          bank_name?: string
+          created_at?: string
+          disbursement_account_code?: string
+          id?: string
+          installment_amount?: number
+          interest_expense_code?: string
+          is_deleted?: boolean
+          liability_account_code?: string
+          loan_name: string
+          notes?: string | null
+          payment_frequency?: string
+          principal?: number
+          start_date?: string
+          status?: string
+          term_months?: number
+          updated_at?: string
+        }
+        Update: {
+          annual_interest_rate?: number
+          bank_name?: string
+          created_at?: string
+          disbursement_account_code?: string
+          id?: string
+          installment_amount?: number
+          interest_expense_code?: string
+          is_deleted?: boolean
+          liability_account_code?: string
+          loan_name?: string
+          notes?: string | null
+          payment_frequency?: string
+          principal?: number
+          start_date?: string
+          status?: string
+          term_months?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       loyalty_settings: {
         Row: {
           created_at: string
@@ -1383,6 +1547,10 @@ export type Database = {
       }
     }
     Functions: {
+      calc_loan_installment: {
+        Args: { _annual_rate: number; _months: number; _principal: number }
+        Returns: number
+      }
       delete_system_entries: {
         Args: { _source_id: string; _source_type: string }
         Returns: undefined
@@ -1404,6 +1572,14 @@ export type Database = {
       }
       get_account_id: { Args: { _code: string }; Returns: string }
       get_accounting_start_date: { Args: never; Returns: string }
+      get_loan_split_summary: {
+        Args: never
+        Returns: {
+          current_portion: number
+          non_current_portion: number
+          total_outstanding: number
+        }[]
+      }
       get_opening_balances: {
         Args: never
         Returns: {
@@ -1428,6 +1604,8 @@ export type Database = {
         Args: { _asset_id: string }
         Returns: string
       }
+      post_loan_disbursement_je: { Args: { _loan_id: string }; Returns: string }
+      post_loan_payment_je: { Args: { _payment_id: string }; Returns: string }
       post_opening_balances: { Args: { _payload: Json }; Returns: string }
       post_order_replay: { Args: { _id: string }; Returns: undefined }
       post_payment_replay: { Args: { _id: string }; Returns: undefined }
@@ -1441,6 +1619,10 @@ export type Database = {
       }
       recompute_expense_lifecycle: {
         Args: { _expense_id: string }
+        Returns: undefined
+      }
+      regenerate_loan_schedule: {
+        Args: { _loan_id: string }
         Returns: undefined
       }
       run_depreciation: {
