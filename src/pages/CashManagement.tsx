@@ -563,6 +563,9 @@ export default function CashManagement() {
           </CardContent>
         </Card>
 
+        {/* Monthly Cash Movement (from GL) */}
+        <MonthlyCashMovementCard />
+
         {/* 5. Future Payments */}
         <Card>
           <CardHeader className="pb-3">
