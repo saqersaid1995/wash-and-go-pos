@@ -1635,6 +1635,31 @@ export type Database = {
           total_outstanding: number
         }[]
       }
+      get_monthly_cash_breakdown: {
+        Args: { _account_codes?: string[]; _month_start: string }
+        Returns: {
+          account_code: string
+          credit: number
+          debit: number
+          description: string
+          entry_date: string
+          entry_id: string
+          line_description: string
+          source_type: string
+        }[]
+      }
+      get_monthly_cash_movements: {
+        Args: { _account_codes?: string[] }
+        Returns: {
+          bank_inflows: number
+          bank_outflows: number
+          cash_inflows: number
+          cash_outflows: number
+          inflows: number
+          month_start: string
+          outflows: number
+        }[]
+      }
       get_opening_balances: {
         Args: never
         Returns: {
