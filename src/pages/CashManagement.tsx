@@ -19,6 +19,7 @@ import { cn, toLocalDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllExpenses, fetchAllExpensePayments, type Expense, type ExpensePayment } from "@/lib/expense-queries";
 import { toast } from "sonner";
+import { MonthlyCashMovementCard } from "@/components/cash/MonthlyCashMovementCard";
 
 interface OpeningBalance {
   id?: string;
