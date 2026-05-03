@@ -53,6 +53,13 @@ export default function OrderDetails() {
     // Load notification logs
     const logs = await fetchNotificationLogs(orderId);
     setNotifLogs(logs);
+    // Load payment corrections
+    const { data: corr } = await supabase
+      .from("payment_corrections")
+      .select("*")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true });
+    setCorrections(corr || []);
   }, [orderId]);
 
   useEffect(() => {
