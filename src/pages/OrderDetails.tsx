@@ -9,6 +9,9 @@ import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent, 
 import { sendReadyForPickupWhatsApp, fetchNotificationLogs } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
 import PaymentModal from "@/components/payment/PaymentModal";
+import EditPaymentModal from "@/components/payment/EditPaymentModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +39,10 @@ export default function OrderDetails() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [notifLogs, setNotifLogs] = useState<any[]>([]);
   const [resending, setResending] = useState(false);
+  const [editPayment, setEditPayment] = useState<any | null>(null);
+  const [corrections, setCorrections] = useState<any[]>([]);
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
@@ -46,6 +53,13 @@ export default function OrderDetails() {
     // Load notification logs
     const logs = await fetchNotificationLogs(orderId);
     setNotifLogs(logs);
+    // Load payment corrections
+    const { data: corr } = await supabase
+      .from("payment_corrections")
+      .select("*")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true });
+    setCorrections(corr || []);
   }, [orderId]);
 
   useEffect(() => {
@@ -422,6 +436,7 @@ export default function OrderDetails() {
                 const timeline = [
                   ...order.statusHistory.map((change) => ({ id: change.id, date: change.changedAt, type: "status" as const, data: change })),
                   ...order.paymentHistory.map((payment) => ({ id: payment.id, date: payment.paymentDate, type: "payment" as const, data: payment })),
+                  ...corrections.map((c: any) => ({ id: `corr-${c.id}`, date: c.created_at, type: "correction" as const, data: c })),
                 ].sort((a, b) => a.date.localeCompare(b.date));
 
                 return timeline.map((entry, i) => (
@@ -429,17 +444,18 @@ export default function OrderDetails() {
                     <div className="flex flex-col items-center">
                       <div className={`w-3 h-3 rounded-full shrink-0 ${
                         entry.type === "payment" ? "bg-green-500" :
+                        entry.type === "correction" ? "bg-warning" :
                         i === timeline.length - 1 ? "bg-primary" : "bg-border"
                       }`} />
                       {i < timeline.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
                     </div>
-                    <div className="text-sm space-y-0.5 -mt-0.5">
+                    <div className="text-sm space-y-0.5 -mt-0.5 flex-1">
                       {entry.type === "status" ? (
                         <>
                           <p className="font-medium">
-                            {entry.data.fromStatus
-                              ? <><span className="capitalize">{(entry.data as any).fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{entry.data.toStatus.replace("-", " ")}</span></>
-                              : <span>Created as <span className="capitalize font-semibold">{entry.data.toStatus.replace("-", " ")}</span></span>
+                            {(entry.data as any).fromStatus
+                              ? <><span className="capitalize">{(entry.data as any).fromStatus.replace("-", " ")}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="capitalize">{(entry.data as any).toStatus.replace("-", " ")}</span></>
+                              : <span>Created as <span className="capitalize font-semibold">{(entry.data as any).toStatus.replace("-", " ")}</span></span>
                             }
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -447,15 +463,45 @@ export default function OrderDetails() {
                             {(entry.data as any).changedBy && <> • {(entry.data as any).changedBy}</>}
                           </p>
                         </>
+                      ) : entry.type === "payment" ? (
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium text-green-600">
+                              <CreditCard className="inline h-3 w-3 mr-1" />
+                              Payment: {formatOMR((entry.data as any).amount)} ({(entry.data as any).paymentMethod})
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(entry.date).toLocaleString()}
+                            </p>
+                          </div>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 print:hidden"
+                              onClick={() => setEditPayment(entry.data)}
+                            >
+                              <Pencil className="h-3 w-3" /> Edit
+                            </Button>
+                          )}
+                        </div>
                       ) : (
                         <>
-                          <p className="font-medium text-green-600">
-                            <CreditCard className="inline h-3 w-3 mr-1" />
-                            Payment: {formatOMR((entry.data as any).amount)} ({(entry.data as any).paymentMethod})
+                          <p className="font-medium text-warning">
+                            Payment corrected: <span className="capitalize">{(entry.data as any).old_method}</span>
+                            <ArrowRight className="inline h-3 w-3 mx-1" />
+                            <span className="capitalize">{(entry.data as any).new_method}</span>
+                            {Number((entry.data as any).old_amount) !== Number((entry.data as any).new_amount) && (
+                              <> • {formatOMR(Number((entry.data as any).old_amount))} → {formatOMR(Number((entry.data as any).new_amount))}</>
+                            )}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(entry.date).toLocaleString()}
+                            {(entry.data as any).changed_by && <> • {(entry.data as any).changed_by}</>}
                           </p>
+                          {(entry.data as any).reason && (
+                            <p className="text-xs text-muted-foreground italic">Reason: {(entry.data as any).reason}</p>
+                          )}
                         </>
                       )}
                     </div>
@@ -543,6 +589,13 @@ export default function OrderDetails() {
           onOpenChange={setPaymentOpen}
           order={order}
           onPaymentComplete={loadOrder}
+        />
+
+        <EditPaymentModal
+          open={!!editPayment}
+          onOpenChange={(v) => !v && setEditPayment(null)}
+          payment={editPayment}
+          onSaved={loadOrder}
         />
       </div>
     </div>
