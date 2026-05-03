@@ -39,6 +39,10 @@ export default function OrderDetails() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [notifLogs, setNotifLogs] = useState<any[]>([]);
   const [resending, setResending] = useState(false);
+  const [editPayment, setEditPayment] = useState<any | null>(null);
+  const [corrections, setCorrections] = useState<any[]>([]);
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
