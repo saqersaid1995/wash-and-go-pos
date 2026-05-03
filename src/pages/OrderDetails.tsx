@@ -601,10 +601,6 @@ export default function OrderDetails() {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (
