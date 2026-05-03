@@ -590,6 +590,17 @@ export default function OrderDetails() {
           order={order}
           onPaymentComplete={loadOrder}
         />
+
+        <EditPaymentModal
+          open={!!editPayment}
+          onOpenChange={(v) => !v && setEditPayment(null)}
+          payment={editPayment}
+          onSaved={loadOrder}
+        />
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );
