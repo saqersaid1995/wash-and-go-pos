@@ -1112,6 +1112,51 @@ export type Database = {
           },
         ]
       }
+      payment_corrections: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_amount: number | null
+          new_method: string | null
+          new_payment_date: string | null
+          old_amount: number | null
+          old_method: string | null
+          old_payment_date: string | null
+          order_id: string
+          original_payment_id: string | null
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_method?: string | null
+          new_payment_date?: string | null
+          old_amount?: number | null
+          old_method?: string | null
+          old_payment_date?: string | null
+          order_id: string
+          original_payment_id?: string | null
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_method?: string | null
+          new_payment_date?: string | null
+          old_amount?: number | null
+          old_method?: string | null
+          old_payment_date?: string | null
+          order_id?: string
+          original_payment_id?: string | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -1596,6 +1641,10 @@ export type Database = {
       calc_loan_installment: {
         Args: { _annual_rate: number; _months: number; _principal: number }
         Returns: number
+      }
+      correct_payment: {
+        Args: { _payload: Json; _payment_id: string }
+        Returns: Json
       }
       delete_system_entries: {
         Args: { _source_id: string; _source_type: string }
