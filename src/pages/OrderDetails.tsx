@@ -9,6 +9,9 @@ import { fetchOrderById, updateOrderStatus, addInternalNote, toggleOrderUrgent, 
 import { sendReadyForPickupWhatsApp, fetchNotificationLogs } from "@/lib/whatsapp";
 import { supabase } from "@/integrations/supabase/client";
 import PaymentModal from "@/components/payment/PaymentModal";
+import EditPaymentModal from "@/components/payment/EditPaymentModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
