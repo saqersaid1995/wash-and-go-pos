@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAllExpenses, fetchAllExpensePayments, type Expense, type ExpensePayment } from "@/lib/expense-queries";
 import { toast } from "sonner";
 import { MonthlyCashMovementCard } from "@/components/cash/MonthlyCashMovementCard";
+import { CashTransferCard } from "@/components/cash/CashTransferCard";
 
 interface OpeningBalance {
   id?: string;
