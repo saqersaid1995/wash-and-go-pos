@@ -171,6 +171,10 @@ export default function CashManagement() {
       const { cash, bank } = splitPayment(p.amount, p.payment_source, p.expense_id);
       cashOut += cash; bankOut += bank;
     });
+    transfers.forEach((t) => {
+      if (t.from_account === "cash") cashOut += t.amount; else bankOut += t.amount;
+      if (t.to_account === "cash") cashIn += t.amount; else bankIn += t.amount;
+    });
     const cashBalance = openingCash.amount + cashIn - cashOut;
     const bankBalance = openingBank.amount + bankIn - bankOut;
     return {
@@ -179,7 +183,7 @@ export default function CashManagement() {
       cashBalance, bankBalance, total: cashBalance + bankBalance,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
+  }, [payments, expensePayments, transfers, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
