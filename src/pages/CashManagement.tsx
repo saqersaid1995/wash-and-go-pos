@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAllExpenses, fetchAllExpensePayments, type Expense, type ExpensePayment } from "@/lib/expense-queries";
 import { toast } from "sonner";
 import { MonthlyCashMovementCard } from "@/components/cash/MonthlyCashMovementCard";
+import { CashTransferCard } from "@/components/cash/CashTransferCard";
 
 interface OpeningBalance {
   id?: string;
@@ -63,6 +64,7 @@ export default function CashManagement() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expensePayments, setExpensePayments] = useState<ExpensePayment[]>([]);
+  const [transfers, setTransfers] = useState<{ id: string; transfer_date: string; from_account: "cash"|"bank"; to_account: "cash"|"bank"; amount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
@@ -88,11 +90,12 @@ export default function CashManagement() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }] = await Promise.all([
+    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }, { data: transferData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
       fetchAllExpensePayments(),
       supabase.from("opening_balances" as any).select("*"),
+      supabase.from("cash_transfers" as any).select("id, transfer_date, from_account, to_account, amount"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
       id: p.id,
@@ -103,6 +106,7 @@ export default function CashManagement() {
     setPayments(mapped);
     setExpenses(allExpenses);
     setExpensePayments(allExpensePayments);
+    setTransfers(((transferData || []) as any[]).map((t) => ({ ...t, amount: Number(t.amount) })));
     const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
     const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
     if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
@@ -167,6 +171,10 @@ export default function CashManagement() {
       const { cash, bank } = splitPayment(p.amount, p.payment_source, p.expense_id);
       cashOut += cash; bankOut += bank;
     });
+    transfers.forEach((t) => {
+      if (t.from_account === "cash") cashOut += t.amount; else bankOut += t.amount;
+      if (t.to_account === "cash") cashIn += t.amount; else bankIn += t.amount;
+    });
     const cashBalance = openingCash.amount + cashIn - cashOut;
     const bankBalance = openingBank.amount + bankIn - bankOut;
     return {
@@ -175,7 +183,7 @@ export default function CashManagement() {
       cashBalance, bankBalance, total: cashBalance + bankBalance,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
+  }, [payments, expensePayments, transfers, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   // ========== PERIOD-FILTERED INFLOWS / OUTFLOWS ==========
   const periodPayments = useMemo(() => {
@@ -190,6 +198,11 @@ export default function CashManagement() {
     if (!bounds) return expensePayments;
     return expensePayments.filter((p) => p.payment_date >= bounds[0] && p.payment_date <= bounds[1]);
   }, [expensePayments, bounds]);
+
+  const periodTransfers = useMemo(() => {
+    if (!bounds) return transfers;
+    return transfers.filter((t) => t.transfer_date >= bounds[0] && t.transfer_date <= bounds[1]);
+  }, [transfers, bounds]);
 
   // Dynamic opening balance for the selected period
   const periodOpening = useMemo(() => {
@@ -209,9 +222,15 @@ export default function CashManagement() {
         cash -= s.cash; bank -= s.bank;
       }
     });
+    transfers.forEach((t) => {
+      if (t.transfer_date < start) {
+        if (t.from_account === "cash") cash -= t.amount; else bank -= t.amount;
+        if (t.to_account === "cash") cash += t.amount; else bank += t.amount;
+      }
+    });
     return { cash, bank };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bounds, payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
+  }, [bounds, payments, expensePayments, transfers, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   const summary = useMemo(() => {
     const inflows = periodPayments.reduce((s, p) => s + p.amount, 0);
@@ -237,6 +256,11 @@ export default function CashManagement() {
       const s = splitPayment(p.amount, p.payment_source, p.expense_id);
       row.cashOut += s.cash; row.bankOut += s.bank;
     });
+    periodTransfers.forEach((t) => {
+      const row = ensure(t.transfer_date);
+      if (t.from_account === "cash") row.cashOut += t.amount; else row.bankOut += t.amount;
+      if (t.to_account === "cash") row.cashIn += t.amount; else row.bankIn += t.amount;
+    });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
     let runningCash = periodOpening.cash, runningBank = periodOpening.bank;
     return sorted.map(([date, v]) => {
@@ -245,7 +269,7 @@ export default function CashManagement() {
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodPayments, periodExpensePayments, periodOpening.cash, periodOpening.bank]);
+  }, [periodPayments, periodExpensePayments, periodTransfers, periodOpening.cash, periodOpening.bank]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
@@ -563,6 +587,9 @@ export default function CashManagement() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Cash ↔ Bank Transfers */}
+        <CashTransferCard onChanged={loadData} />
 
         {/* Monthly Cash Movement (from GL) */}
         <MonthlyCashMovementCard />

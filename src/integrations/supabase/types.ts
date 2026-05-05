@@ -35,6 +35,39 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          from_account: string
+          id: string
+          notes: string | null
+          to_account: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          from_account: string
+          id?: string
+          notes?: string | null
+          to_account: string
+          transfer_date?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          from_account?: string
+          id?: string
+          notes?: string | null
+          to_account?: string
+          transfer_date?: string
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           account_name: string
