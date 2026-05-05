@@ -90,11 +90,12 @@ export default function CashManagement() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }] = await Promise.all([
+    const [{ data: payData }, allExpenses, allExpensePayments, { data: openingData }, { data: transferData }] = await Promise.all([
       supabase.from("payments").select("id, amount, payment_date, payment_method").order("payment_date", { ascending: false }),
       fetchAllExpenses(),
       fetchAllExpensePayments(),
       supabase.from("opening_balances" as any).select("*"),
+      supabase.from("cash_transfers" as any).select("id, transfer_date, from_account, to_account, amount"),
     ]);
     const mapped: PaymentRow[] = (payData || []).map((p: any) => ({
       id: p.id,
@@ -105,6 +106,7 @@ export default function CashManagement() {
     setPayments(mapped);
     setExpenses(allExpenses);
     setExpensePayments(allExpensePayments);
+    setTransfers(((transferData || []) as any[]).map((t) => ({ ...t, amount: Number(t.amount) })));
     const cash = (openingData as any[])?.find((o) => o.account_type === "cash");
     const bank = (openingData as any[])?.find((o) => o.account_type === "bank");
     if (cash) setOpeningCash({ id: cash.id, account_type: "cash", amount: Number(cash.amount), as_of_date: cash.as_of_date, notes: cash.notes });
