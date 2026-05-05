@@ -588,6 +588,9 @@ export default function CashManagement() {
           </CardContent>
         </Card>
 
+        {/* Cash ↔ Bank Transfers */}
+        <CashTransferCard onChanged={loadData} />
+
         {/* Monthly Cash Movement (from GL) */}
         <MonthlyCashMovementCard />
 
