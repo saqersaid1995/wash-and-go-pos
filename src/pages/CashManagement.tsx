@@ -199,6 +199,11 @@ export default function CashManagement() {
     return expensePayments.filter((p) => p.payment_date >= bounds[0] && p.payment_date <= bounds[1]);
   }, [expensePayments, bounds]);
 
+  const periodTransfers = useMemo(() => {
+    if (!bounds) return transfers;
+    return transfers.filter((t) => t.transfer_date >= bounds[0] && t.transfer_date <= bounds[1]);
+  }, [transfers, bounds]);
+
   // Dynamic opening balance for the selected period
   const periodOpening = useMemo(() => {
     if (!bounds) return { cash: openingCash.amount, bank: openingBank.amount };
@@ -217,9 +222,15 @@ export default function CashManagement() {
         cash -= s.cash; bank -= s.bank;
       }
     });
+    transfers.forEach((t) => {
+      if (t.transfer_date < start) {
+        if (t.from_account === "cash") cash -= t.amount; else bank -= t.amount;
+        if (t.to_account === "cash") cash += t.amount; else bank += t.amount;
+      }
+    });
     return { cash, bank };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bounds, payments, expensePayments, expenseSourceMap, openingCash.amount, openingBank.amount]);
+  }, [bounds, payments, expensePayments, transfers, expenseSourceMap, openingCash.amount, openingBank.amount]);
 
   const summary = useMemo(() => {
     const inflows = periodPayments.reduce((s, p) => s + p.amount, 0);
@@ -245,6 +256,11 @@ export default function CashManagement() {
       const s = splitPayment(p.amount, p.payment_source, p.expense_id);
       row.cashOut += s.cash; row.bankOut += s.bank;
     });
+    periodTransfers.forEach((t) => {
+      const row = ensure(t.transfer_date);
+      if (t.from_account === "cash") row.cashOut += t.amount; else row.bankOut += t.amount;
+      if (t.to_account === "cash") row.cashIn += t.amount; else row.bankIn += t.amount;
+    });
     const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
     let runningCash = periodOpening.cash, runningBank = periodOpening.bank;
     return sorted.map(([date, v]) => {
@@ -253,7 +269,7 @@ export default function CashManagement() {
       return { date, ...v, runningCash, runningBank, runningTotal: runningCash + runningBank };
     }).reverse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodPayments, periodExpensePayments, periodOpening.cash, periodOpening.bank]);
+  }, [periodPayments, periodExpensePayments, periodTransfers, periodOpening.cash, periodOpening.bank]);
 
   // ========== RECONCILIATION ==========
   const reconciliation = useMemo(() => {
