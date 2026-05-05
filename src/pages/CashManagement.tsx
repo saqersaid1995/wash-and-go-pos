@@ -64,6 +64,7 @@ export default function CashManagement() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expensePayments, setExpensePayments] = useState<ExpensePayment[]>([]);
+  const [transfers, setTransfers] = useState<{ id: string; transfer_date: string; from_account: "cash"|"bank"; to_account: "cash"|"bank"; amount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [actualBank, setActualBank] = useState<string>("");
 
