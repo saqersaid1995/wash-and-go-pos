@@ -153,6 +153,45 @@ Deno.serve(async (req) => {
       return json({ success: res.ok, status: res.status, data });
     }
 
+    // Validate proposed credentials WITHOUT storing them.
+    // Used by the admin UI to verify a token/phone-id pair against Graph API
+    // before the admin manually saves them in Lovable Cloud secrets.
+    if (action === "validate_secrets") {
+      const proposedToken = String(body?.access_token || "").trim();
+      const proposedPhoneId = String(body?.phone_number_id || "").trim();
+      if (!proposedToken || !proposedPhoneId) {
+        return json({ success: false, error: "access_token and phone_number_id required" }, 400);
+      }
+      try {
+        const res = await fetch(
+          `https://graph.facebook.com/${GRAPH_VERSION}/${proposedPhoneId}?fields=display_phone_number,verified_name,quality_rating`,
+          { headers: { Authorization: `Bearer ${proposedToken}` } },
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          return json({
+            success: false,
+            status: res.status,
+            error: data?.error?.message || `HTTP ${res.status}`,
+          });
+        }
+        return json({
+          success: true,
+          display_phone_number: data?.display_phone_number || "",
+          verified_name: data?.verified_name || "",
+          quality_rating: data?.quality_rating || "",
+          requires_manual_update: true,
+          instructions: [
+            "Open Lovable Cloud → Backend → Edge Function Secrets.",
+            "Update WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, VERIFY_TOKEN, WHATSAPP_APP_SECRET as needed.",
+            "Save changes. Then click 'Test Connection' here to verify.",
+          ],
+        });
+      } catch (e) {
+        return json({ success: false, error: String(e) });
+      }
+    }
+
     return json({ error: "Unknown action" }, 400);
   } catch (error) {
     console.error("whatsapp-admin error:", error);
