@@ -67,3 +67,59 @@ export async function callAdmin(action: string, body?: Record<string, unknown>) 
   if (error) throw error;
   return data;
 }
+
+/* ───────── Country code CRUD ───────── */
+
+export interface CountryCodeRow {
+  id: string;
+  country_name: string;
+  country_code: string;
+  is_default: boolean;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export async function listCountryCodes(): Promise<CountryCodeRow[]> {
+  const { data, error } = await supabase
+    .from("whatsapp_country_codes" as any)
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("listCountryCodes", error);
+    return [];
+  }
+  return (data as any) || [];
+}
+
+export async function createCountryCode(row: Omit<CountryCodeRow, "id">) {
+  const { error } = await supabase.from("whatsapp_country_codes" as any).insert(row as any);
+  if (error) throw error;
+}
+
+export async function updateCountryCode(id: string, patch: Partial<CountryCodeRow>) {
+  const { error } = await supabase
+    .from("whatsapp_country_codes" as any)
+    .update(patch as any)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteCountryCode(id: string) {
+  const { error } = await supabase.from("whatsapp_country_codes" as any).delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Atomically set one country code as default (clears others). */
+export async function setDefaultCountryCode(id: string) {
+  // Two-step: clear all, then set one. RLS will be evaluated per row.
+  const { error: e1 } = await supabase
+    .from("whatsapp_country_codes" as any)
+    .update({ is_default: false } as any)
+    .neq("id", id);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase
+    .from("whatsapp_country_codes" as any)
+    .update({ is_default: true } as any)
+    .eq("id", id);
+  if (e2) throw e2;
+}
