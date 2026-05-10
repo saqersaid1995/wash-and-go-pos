@@ -25,6 +25,7 @@ import {
 import UpdateSecretsCard from "@/components/whatsapp-settings/UpdateSecretsCard";
 import CountryCodesTab from "@/components/whatsapp-settings/CountryCodesTab";
 import DashboardTab from "@/components/whatsapp-settings/DashboardTab";
+import MenuBotTab from "@/components/whatsapp-settings/MenuBotTab";
 
 type Status = {
   connected: boolean;
@@ -94,17 +95,20 @@ const WhatsAppSettings = () => {
       <AppHeader title="WhatsApp Settings" />
       <div className="max-w-6xl mx-auto p-4">
         <Tabs defaultValue="dashboard">
-          <TabsList className="flex flex-wrap h-auto justify-start mb-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="credentials">Credentials</TabsTrigger>
-            <TabsTrigger value="countries">Country Codes</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="events">Event Mapping</TabsTrigger>
-            <TabsTrigger value="invoice">Invoice PDF</TabsTrigger>
-            <TabsTrigger value="webhook">Webhook</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="inbox">Inbox</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 mb-4">
+            <TabsList className="inline-flex w-max h-auto justify-start gap-1 px-1">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsTrigger value="countries">Country Codes</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="events">Event Mapping</TabsTrigger>
+              <TabsTrigger value="invoice">Invoice PDF</TabsTrigger>
+              <TabsTrigger value="webhook">Webhook</TabsTrigger>
+              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="inbox">Inbox</TabsTrigger>
+              <TabsTrigger value="menubot">Menu Bot</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="dashboard">
             <DashboardTab />
@@ -132,6 +136,9 @@ const WhatsAppSettings = () => {
           </TabsContent>
           <TabsContent value="inbox">
             <InboxTab settings={settings} onSave={saveSettings} saving={saving} />
+          </TabsContent>
+          <TabsContent value="menubot">
+            <MenuBotTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -209,10 +216,29 @@ function ConnectionTab({ status, loading, onRefresh }: { status: Status | null; 
 }
 
 function Field({ label, value }: { label: string; value: string }) {
+  const isSecretName = /^[A-Z_]+$/.test(label.split(" ")[0]);
   return (
-    <div className="border rounded-md p-3 bg-card">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-mono text-sm mt-1 break-all">{value}</p>
+    <div className="border rounded-md p-3 bg-card min-w-0 overflow-hidden">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        {isSecretName && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            title="Copy secret name"
+            onClick={() => {
+              const name = label.split(" ")[0];
+              navigator.clipboard.writeText(name);
+              toast.success(`Copied ${name}`);
+            }}
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+      <p className="font-mono text-sm mt-1 truncate" title={value}>{value}</p>
     </div>
   );
 }
