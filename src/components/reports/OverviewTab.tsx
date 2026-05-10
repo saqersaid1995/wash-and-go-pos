@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Package, Truck, TrendingUp, TrendingDown, Percent, Receipt, Star, Shirt, ArrowUpRight, ArrowDownRight, AlertCircle } from "lucide-react";
 import { RevenueExpensesCharts } from "./RevenueExpensesCharts";
+import { DonutCard } from "./DonutCard";
 import { formatOMR } from "@/lib/currency";
 
 const PIE_COLORS = [
@@ -10,6 +11,18 @@ const PIE_COLORS = [
   "hsl(0, 72%, 51%)", "hsl(200, 70%, 50%)", "hsl(280, 50%, 55%)",
   "hsl(170, 60%, 45%)", "hsl(15, 80%, 55%)",
 ];
+
+const STATUS_COLORS: Record<string, string> = {
+  "Received": "hsl(200, 70%, 50%)",
+  "Ready for Pickup": "hsl(38, 92%, 50%)",
+  "Delivered": "hsl(142, 72%, 40%)",
+};
+
+const PAYMENT_COLORS: Record<string, string> = {
+  "Paid": "hsl(142, 72%, 40%)",
+  "Partial": "hsl(38, 92%, 50%)",
+  "Unpaid": "hsl(0, 72%, 51%)",
+};
 
 function ChangeIndicator({ current, previous }: { current: number; previous: number }) {
   if (previous === 0 && current === 0) return null;
