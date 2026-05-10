@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import { fetchLoyaltyBalance, type LoyaltyBalance } from "@/lib/loyalty-balance";
+import PhoneInput, { type PhoneInputValue } from "@/components/ui/phone-input";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode, buildE164 } from "@/lib/phone";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
