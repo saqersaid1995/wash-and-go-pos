@@ -216,10 +216,29 @@ function ConnectionTab({ status, loading, onRefresh }: { status: Status | null; 
 }
 
 function Field({ label, value }: { label: string; value: string }) {
+  const isSecretName = /^[A-Z_]+$/.test(label.split(" ")[0]);
   return (
-    <div className="border rounded-md p-3 bg-card">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-mono text-sm mt-1 break-all">{value}</p>
+    <div className="border rounded-md p-3 bg-card min-w-0 overflow-hidden">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        {isSecretName && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            title="Copy secret name"
+            onClick={() => {
+              const name = label.split(" ")[0];
+              navigator.clipboard.writeText(name);
+              toast.success(`Copied ${name}`);
+            }}
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+      <p className="font-mono text-sm mt-1 truncate" title={value}>{value}</p>
     </div>
   );
 }
