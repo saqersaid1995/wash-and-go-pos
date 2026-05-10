@@ -11,6 +11,8 @@ import {
 import CustomerSnapshot from "./CustomerSnapshot";
 import { formatOMR } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import PhoneInput, { type PhoneInputValue } from "@/components/ui/phone-input";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode } from "@/lib/phone";
 
 interface Props {
   phone: string;
