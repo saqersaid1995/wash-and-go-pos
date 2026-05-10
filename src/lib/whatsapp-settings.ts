@@ -23,6 +23,15 @@ export interface WhatsAppSettingsRow {
   auto_reply_enabled: boolean;
   push_notifications_enabled: boolean;
   unread_badge_enabled: boolean;
+  cost_rates: {
+    utility?: number;
+    marketing?: number;
+    service?: number;
+    authentication?: number;
+    default?: number;
+    currency?: string;
+  };
+  outstanding_unpaid_cost: number;
 }
 
 export const TEMPLATE_KEYS = [
