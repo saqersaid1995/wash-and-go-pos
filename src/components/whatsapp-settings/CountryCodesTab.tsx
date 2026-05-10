@@ -42,7 +42,7 @@ export default function CountryCodesTab() {
       await createCountryCode({
         country_name: name, country_code: code,
         is_default: rows.length === 0, is_active: true,
-        sort_order: (rows.at(-1)?.sort_order ?? 0) + 1,
+        sort_order: (rows.length ? rows[rows.length - 1].sort_order : 0) + 1,
       });
       setNewName(""); setNewCode("+");
       await refresh();
