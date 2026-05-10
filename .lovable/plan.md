@@ -1,126 +1,143 @@
-## WhatsApp Settings + Multi-Country Phone Support
+# WhatsApp Dashboard — Full Ops View
 
-A multi-part change touching backend, settings UI, POS, customer profile, and WhatsApp sending. Below is the full plan.
-
----
-
-### 1. Database changes (one migration)
-
-**New table `whatsapp_country_codes`**
-- `id uuid pk`, `country_name text`, `country_code text` (e.g. `+968`), `is_default bool`, `is_active bool`, `sort_order int`, timestamps
-- Partial unique index: only one row may have `is_default = true`
-- Seed: Oman +968 (default), UAE +971, KSA +966, Qatar +974, Bahrain +973, Kuwait +965
-- RLS: anyone read; admin insert/update/delete
-
-**Extend `customers` table**
-- Add `country_code text` (default `+968`)
-- Add `local_phone text` 
-- Add `full_phone_e164 text`
-- Backfill: split existing `phone_number` — if starts with `+` keep, else assume default country
-- Add unique index on `full_phone_e164` (where not null)
-
-Keep `phone_number` column for backward compat (mirror of `full_phone_e164` without `+`).
-
-**Drop single `default_country_code` field on `whatsapp_settings`** — superseded by country codes table. (Leave column but ignore it; safer than dropping.)
+Transforms the current "Connection" tab into a comprehensive WhatsApp dashboard with KPIs, analytics, cost tracking, and error insights, while preserving existing connection-health functionality.
 
 ---
 
-### 2. Edge function `whatsapp-admin` — extend
+## 1. Database Changes
 
-Add new admin actions:
-- `update_secrets` — accepts `{ access_token?, phone_number_id?, verify_token?, app_secret? }`. Since Supabase secrets cannot be updated via runtime API without a Management token, this action will:
-  - Validate the token by hitting Graph API (so admin gets immediate feedback the values are correct)
-  - Return `{ requires_manual_update: true, instructions: [...] }` so the UI shows a guided manual workflow
-- (No actual secret write — Lovable Cloud secrets must be set via the Backend UI.)
+### Extend `notification_logs` (outgoing send log)
+Add nullable columns (backfill safe):
+- `direction text default 'outgoing'`
+- `template_name text`
+- `template_language text`
+- `template_category text` (utility | marketing | service | authentication)
+- `event_type text` (event_order_ready | event_payment_reminder | …)
+- `error_code text`
+- `delivered_at timestamptz`
+- `read_at timestamptz`
+- `failed_at timestamptz`
+- `estimated_cost numeric default 0`
+- `currency text default 'OMR'`
 
-Verdict: implement the **guided manual workflow** path. UI lets admin paste values, the edge function validates them against Graph API, then instructs the admin to copy them into Lovable Cloud → Backend → Edge Function Secrets. Provides copy buttons for secret names and a "Test Connection" button after they've saved.
+Existing `send_status` already covers pending/sent/delivered/read/failed.
 
----
+### Extend `whatsapp_messages` (incoming + outgoing chat messages)
+Confirm/add: `direction` (incoming/outgoing), `status`, `provider_message_id`, `error_code`, `error_message`, `estimated_cost`, `currency`, timestamp fields. Add only what's missing.
 
-### 3. Frontend — WhatsApp Settings (Credentials tab)
+### Extend `whatsapp_settings` with cost config (jsonb):
+```json
+"cost_rates": {
+  "utility": 0.005,
+  "marketing": 0.025,
+  "service": 0.000,
+  "authentication": 0.005,
+  "default": 0.005,
+  "currency": "OMR",
+  "outstanding_unpaid": 0
+}
+```
+Plus `outstanding_unpaid_cost numeric default 0` (admin-set estimated unpaid balance to Meta).
 
-In `src/pages/WhatsAppSettings.tsx`:
-- Add **"Update Secrets"** card (admin-only)
-- 4 password fields (token + confirm token, phone id, verify token, app secret)
-- "Validate" button → calls `whatsapp-admin` `update_secrets` action which pings Graph API with the proposed token/phone id
-- Confirmation modal before submit
-- Shows guided manual update steps with copy-to-clipboard buttons for secret names
-- "Test Connection" button after manual update completes
+### Backfill
+On migration: set `direction='outgoing'`, derive `template_name`/`event_type` from existing `message_type` mapping where possible.
 
----
+### Webhook (`whatsapp-webhook`)
+Update to write `delivered_at` / `read_at` / `failed_at` / `error_code` on status callbacks (matched via `provider_message_id`).
 
-### 4. Frontend — Country Code Management
-
-New tab/section "Country Codes" in WhatsApp Settings:
-- Table of country codes from `whatsapp_country_codes`
-- Add row, edit label/code, toggle active, set as default (radio), reorder (up/down arrows)
-- New file: `src/components/whatsapp-settings/CountryCodesTab.tsx`
-- Helpers in `src/lib/whatsapp-settings.ts`
-
----
-
-### 5. New shared component `PhoneInput`
-
-`src/components/ui/phone-input.tsx`
-- Country code dropdown (Select) + phone number text input
-- Loads codes from `whatsapp_country_codes` (active only), pre-selects default
-- Exposes `{ countryCode, localPhone, fullE164 }` via change handler
-- Strips leading zero with toast warning
-- Validates length per country (basic min/max)
-
----
-
-### 6. POS integration
-
-- Update `src/components/pos/CustomerSection.tsx` to use `PhoneInput`
-- Update `src/hooks/useCustomerState.ts` and order-save flow in `src/lib/supabase-queries.ts` to persist `country_code`, `local_phone`, `full_phone_e164`
-- Duplicate check uses `full_phone_e164`
+### Send functions (`send-whatsapp`, `send-whatsapp-image`, `send-whatsapp-loyalty`, `send-whatsapp-text`)
+Populate new fields when inserting `notification_logs`:
+- `template_name`, `template_language`, `template_category` (read from `whatsapp_settings.templates` mapping)
+- `event_type` (passed from caller or inferred from `message_type`)
+- `estimated_cost` = lookup from `whatsapp_settings.cost_rates[category]` × 1 message
 
 ---
 
-### 7. Search behavior
+## 2. Edge Function `whatsapp-admin` — new actions
 
-`fetchCustomerByPhone` in `src/lib/supabase-queries.ts`:
-- Normalize input: strip spaces/dashes; if starts with `+` use as e164; if starts with `00` convert to `+`; if all digits and length >= 10 try `+` + digits; else treat as local and try matching against `local_phone` for the default country
-- Query `customers` by `full_phone_e164`, fallback to `local_phone`, fallback to legacy `phone_number`
-
-`SmartSearchBar` already passes raw value — no change needed beyond the query.
-
----
-
-### 8. WhatsApp sending
-
-- `src/lib/whatsapp.ts` and edge functions `send-whatsapp`, `send-whatsapp-loyalty`, `send-whatsapp-text`, `send-whatsapp-image`: ensure recipient phone is `full_phone_e164` (without `+` for Graph API). Helper: if missing, rebuild from `country_code + local_phone`.
-
----
-
-### 9. Customer Profile
-
-`src/pages/CustomerProfile.tsx`:
-- Display country code, local phone, full WhatsApp number
-- Allow editing via `PhoneInput` component
+- `dashboard_stats` — input: `{ from, to }`, output:
+  - KPI counts (sent/delivered/read/failed/pending, incoming/outgoing, total)
+  - delivery rate %
+  - estimated period cost (sum of `estimated_cost` in window)
+  - month-to-date cost
+  - outstanding cost (from settings)
+  - status breakdown with %
+  - daily series (date, sent, failed, cost)
+  - template usage table (name/lang/event/sent/delivered/failed/rate/cost)
+  - error groups (code, count, last_occurrence, sample message)
+  - latest failures (last 20 with phone/template/error)
+  - insights (top template, top failure template, top recipient, last success/failure/incoming)
+- `retry_failed_message` — input: `{ log_id }` re-invokes the original send path with stored params.
 
 ---
 
-### Files to create
-- `supabase/migrations/{ts}_whatsapp_country_codes_and_phones.sql`
-- `src/components/whatsapp-settings/UpdateSecretsCard.tsx`
-- `src/components/whatsapp-settings/CountryCodesTab.tsx`
-- `src/components/ui/phone-input.tsx`
-- `src/lib/phone.ts` (normalize/parse/format helpers + country code cache)
+## 3. Frontend — `WhatsAppSettings.tsx` Connection tab → "Dashboard" tab
 
-### Files to edit
-- `supabase/functions/whatsapp-admin/index.ts` — add `update_secrets` action
-- `src/lib/whatsapp-settings.ts` — country code CRUD helpers
-- `src/lib/whatsapp.ts` — ensure e164 routing
-- `src/lib/supabase-queries.ts` — phone normalization in search + customer create/update
-- `src/pages/WhatsAppSettings.tsx` — wire new tab + update-secrets card
-- `src/pages/CustomerProfile.tsx` — show & edit phone parts
-- `src/components/pos/CustomerSection.tsx` — use PhoneInput
-- `src/hooks/useCustomerState.ts` — track country_code/local_phone
+New file: `src/components/whatsapp-settings/DashboardTab.tsx` containing:
 
-### Out of scope
-- Bulk re-format of existing customer rows beyond simple backfill
-- Per-country length validation beyond basic 6–14 digit range
+### Layout
+```
+[ Connection Health card — compact, 1 row ]
+[ Period Filter: Today | This Week | This Month | Last Month | Custom range picker ]
 
-Ready to implement on approval.
+[ KPI Grid 4×2 ]
+  Total Sent | Delivered | Failed | Incoming
+  Outgoing | Delivery % | Est. Period Cost | Outstanding Cost
+
+[ Status Breakdown card — bar+%]   [ Trends chart — messages/day, failed/day, cost/day (Recharts) ]
+
+[ Template Usage table ]
+
+[ Error Analytics: grouped errors table + Latest failures list with Retry ]
+
+[ Operational Insights card ]
+```
+
+### Components used
+- `Card`, `Tabs`, shadcn `DateRangePicker` via `Popover + Calendar`
+- `Recharts` (`LineChart`, `BarChart`) via existing `ChartContainer`
+- `formatOMR` for all costs
+
+### State
+- `period`: `'today'|'week'|'month'|'last_month'|'custom'` + `customRange`
+- `stats` from `callAdmin('dashboard_stats', { from, to })`
+- React Query for caching, 30s stale time
+- "Retry" button → `callAdmin('retry_failed_message', { log_id })` then refetch
+
+### Cost Settings sub-card (admin only)
+Editable form for `cost_rates` + `outstanding_unpaid_cost`, persisted via `updateSettings`.
+
+### Connection Health (kept)
+Reduced to a single status row at top: green/red dot, masked token, display phone, "Test Connection" button. Detailed credentials remain in existing "Credentials" tab.
+
+---
+
+## 4. Renames / Navigation
+- Rename current "Connection" tab label → "Dashboard"
+- Existing "Logs" tab stays (raw log viewer)
+- Existing "Credentials", "Templates", "Country Codes", "Update Secrets" tabs unchanged
+
+---
+
+## 5. Out of Scope
+- Real Meta billing API integration (costs remain admin-configurable estimates)
+- Per-conversation pricing model details (use template-category flat rates)
+- Historical backfill of `delivered_at/read_at` for messages sent before this change
+
+---
+
+## 6. Files
+
+**Create**
+- `supabase/migrations/<ts>_whatsapp_dashboard_fields.sql`
+- `src/components/whatsapp-settings/DashboardTab.tsx`
+- `src/components/whatsapp-settings/CostSettingsCard.tsx`
+
+**Edit**
+- `supabase/functions/whatsapp-admin/index.ts` (new actions)
+- `supabase/functions/whatsapp-webhook/index.ts` (status timestamps + error_code)
+- `supabase/functions/send-whatsapp/index.ts`, `send-whatsapp-image`, `send-whatsapp-loyalty`, `send-whatsapp-text` (populate new fields + estimated_cost)
+- `src/lib/whatsapp-settings.ts` (types + helpers for cost_rates and dashboard_stats)
+- `src/pages/WhatsAppSettings.tsx` (replace Connection tab content with `DashboardTab`)
+
+Approve to implement.
