@@ -62,7 +62,7 @@ export default function CustomerProfile() {
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editPhone, setEditPhone] = useState<PhoneInputValue>({ countryCode: "+968", localPhone: "", fullE164: "" });
   const [editType, setEditType] = useState<"regular" | "vip">("regular");
   const [tab, setTab] = useState<"active" | "completed" | "all">("all");
 
