@@ -530,11 +530,23 @@ export async function createOrder(params: {
   // Upsert customer
   let customerId = params.customerId;
   if (!customerId && params.customerPhone) {
-    // Try to find existing
+    // Parse phone into parts using known country codes
+    const codes = await fetchCountryCodes();
+    const fallback = await getDefaultCountryCode();
+    const parsed = parsePhone(
+      params.customerPhone,
+      codes.map((c) => c.country_code),
+      fallback,
+    );
+    const e164 = parsed.fullE164 || params.customerPhone;
+
+    // Try to find existing by e164 or legacy phone
     const { data: existing } = await supabase
       .from("customers")
       .select("id")
-      .eq("phone_number", params.customerPhone)
+      .or(
+        `full_phone_e164.eq.${e164},phone_number.eq.${params.customerPhone}`,
+      )
       .maybeSingle();
 
     if (existing) {
@@ -545,7 +557,10 @@ export async function createOrder(params: {
         .insert({
           full_name: params.customerName || params.customerPhone || "Walk-in",
           phone_number: params.customerPhone,
-        })
+          country_code: parsed.countryCode,
+          local_phone: parsed.localPhone,
+          full_phone_e164: e164,
+        } as any)
         .select("id")
         .single();
 
