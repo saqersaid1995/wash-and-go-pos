@@ -335,9 +335,9 @@ export async function searchCustomerSuggestions(
 
   const { data, error } = await supabase
     .from("customers")
-    .select("id, full_name, phone_number, customer_type")
+    .select("id, full_name, phone_number, customer_type, country_code, local_phone, full_phone_e164")
     .eq("is_active", true)
-    .or(`phone_number.ilike.${pattern},full_name.ilike.${pattern}`)
+    .or(`phone_number.ilike.${pattern},full_name.ilike.${pattern},local_phone.ilike.${pattern},full_phone_e164.ilike.${pattern}`)
     .order("created_at", { ascending: false })
     .limit(limit);
 
