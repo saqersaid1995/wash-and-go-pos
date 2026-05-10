@@ -159,10 +159,6 @@ const Reports = () => {
                 topCustomers={data.topCustomers}
               />
             </TabsContent>
-
-            <TabsContent value="cleanup">
-              <BulkCleanupTool onComplete={() => window.location.reload()} />
-            </TabsContent>
           </Tabs>
         </div>
       </div>
