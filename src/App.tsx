@@ -21,7 +21,6 @@ import WhatsAppInbox from "./pages/WhatsAppInbox.tsx";
 import StaffManagement from "./pages/StaffManagement.tsx";
 import LoyaltySettings from "./pages/LoyaltySettings.tsx";
 import OfflineMode from "./pages/OfflineMode.tsx";
-import WhatsAppMenuBuilder from "./pages/WhatsAppMenuBuilder.tsx";
 import ComplaintsCenter from "./pages/ComplaintsCenter.tsx";
 import Cashflow from "./pages/Cashflow.tsx";
 import CashManagement from "./pages/CashManagement.tsx";
