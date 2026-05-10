@@ -575,9 +575,16 @@ Deno.serve(async (req) => {
       recipient_phone: normalizedPhone,
       message_type: is_test ? "test" : message_type,
       message_body: messageDescription,
+      direction: "outgoing",
+      template_name,
+      template_language,
+      template_category,
+      event_type,
       send_status: "sent",
       provider_message_id: messageId,
       provider_response: JSON.stringify(waData),
+      estimated_cost: estimatedCost,
+      currency,
     } as any);
 
     // Also save to whatsapp_messages for inbox display
