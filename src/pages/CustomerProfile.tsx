@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import { fetchLoyaltyBalance, type LoyaltyBalance } from "@/lib/loyalty-balance";
+import PhoneInput, { type PhoneInputValue } from "@/components/ui/phone-input";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode, buildE164 } from "@/lib/phone";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-secondary text-secondary-foreground",
@@ -60,7 +62,7 @@ export default function CustomerProfile() {
   const [noteText, setNoteText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editPhone, setEditPhone] = useState<PhoneInputValue>({ countryCode: "+968", localPhone: "", fullE164: "" });
   const [editType, setEditType] = useState<"regular" | "vip">("regular");
   const [tab, setTab] = useState<"active" | "completed" | "all">("all");
 
@@ -115,17 +117,24 @@ export default function CustomerProfile() {
     loadCustomer();
   };
 
-  const startEdit = () => {
+  const startEdit = async () => {
     setEditName(customer.name);
-    setEditPhone(customer.phone);
+    const codes = await fetchCountryCodes();
+    const fallback = await getDefaultCountryCode();
+    const parsed = parsePhone(customer.phone, codes.map((c) => c.country_code), fallback);
+    setEditPhone(parsed);
     setEditType(customer.customerType);
     setEditing(true);
   };
 
   const saveEdit = async () => {
+    const e164 = editPhone.fullE164 || buildE164(editPhone.countryCode, editPhone.localPhone);
     await updateCustomerRecord(customer.id, {
       full_name: editName,
-      phone_number: editPhone,
+      phone_number: e164,
+      country_code: editPhone.countryCode,
+      local_phone: editPhone.localPhone,
+      full_phone_e164: e164,
       customer_type: editType === "vip" ? "VIP" : "Regular",
     });
     setEditing(false);
@@ -161,7 +170,7 @@ export default function CustomerProfile() {
             <h2 className="pos-label">Edit Customer</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" className="pos-input w-full" />
-              <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone" className="pos-input w-full" />
+              <PhoneInput value={editPhone} onChange={setEditPhone} placeholder="Phone" />
               <select value={editType} onChange={(e) => setEditType(e.target.value as any)} className="pos-input w-full">
                 <option value="regular">Regular</option>
                 <option value="vip">VIP</option>

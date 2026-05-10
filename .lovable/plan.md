@@ -1,116 +1,126 @@
-## WhatsApp Admin Settings — Implementation Plan
+## WhatsApp Settings + Multi-Country Phone Support
 
-Build a comprehensive admin UI for the existing WhatsApp integration. Keep current single-tenant architecture intact. No SaaS, no tenant_id.
-
----
-
-### 1. New Database Table: `whatsapp_settings`
-
-Single-row config table (admin-managed) for non-secret settings:
-
-- `graph_api_version` (default `v18.0`)
-- `default_country_code` (default `968`)
-- `business_name`, `business_logo_url`, `invoice_footer_text`, `default_invoice_language`
-- `receipt_size` (default `A4`), `include_qr` (bool)
-- Template config (JSON) — name/lang/enabled per event:
-  - `tpl_order_ready` → `order_ready_pdf_ar`
-  - `tpl_loyalty_progress` → `loyalty_progress_update_ar`
-  - `tpl_loyalty_redeem` → `loyalty_ready_to_redeem_ar`
-  - `tpl_payment_reminder` → (new, optional)
-- Event mapping (JSON):
-  - `event_order_ready` → tpl key
-  - `event_payment_completed` → tpl key
-  - `event_manual_resend` → tpl key
-  - `event_payment_reminder` → tpl key
-- Support inbox flags: `incoming_enabled`, `auto_reply_enabled`, `push_notifications_enabled`, `unread_badge_enabled`
-- RLS: anyone read; admin update/insert.
-
-Secrets (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `VERIFY_TOKEN`, optional `WHATSAPP_APP_SECRET`) **stay in Supabase secrets**. UI shows masked values via Edge Function; updates go through a secure Edge Function (admin role check).
+A multi-part change touching backend, settings UI, POS, customer profile, and WhatsApp sending. Below is the full plan.
 
 ---
 
-### 2. New Edge Function: `whatsapp-admin`
+### 1. Database changes (one migration)
 
-Single function with action-based routing (admin JWT verified in code via `has_role`):
+**New table `whatsapp_country_codes`**
+- `id uuid pk`, `country_name text`, `country_code text` (e.g. `+968`), `is_default bool`, `is_active bool`, `sort_order int`, timestamps
+- Partial unique index: only one row may have `is_default = true`
+- Seed: Oman +968 (default), UAE +971, KSA +966, Qatar +974, Bahrain +973, Kuwait +965
+- RLS: anyone read; admin insert/update/delete
 
-- `GET status` — returns:
-  - `connected` (bool), masked phone_number_id, masked token, display phone number (from Graph API `/{phone_number_id}` call), graph version, last success/failure timestamps from `notification_logs`, token health (calls Graph `/me` or `/{phone_number_id}`).
-- `POST test_connection` — pings Graph API with current token.
-- `POST update_secrets` — admin-only; updates secrets via Supabase Management API is NOT possible from edge function. **Alternative: store these in `whatsapp_settings` (encrypted column) OR document that secrets must be updated via Lovable Cloud UI.** Plan: show masked values only and provide a "Update via Lovable Cloud" button that opens backend settings. Editing secrets directly from the app would require Management API token which we don't want.
-- `POST test_template` — sends a test template message to a given phone.
-- `GET webhook_info` — returns webhook URL (constructed from project URL), verify token (masked), last incoming msg timestamp from `whatsapp_messages`.
+**Extend `customers` table**
+- Add `country_code text` (default `+968`)
+- Add `local_phone text` 
+- Add `full_phone_e164 text`
+- Backfill: split existing `phone_number` — if starts with `+` keep, else assume default country
+- Add unique index on `full_phone_e164` (where not null)
 
-CORS + JWT validation + admin role check for all mutating endpoints.
+Keep `phone_number` column for backward compat (mirror of `full_phone_e164` without `+`).
 
----
-
-### 3. UI: Rebuild `src/pages/WhatsAppSettings.tsx`
-
-Use tabbed layout (one section per tab) with `Tabs` component:
-
-```text
-[Connection] [Credentials] [Templates] [Event Mapping]
-[Invoice PDF] [Webhook] [Logs] [Inbox]
-```
-
-Each tab is a small component under `src/components/whatsapp-settings/`:
-
-- `ConnectionTab.tsx` — status card, test button, key health metrics
-- `CredentialsTab.tsx` — masked secret values, instructions, default country code & API version inputs (saved to `whatsapp_settings`)
-- `TemplatesTab.tsx` — list of 4 templates with name/lang inputs, enable toggle, test send dialog
-- `EventMappingTab.tsx` — dropdowns mapping events → template keys
-- `InvoicePdfTab.tsx` — business name, logo URL, footer, language, QR toggle
-- `WebhookTab.tsx` — URL display, copy button, last incoming/error
-- `LogsTab.tsx` — merged view of `notification_logs` + `whatsapp_messages` with filters (status, type, direction)
-- `InboxTab.tsx` — toggles for inbox flags
-
-Admin-only access enforced by wrapping route in `ProtectedRoute` with `allowedRoles={["admin"]}`.
+**Drop single `default_country_code` field on `whatsapp_settings`** — superseded by country codes table. (Leave column but ignore it; safer than dropping.)
 
 ---
 
-### 4. Routing & Nav
+### 2. Edge function `whatsapp-admin` — extend
 
-- Route already exists. Confirm/add admin role guard.
-- Confirm "Communication → WhatsApp Settings" nav link is admin-only (check `AppHeader.tsx`).
+Add new admin actions:
+- `update_secrets` — accepts `{ access_token?, phone_number_id?, verify_token?, app_secret? }`. Since Supabase secrets cannot be updated via runtime API without a Management token, this action will:
+  - Validate the token by hitting Graph API (so admin gets immediate feedback the values are correct)
+  - Return `{ requires_manual_update: true, instructions: [...] }` so the UI shows a guided manual workflow
+- (No actual secret write — Lovable Cloud secrets must be set via the Backend UI.)
 
----
-
-### 5. Safety
-
-- Keep all existing edge functions (`send-whatsapp`, `send-whatsapp-loyalty`, `whatsapp-webhook`, etc.) untouched.
-- Existing send code can optionally read from `whatsapp_settings` for template names; for now, settings table is informational + drives the test send. Migrating live sends to read from settings can be a follow-up to avoid risk.
-- All mutations admin-only via RLS + edge function role check.
-- No tenant_id, no architectural changes.
+Verdict: implement the **guided manual workflow** path. UI lets admin paste values, the edge function validates them against Graph API, then instructs the admin to copy them into Lovable Cloud → Backend → Edge Function Secrets. Provides copy buttons for secret names and a "Test Connection" button after they've saved.
 
 ---
 
-### Files
+### 3. Frontend — WhatsApp Settings (Credentials tab)
 
-**New:**
-- `supabase/migrations/<ts>_whatsapp_settings.sql`
-- `supabase/functions/whatsapp-admin/index.ts`
-- `src/components/whatsapp-settings/ConnectionTab.tsx`
-- `src/components/whatsapp-settings/CredentialsTab.tsx`
-- `src/components/whatsapp-settings/TemplatesTab.tsx`
-- `src/components/whatsapp-settings/EventMappingTab.tsx`
-- `src/components/whatsapp-settings/InvoicePdfTab.tsx`
-- `src/components/whatsapp-settings/WebhookTab.tsx`
-- `src/components/whatsapp-settings/LogsTab.tsx`
-- `src/components/whatsapp-settings/InboxTab.tsx`
-- `src/lib/whatsapp-settings.ts` (client helpers)
-
-**Edited:**
-- `src/pages/WhatsAppSettings.tsx` (rewrite as tabbed shell)
-- `src/App.tsx` (ensure admin role guard on route)
+In `src/pages/WhatsAppSettings.tsx`:
+- Add **"Update Secrets"** card (admin-only)
+- 4 password fields (token + confirm token, phone id, verify token, app secret)
+- "Validate" button → calls `whatsapp-admin` `update_secrets` action which pings Graph API with the proposed token/phone id
+- Confirmation modal before submit
+- Shows guided manual update steps with copy-to-clipboard buttons for secret names
+- "Test Connection" button after manual update completes
 
 ---
 
-### Open question
+### 4. Frontend — Country Code Management
 
-For **Credentials Management**: tokens live in Supabase secrets and cannot be edited from the frontend without exposing a Management API token (security risk). My plan is:
+New tab/section "Country Codes" in WhatsApp Settings:
+- Table of country codes from `whatsapp_country_codes`
+- Add row, edit label/code, toggle active, set as default (radio), reorder (up/down arrows)
+- New file: `src/components/whatsapp-settings/CountryCodesTab.tsx`
+- Helpers in `src/lib/whatsapp-settings.ts`
 
-- Show **masked** token values (last 4 chars) fetched via the admin edge function
-- Show a clear instructions card: "To rotate tokens, update them in Lovable Cloud → Backend → Edge Function Secrets"
-- Allow editing only the **non-secret** settings (country code, API version, etc.) directly from UI
+---
 
-This keeps the integration secure. If you want in-app secret editing later, we can add a Management API token as a separate secret and gate it behind admin auth.
+### 5. New shared component `PhoneInput`
+
+`src/components/ui/phone-input.tsx`
+- Country code dropdown (Select) + phone number text input
+- Loads codes from `whatsapp_country_codes` (active only), pre-selects default
+- Exposes `{ countryCode, localPhone, fullE164 }` via change handler
+- Strips leading zero with toast warning
+- Validates length per country (basic min/max)
+
+---
+
+### 6. POS integration
+
+- Update `src/components/pos/CustomerSection.tsx` to use `PhoneInput`
+- Update `src/hooks/useCustomerState.ts` and order-save flow in `src/lib/supabase-queries.ts` to persist `country_code`, `local_phone`, `full_phone_e164`
+- Duplicate check uses `full_phone_e164`
+
+---
+
+### 7. Search behavior
+
+`fetchCustomerByPhone` in `src/lib/supabase-queries.ts`:
+- Normalize input: strip spaces/dashes; if starts with `+` use as e164; if starts with `00` convert to `+`; if all digits and length >= 10 try `+` + digits; else treat as local and try matching against `local_phone` for the default country
+- Query `customers` by `full_phone_e164`, fallback to `local_phone`, fallback to legacy `phone_number`
+
+`SmartSearchBar` already passes raw value — no change needed beyond the query.
+
+---
+
+### 8. WhatsApp sending
+
+- `src/lib/whatsapp.ts` and edge functions `send-whatsapp`, `send-whatsapp-loyalty`, `send-whatsapp-text`, `send-whatsapp-image`: ensure recipient phone is `full_phone_e164` (without `+` for Graph API). Helper: if missing, rebuild from `country_code + local_phone`.
+
+---
+
+### 9. Customer Profile
+
+`src/pages/CustomerProfile.tsx`:
+- Display country code, local phone, full WhatsApp number
+- Allow editing via `PhoneInput` component
+
+---
+
+### Files to create
+- `supabase/migrations/{ts}_whatsapp_country_codes_and_phones.sql`
+- `src/components/whatsapp-settings/UpdateSecretsCard.tsx`
+- `src/components/whatsapp-settings/CountryCodesTab.tsx`
+- `src/components/ui/phone-input.tsx`
+- `src/lib/phone.ts` (normalize/parse/format helpers + country code cache)
+
+### Files to edit
+- `supabase/functions/whatsapp-admin/index.ts` — add `update_secrets` action
+- `src/lib/whatsapp-settings.ts` — country code CRUD helpers
+- `src/lib/whatsapp.ts` — ensure e164 routing
+- `src/lib/supabase-queries.ts` — phone normalization in search + customer create/update
+- `src/pages/WhatsAppSettings.tsx` — wire new tab + update-secrets card
+- `src/pages/CustomerProfile.tsx` — show & edit phone parts
+- `src/components/pos/CustomerSection.tsx` — use PhoneInput
+- `src/hooks/useCustomerState.ts` — track country_code/local_phone
+
+### Out of scope
+- Bulk re-format of existing customer rows beyond simple backfill
+- Per-country length validation beyond basic 6–14 digit range
+
+Ready to implement on approval.

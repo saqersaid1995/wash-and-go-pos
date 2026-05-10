@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowOrder, WorkflowStatus, StatusChange, InternalNote } from "@/types/workflow";
 import type { CustomerRecord, CustomerNote } from "@/types/customer";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode } from "@/lib/phone";
 
 
 // ─── Order with all relations ───
@@ -285,13 +286,30 @@ export async function fetchCustomerById(id: string): Promise<CustomerRecord | nu
 }
 
 export async function fetchCustomerByPhone(phone: string): Promise<CustomerRecord | null> {
-  const { data, error } = await supabase
+  const raw = (phone || "").trim();
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  const withPlus = raw.startsWith("+") ? raw : raw.startsWith("00") ? "+" + digits.slice(2) : digits.length >= 10 ? "+" + digits : null;
+
+  // Try in priority: full e164, legacy phone_number, local_phone
+  let q = supabase
     .from("customers")
     .select("*, customer_notes(*)")
-    .eq("phone_number", phone)
     .eq("is_active", true)
-    .maybeSingle();
+    .limit(1);
 
+  // Build OR clause covering all match strategies
+  const orParts: string[] = [];
+  if (withPlus) orParts.push(`full_phone_e164.eq.${withPlus}`);
+  orParts.push(`phone_number.eq.${raw}`);
+  if (digits) {
+    orParts.push(`phone_number.eq.${digits}`);
+    orParts.push(`local_phone.eq.${digits}`);
+    // Strip leading zero
+    if (digits.startsWith("0")) orParts.push(`local_phone.eq.${digits.replace(/^0+/, "")}`);
+  }
+
+  const { data, error } = await q.or(orParts.join(",")).maybeSingle();
   if (error || !data) return null;
   return mapDbCustomer(data, data.customer_notes || []);
 }
@@ -317,9 +335,9 @@ export async function searchCustomerSuggestions(
 
   const { data, error } = await supabase
     .from("customers")
-    .select("id, full_name, phone_number, customer_type")
+    .select("id, full_name, phone_number, customer_type, country_code, local_phone, full_phone_e164")
     .eq("is_active", true)
-    .or(`phone_number.ilike.${pattern},full_name.ilike.${pattern}`)
+    .or(`phone_number.ilike.${pattern},full_name.ilike.${pattern},local_phone.ilike.${pattern},full_phone_e164.ilike.${pattern}`)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -458,9 +476,9 @@ export async function addCustomerNote(customerId: string, text: string, createdB
 
 export async function updateCustomerRecord(
   id: string,
-  updates: { full_name?: string; phone_number?: string; customer_type?: string }
+  updates: { full_name?: string; phone_number?: string; customer_type?: string; country_code?: string; local_phone?: string; full_phone_e164?: string }
 ) {
-  const { error } = await supabase.from("customers").update(updates).eq("id", id);
+  const { error } = await supabase.from("customers").update(updates as any).eq("id", id);
   if (error) console.error("updateCustomerRecord error:", error);
   return !error;
 }
@@ -512,11 +530,23 @@ export async function createOrder(params: {
   // Upsert customer
   let customerId = params.customerId;
   if (!customerId && params.customerPhone) {
-    // Try to find existing
+    // Parse phone into parts using known country codes
+    const codes = await fetchCountryCodes();
+    const fallback = await getDefaultCountryCode();
+    const parsed = parsePhone(
+      params.customerPhone,
+      codes.map((c) => c.country_code),
+      fallback,
+    );
+    const e164 = parsed.fullE164 || params.customerPhone;
+
+    // Try to find existing by e164 or legacy phone
     const { data: existing } = await supabase
       .from("customers")
       .select("id")
-      .eq("phone_number", params.customerPhone)
+      .or(
+        `full_phone_e164.eq.${e164},phone_number.eq.${params.customerPhone}`,
+      )
       .maybeSingle();
 
     if (existing) {
@@ -527,7 +557,10 @@ export async function createOrder(params: {
         .insert({
           full_name: params.customerName || params.customerPhone || "Walk-in",
           phone_number: params.customerPhone,
-        })
+          country_code: parsed.countryCode,
+          local_phone: parsed.localPhone,
+          full_phone_e164: e164,
+        } as any)
         .select("id")
         .single();
 

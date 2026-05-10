@@ -11,6 +11,8 @@ import {
 import CustomerSnapshot from "./CustomerSnapshot";
 import { formatOMR } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import PhoneInput, { type PhoneInputValue } from "@/components/ui/phone-input";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode } from "@/lib/phone";
 
 interface Props {
   phone: string;
@@ -141,22 +143,16 @@ export default function CustomerSection({
     <div className="pos-section space-y-3">
       <h2 className="pos-label">Customer</h2>
       <div className="relative" ref={wrapperRef}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
+        <PhoneInput
+          rawPhone={phone}
+          onChange={(v: PhoneInputValue) => onPhoneChange(v.fullE164 || v.localPhone)}
+          placeholder="Phone number..."
           autoFocus
-          type="tel"
-          placeholder="Phone number or name..."
-          value={phone}
-          onChange={(e) => onPhoneChange(e.target.value)}
+          inputClassName="pos-input pl-3"
+          onKeyDown={handleKeyDown}
           onFocus={() => {
             if (suggestions.length > 0 && !matchedCustomer) setOpen(true);
           }}
-          onKeyDown={handleKeyDown}
-          className="pos-input w-full pl-10"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={showDropdown}
-          aria-autocomplete="list"
         />
 
         <AnimatePresence>
