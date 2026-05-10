@@ -185,31 +185,40 @@ export type Database = {
       }
       customers: {
         Row: {
+          country_code: string | null
           created_at: string
           customer_type: string
           full_name: string
+          full_phone_e164: string | null
           id: string
           is_active: boolean
+          local_phone: string | null
           notes: string | null
           phone_number: string
           updated_at: string
         }
         Insert: {
+          country_code?: string | null
           created_at?: string
           customer_type?: string
           full_name: string
+          full_phone_e164?: string | null
           id?: string
           is_active?: boolean
+          local_phone?: string | null
           notes?: string | null
           phone_number: string
           updated_at?: string
         }
         Update: {
+          country_code?: string | null
           created_at?: string
           customer_type?: string
           full_name?: string
+          full_phone_e164?: string | null
           id?: string
           is_active?: boolean
+          local_phone?: string | null
           notes?: string | null
           phone_number?: string
           updated_at?: string
@@ -1485,6 +1494,39 @@ export type Database = {
           menu_sent?: boolean
           phone?: string
           state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_country_codes: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
