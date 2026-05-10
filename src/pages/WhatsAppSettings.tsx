@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  CheckCircle, XCircle, RefreshCw, Send, Copy, AlertTriangle, Save, ExternalLink,
+  CheckCircle, XCircle, RefreshCw, Send, Copy, AlertTriangle, Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
