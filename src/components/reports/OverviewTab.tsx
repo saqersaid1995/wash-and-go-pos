@@ -192,59 +192,53 @@ export function OverviewTab({ kpis, orders, expenses, revenueVsExpenses, expense
 
       {/* Supporting breakdowns */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard
+          title="Expense Breakdown"
+          data={expensesByCategory}
+          centerValue={formatOMR(kpis.totalExpenses)}
+          centerLabel="Total Expenses"
+          formatValue={formatOMR}
+          emptyMessage="No expenses recorded"
+          colors={PIE_COLORS}
+        />
+
+        <DonutCard
+          title="Workflow Pipeline"
+          data={[
+            ...statusDistribution.map((s) => ({ name: s.name, color: STATUS_COLORS[s.name] })).map((s, i) => ({
+              ...s,
+              value: statusDistribution[i].value,
+            })),
+            { name: "Overdue", value: kpis.overdueOrders || 0, color: "hsl(0, 72%, 51%)" },
+          ]}
+          centerValue={kpis.totalOrders}
+          centerLabel="Total Orders"
+          emptyMessage="No orders yet"
+          colors={PIE_COLORS}
+        />
+
+        <DonutCard
+          title="Payment Status"
+          data={paymentDistribution.map((p) => ({ ...p, color: PAYMENT_COLORS[p.name] }))}
+          centerValue={kpis.totalOrders}
+          centerLabel="Total Orders"
+          emptyMessage="No orders yet"
+          colors={PIE_COLORS}
+        />
+      </section>
+
+      {/* Outstanding summary row */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm font-semibold mb-4">Expense Breakdown</h3>
-            {expensesByCategory.length > 0 ? (
-              <ChartContainer config={{ value: { label: "Amount" } }} className="h-[240px] w-full">
-                <PieChart>
-                  <Pie data={expensesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={40} paddingAngle={2}
-                    label={({ name, value }) => `${name}: ${formatOMR(value)}`}>
-                    {expensesByCategory.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </PieChart>
-              </ChartContainer>
-            ) : <p className="text-sm text-muted-foreground text-center py-8">No expenses recorded</p>}
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Total Paid</span>
+            <span className="font-semibold text-[hsl(var(--success))]">{formatOMR(kpis.totalPaid)}</span>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm font-semibold mb-4">Workflow Pipeline</h3>
-            <ChartContainer config={{ value: { label: "Orders" } }} className="h-[240px] w-full">
-              <PieChart>
-                <Pie data={statusDistribution.filter((s) => s.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={40} paddingAngle={2}
-                  label={({ name, value }) => `${name}: ${value}`}>
-                  {statusDistribution.filter((s) => s.value > 0).map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm font-semibold mb-4">Payment Status</h3>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {paymentDistribution.map((p) => (
-                <div key={p.name} className="text-center p-3 rounded-lg bg-secondary">
-                  <p className="text-2xl font-bold">{p.value}</p>
-                  <p className="text-xs text-muted-foreground">{p.name}</p>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Paid</span>
-                <span className="font-semibold">{formatOMR(kpis.totalPaid)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Outstanding</span>
-                <span className="font-semibold text-destructive">{formatOMR(kpis.outstanding)}</span>
-              </div>
-            </div>
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Outstanding</span>
+            <span className="font-semibold text-destructive">{formatOMR(kpis.outstanding)}</span>
           </CardContent>
         </Card>
       </section>
