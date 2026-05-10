@@ -218,33 +218,16 @@ function Field({ label, value }: { label: string; value: string }) {
 
 /* -------------------- Credentials -------------------- */
 function CredentialsTab({
-  status, settings, onSave, saving,
-}: { status: Status | null; settings: WhatsAppSettingsRow | null; onSave: (p: Partial<WhatsAppSettingsRow>) => Promise<void>; saving: boolean }) {
-  const [country, setCountry] = useState("");
+  status, settings, onSave, saving, onRefreshStatus,
+}: { status: Status | null; settings: WhatsAppSettingsRow | null; onSave: (p: Partial<WhatsAppSettingsRow>) => Promise<void>; saving: boolean; onRefreshStatus: () => Promise<void> }) {
   const [version, setVersion] = useState("");
   useEffect(() => {
-    if (settings) {
-      setCountry(settings.default_country_code);
-      setVersion(settings.graph_api_version);
-    }
+    if (settings) setVersion(settings.graph_api_version);
   }, [settings]);
   return (
     <div className="space-y-4">
-      <Card className="border-yellow-300 bg-yellow-50/50 dark:bg-yellow-950/20">
-        <CardContent className="flex gap-3 p-4">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200">Secret tokens are stored securely in backend secrets</p>
-            <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-              Tokens are never exposed in the UI for security. To rotate them, update them in
-              <strong> Lovable Cloud → Backend → Edge Function Secrets</strong>.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
-        <CardHeader><CardTitle>Secrets (masked)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Current Secrets (masked)</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="WHATSAPP_ACCESS_TOKEN" value={status?.masked_token || "—"} />
           <Field label="WHATSAPP_PHONE_NUMBER_ID" value={status?.masked_phone_number_id || "—"} />
@@ -253,23 +236,19 @@ function CredentialsTab({
         </CardContent>
       </Card>
 
+      <UpdateSecretsCard onAfterTest={onRefreshStatus} />
+
       <Card>
         <CardHeader>
-          <CardTitle>Editable Settings</CardTitle>
-          <CardDescription>Non-secret options stored in the database</CardDescription>
+          <CardTitle>Other Settings</CardTitle>
+          <CardDescription>Country codes are managed in the “Country Codes” tab</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Default Country Code</Label>
-              <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="968" />
-            </div>
-            <div className="space-y-2">
-              <Label>Graph API Version</Label>
-              <Input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="v18.0" />
-            </div>
+          <div className="space-y-2 max-w-xs">
+            <Label>Graph API Version</Label>
+            <Input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="v18.0" />
           </div>
-          <Button disabled={saving} onClick={() => onSave({ default_country_code: country, graph_api_version: version })}>
+          <Button disabled={saving} onClick={() => onSave({ graph_api_version: version })}>
             <Save className="h-4 w-4" />Save
           </Button>
         </CardContent>
