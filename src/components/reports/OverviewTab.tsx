@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { DollarSign, ShoppingCart, Clock, Package, Truck, TrendingUp, TrendingDown, Percent, Receipt, Star, Shirt, ArrowUpRight, ArrowDownRight, AlertCircle } from "lucide-react";
 import { RevenueExpensesCharts } from "./RevenueExpensesCharts";
 import { DonutCard } from "./DonutCard";
-import { formatOMR } from "@/lib/currency";
+import { formatOMR, formatOMRCompact } from "@/lib/currency";
 
 const PIE_COLORS = [
   "hsl(230, 60%, 50%)", "hsl(142, 72%, 40%)", "hsl(38, 92%, 50%)",
