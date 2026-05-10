@@ -55,14 +55,13 @@ const App = () => (
             <Route path="/inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["admin"]}><StaffManagement /></ProtectedRoute>} />
             <Route path="/loyalty" element={<ProtectedRoute allowedRoles={["admin"]}><LoyaltySettings /></ProtectedRoute>} />
-            <Route path="/wa-menu" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppMenuBuilder /></ProtectedRoute>} />
             <Route path="/complaints" element={<ProtectedRoute allowedRoles={["admin"]}><ComplaintsCenter /></ProtectedRoute>} />
             <Route path="/cashflow" element={<ProtectedRoute allowedRoles={["admin"]}><Cashflow /></ProtectedRoute>} />
             <Route path="/cash-management" element={<ProtectedRoute allowedRoles={["admin"]}><CashManagement /></ProtectedRoute>} />
             <Route path="/accounting" element={<ProtectedRoute allowedRoles={["admin"]}><Accounting /></ProtectedRoute>} />
             <Route path="/loans" element={<ProtectedRoute allowedRoles={["admin"]}><Loans /></ProtectedRoute>} />
             <Route path="/scan-lite" element={<ProtectedRoute><ScanLite /></ProtectedRoute>} />
-            <Route path="/support-lite" element={<ProtectedRoute><SupportLite /></ProtectedRoute>} />
+            <Route path="/wa-menu" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsAppSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </NetworkProvider>
