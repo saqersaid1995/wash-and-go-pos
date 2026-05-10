@@ -300,6 +300,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Load cost rates from settings
+    const { data: settingsRow } = await supabase
+      .from("whatsapp_settings")
+      .select("cost_rates")
+      .limit(1)
+      .maybeSingle();
+    const costRates: any = settingsRow?.cost_rates || {};
+
     const body = await req.json();
     const {
       order_id,
@@ -312,8 +320,15 @@ Deno.serve(async (req) => {
       message_type = "ready_for_pickup",
       template_name = "order_ready_pdf_ar",
       template_language = "ar",
+      template_category = "utility",
+      event_type = null,
       is_test = false,
     } = body;
+
+    const estimatedCost = Number(
+      costRates[template_category] ?? costRates.default ?? 0
+    );
+    const currency = String(costRates.currency || "OMR");
 
     if (!customer_phone) {
       return new Response(
@@ -330,8 +345,14 @@ Deno.serve(async (req) => {
         channel: "whatsapp",
         recipient_phone: customer_phone,
         message_type,
+        direction: "outgoing",
+        template_name,
+        template_language,
+        template_category,
+        event_type,
         send_status: "skipped",
         error_message: "Invalid phone number format",
+        currency,
       } as any);
 
       return new Response(
@@ -519,9 +540,18 @@ Deno.serve(async (req) => {
         recipient_phone: normalizedPhone,
         message_type: is_test ? "test" : message_type,
         message_body: messageDescription,
+        direction: "outgoing",
+        template_name,
+        template_language,
+        template_category,
+        event_type,
         send_status: "failed",
         provider_response: JSON.stringify(waData),
         error_message: errorMsg,
+        error_code: errorCode ? String(errorCode) : null,
+        failed_at: new Date().toISOString(),
+        estimated_cost: 0,
+        currency,
       } as any);
 
       if (order_id) {
@@ -545,9 +575,16 @@ Deno.serve(async (req) => {
       recipient_phone: normalizedPhone,
       message_type: is_test ? "test" : message_type,
       message_body: messageDescription,
+      direction: "outgoing",
+      template_name,
+      template_language,
+      template_category,
+      event_type,
       send_status: "sent",
       provider_message_id: messageId,
       provider_response: JSON.stringify(waData),
+      estimated_cost: estimatedCost,
+      currency,
     } as any);
 
     // Also save to whatsapp_messages for inbox display

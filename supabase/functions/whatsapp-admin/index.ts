@@ -192,6 +192,232 @@ Deno.serve(async (req) => {
       }
     }
 
+
+    if (action === "dashboard_stats") {
+      const from = String(body?.from || "");
+      const to = String(body?.to || "");
+      if (!from || !to) return json({ error: "from and to required (ISO)" }, 400);
+
+      const costRates = (settings?.cost_rates as any) || {};
+      const outstanding = Number(settings?.outstanding_unpaid_cost || 0);
+
+      // Outgoing notification logs in window
+      const { data: logs } = await admin
+        .from("notification_logs")
+        .select("*")
+        .gte("created_at", from)
+        .lte("created_at", to)
+        .order("created_at", { ascending: false });
+
+      // Incoming whatsapp_messages in window
+      const { data: incomingRows } = await admin
+        .from("notification_logs")
+        .select("id")
+        .gte("created_at", from)
+        .lte("created_at", to)
+        .eq("direction", "incoming");
+
+      const { data: waMessages } = await admin
+        .from("whatsapp_messages")
+        .select("type, created_at, phone")
+        .gte("created_at", from)
+        .lte("created_at", to);
+
+      const all = logs || [];
+      const outgoing = all.filter((r: any) => (r.direction || "outgoing") === "outgoing");
+      const incoming = (waMessages || []).filter((m: any) => m.type === "incoming");
+      const outgoingChat = (waMessages || []).filter((m: any) => m.type === "outgoing");
+
+      const counts = {
+        sent: 0, delivered: 0, read: 0, failed: 0, pending: 0, skipped: 0,
+      };
+      let estimatedCost = 0;
+      for (const r of outgoing) {
+        const s = String(r.send_status || "pending");
+        if (s in counts) (counts as any)[s]++;
+        estimatedCost += Number(r.estimated_cost || 0);
+      }
+
+      const totalSent = outgoing.length;
+      const deliveredOrRead = counts.delivered + counts.read;
+      const deliveryRate = totalSent ? (deliveredOrRead + counts.sent) / totalSent : 0;
+
+      // Status breakdown with %
+      const statusBreakdown = Object.entries(counts).map(([k, v]) => ({
+        status: k,
+        count: v,
+        percent: totalSent ? Math.round((v / totalSent) * 1000) / 10 : 0,
+      }));
+
+      // Daily series
+      const dayMap: Record<string, { date: string; sent: number; failed: number; cost: number }> = {};
+      for (const r of outgoing) {
+        const d = String(r.created_at).slice(0, 10);
+        if (!dayMap[d]) dayMap[d] = { date: d, sent: 0, failed: 0, cost: 0 };
+        if (r.send_status === "failed") dayMap[d].failed++;
+        else dayMap[d].sent++;
+        dayMap[d].cost += Number(r.estimated_cost || 0);
+      }
+      const daily = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+
+      // Template usage
+      const tplMap: Record<string, any> = {};
+      for (const r of outgoing) {
+        const name = r.template_name || r.message_type || "unknown";
+        const k = `${name}|${r.template_language || ""}|${r.event_type || ""}`;
+        if (!tplMap[k]) {
+          tplMap[k] = {
+            template_name: name,
+            language: r.template_language || "",
+            event_type: r.event_type || "",
+            category: r.template_category || "",
+            sent: 0, delivered: 0, failed: 0, cost: 0,
+          };
+        }
+        const t = tplMap[k];
+        if (r.send_status === "failed") t.failed++;
+        else if (r.send_status === "delivered" || r.send_status === "read") {
+          t.delivered++; t.sent++;
+        } else if (r.send_status === "sent") t.sent++;
+        t.cost += Number(r.estimated_cost || 0);
+      }
+      const templateUsage = Object.values(tplMap).map((t: any) => ({
+        ...t,
+        success_rate: t.sent ? Math.round((t.delivered / t.sent) * 1000) / 10 : 0,
+      }));
+
+      // Error groups
+      const errMap: Record<string, any> = {};
+      const failedRows = outgoing.filter((r: any) => r.send_status === "failed");
+      for (const r of failedRows) {
+        const code = r.error_code || "UNKNOWN";
+        if (!errMap[code]) {
+          errMap[code] = { code, count: 0, last_at: null, last_message: r.error_message };
+        }
+        errMap[code].count++;
+        if (!errMap[code].last_at || r.created_at > errMap[code].last_at) {
+          errMap[code].last_at = r.created_at;
+          errMap[code].last_message = r.error_message;
+        }
+      }
+      const errorGroups = Object.values(errMap).sort((a: any, b: any) => b.count - a.count);
+
+      const latestFailures = failedRows.slice(0, 20).map((r: any) => ({
+        id: r.id,
+        created_at: r.created_at,
+        phone: r.recipient_phone,
+        template_name: r.template_name || r.message_type,
+        error_code: r.error_code,
+        error_message: r.error_message,
+      }));
+
+      // Top recipient by message count
+      const phoneMap: Record<string, number> = {};
+      for (const r of outgoing) {
+        const p = r.recipient_phone || "";
+        phoneMap[p] = (phoneMap[p] || 0) + 1;
+      }
+      const topRecipient = Object.entries(phoneMap).sort((a, b) => b[1] - a[1])[0] || null;
+
+      // Top templates
+      const topTemplate = templateUsage.sort((a: any, b: any) => b.sent - a.sent)[0] || null;
+      const topFailureTemplate = templateUsage.sort((a: any, b: any) => b.failed - a.failed)[0] || null;
+
+      // Month-to-date cost
+      const now = new Date();
+      const mtdFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { data: mtdLogs } = await admin
+        .from("notification_logs")
+        .select("estimated_cost")
+        .gte("created_at", mtdFrom);
+      const mtdCost = (mtdLogs || []).reduce((s: number, r: any) => s + Number(r.estimated_cost || 0), 0);
+
+      return json({
+        kpis: {
+          total_messages: totalSent + incoming.length,
+          outgoing: totalSent,
+          incoming: incoming.length,
+          sent: counts.sent + counts.delivered + counts.read,
+          delivered: deliveredOrRead,
+          failed: counts.failed,
+          pending: counts.pending,
+          delivery_rate: Math.round(deliveryRate * 1000) / 10,
+          estimated_cost: estimatedCost,
+          mtd_cost: mtdCost,
+          outstanding_cost: outstanding,
+          currency: costRates.currency || "OMR",
+        },
+        status_breakdown: statusBreakdown,
+        daily,
+        template_usage: templateUsage,
+        error_groups: errorGroups,
+        latest_failures: latestFailures,
+        insights: {
+          top_template: topTemplate,
+          top_failure_template: topFailureTemplate,
+          top_recipient: topRecipient ? { phone: topRecipient[0], count: topRecipient[1] } : null,
+          last_success_at: outgoing.find((r: any) => r.send_status !== "failed")?.created_at || null,
+          last_failure_at: failedRows[0]?.created_at || null,
+          last_incoming_at: incoming[0]?.created_at || null,
+        },
+        cost_rates: costRates,
+        outstanding_unpaid_cost: outstanding,
+      });
+    }
+
+    if (action === "retry_failed_message") {
+      const logId = String(body?.log_id || "");
+      if (!logId) return json({ error: "log_id required" }, 400);
+      const { data: log } = await admin.from("notification_logs").select("*").eq("id", logId).maybeSingle();
+      if (!log) return json({ error: "Log not found" }, 404);
+
+      // Re-invoke send-whatsapp for ready_for_pickup; otherwise simple template send
+      try {
+        if (log.order_id && (log.message_type === "ready_for_pickup" || log.template_name === "order_ready_pdf_ar")) {
+          const res = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+            body: JSON.stringify({
+              order_id: log.order_id,
+              customer_id: log.customer_id,
+              customer_phone: log.recipient_phone,
+              message_type: log.message_type,
+              template_name: log.template_name || "order_ready_pdf_ar",
+              template_language: log.template_language || "ar",
+              template_category: log.template_category || "utility",
+              event_type: log.event_type,
+            }),
+          });
+          const data = await res.json();
+          return json({ success: !!data.success, data });
+        }
+        // Generic template retry
+        if (TOKEN && PHONE_ID && log.template_name) {
+          const r = await fetch(
+            `https://graph.facebook.com/${GRAPH_VERSION}/${PHONE_ID}/messages`,
+            {
+              method: "POST",
+              headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to: log.recipient_phone,
+                type: "template",
+                template: {
+                  name: log.template_name,
+                  language: { code: log.template_language || "ar" },
+                },
+              }),
+            },
+          );
+          const data = await r.json();
+          return json({ success: r.ok, data });
+        }
+        return json({ success: false, error: "Cannot retry: missing template/order info" });
+      } catch (e) {
+        return json({ success: false, error: String(e) });
+      }
+    }
+
     return json({ error: "Unknown action" }, 400);
   } catch (error) {
     console.error("whatsapp-admin error:", error);

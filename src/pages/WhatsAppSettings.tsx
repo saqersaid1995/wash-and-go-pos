@@ -24,6 +24,7 @@ import {
 } from "@/lib/whatsapp-settings";
 import UpdateSecretsCard from "@/components/whatsapp-settings/UpdateSecretsCard";
 import CountryCodesTab from "@/components/whatsapp-settings/CountryCodesTab";
+import DashboardTab from "@/components/whatsapp-settings/DashboardTab";
 
 type Status = {
   connected: boolean;
@@ -92,9 +93,9 @@ const WhatsAppSettings = () => {
     <div className="min-h-screen bg-background">
       <AppHeader title="WhatsApp Settings" />
       <div className="max-w-6xl mx-auto p-4">
-        <Tabs defaultValue="connection">
+        <Tabs defaultValue="dashboard">
           <TabsList className="flex flex-wrap h-auto justify-start mb-4">
-            <TabsTrigger value="connection">Connection</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="credentials">Credentials</TabsTrigger>
             <TabsTrigger value="countries">Country Codes</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
@@ -105,8 +106,8 @@ const WhatsAppSettings = () => {
             <TabsTrigger value="inbox">Inbox</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="connection">
-            <ConnectionTab status={status} loading={loadingStatus} onRefresh={refreshStatus} />
+          <TabsContent value="dashboard">
+            <DashboardTab />
           </TabsContent>
           <TabsContent value="credentials">
             <CredentialsTab status={status} settings={settings} onSave={saveSettings} saving={saving} onRefreshStatus={refreshStatus} />
