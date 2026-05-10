@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowOrder, WorkflowStatus, StatusChange, InternalNote } from "@/types/workflow";
 import type { CustomerRecord, CustomerNote } from "@/types/customer";
+import { parsePhone, fetchCountryCodes, getDefaultCountryCode } from "@/lib/phone";
 
 
 // ─── Order with all relations ───
