@@ -24,6 +24,7 @@ import {
 } from "@/lib/whatsapp-settings";
 import UpdateSecretsCard from "@/components/whatsapp-settings/UpdateSecretsCard";
 import CountryCodesTab from "@/components/whatsapp-settings/CountryCodesTab";
+import DashboardTab from "@/components/whatsapp-settings/DashboardTab";
 
 type Status = {
   connected: boolean;
