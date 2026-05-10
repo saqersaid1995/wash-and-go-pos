@@ -540,9 +540,18 @@ Deno.serve(async (req) => {
         recipient_phone: normalizedPhone,
         message_type: is_test ? "test" : message_type,
         message_body: messageDescription,
+        direction: "outgoing",
+        template_name,
+        template_language,
+        template_category,
+        event_type,
         send_status: "failed",
         provider_response: JSON.stringify(waData),
         error_message: errorMsg,
+        error_code: errorCode ? String(errorCode) : null,
+        failed_at: new Date().toISOString(),
+        estimated_cost: 0,
+        currency,
       } as any);
 
       if (order_id) {
