@@ -285,13 +285,30 @@ export async function fetchCustomerById(id: string): Promise<CustomerRecord | nu
 }
 
 export async function fetchCustomerByPhone(phone: string): Promise<CustomerRecord | null> {
-  const { data, error } = await supabase
+  const raw = (phone || "").trim();
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  const withPlus = raw.startsWith("+") ? raw : raw.startsWith("00") ? "+" + digits.slice(2) : digits.length >= 10 ? "+" + digits : null;
+
+  // Try in priority: full e164, legacy phone_number, local_phone
+  let q = supabase
     .from("customers")
     .select("*, customer_notes(*)")
-    .eq("phone_number", phone)
     .eq("is_active", true)
-    .maybeSingle();
+    .limit(1);
 
+  // Build OR clause covering all match strategies
+  const orParts: string[] = [];
+  if (withPlus) orParts.push(`full_phone_e164.eq.${withPlus}`);
+  orParts.push(`phone_number.eq.${raw}`);
+  if (digits) {
+    orParts.push(`phone_number.eq.${digits}`);
+    orParts.push(`local_phone.eq.${digits}`);
+    // Strip leading zero
+    if (digits.startsWith("0")) orParts.push(`local_phone.eq.${digits.replace(/^0+/, "")}`);
+  }
+
+  const { data, error } = await q.or(orParts.join(",")).maybeSingle();
   if (error || !data) return null;
   return mapDbCustomer(data, data.customer_notes || []);
 }
