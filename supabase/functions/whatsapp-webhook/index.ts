@@ -465,6 +465,38 @@ Deno.serve(async (req) => {
           const value = change.value;
           if (!value || value.messaging_product !== "whatsapp") continue;
 
+          // ── Handle delivery/read/failed status callbacks ──
+          const statuses = value.statuses || [];
+          for (const st of statuses) {
+            try {
+              const waId = st.id;
+              if (!waId) continue;
+              const ts = st.timestamp
+                ? new Date(parseInt(st.timestamp) * 1000).toISOString()
+                : new Date().toISOString();
+              const status = String(st.status || "").toLowerCase();
+              const errCode = st.errors?.[0]?.code ? String(st.errors[0].code) : null;
+              const errMsg = st.errors?.[0]?.title || st.errors?.[0]?.message || null;
+
+              const patch: Record<string, any> = { send_status: status };
+              if (status === "delivered") patch.delivered_at = ts;
+              else if (status === "read") {
+                patch.read_at = ts;
+                if (!patch.delivered_at) patch.delivered_at = ts;
+              } else if (status === "failed") {
+                patch.failed_at = ts;
+                if (errCode) patch.error_code = errCode;
+                if (errMsg) patch.error_message = errMsg;
+              }
+              await supabase
+                .from("notification_logs")
+                .update(patch)
+                .eq("provider_message_id", waId);
+            } catch (e) {
+              console.error("Status update error:", e);
+            }
+          }
+
           const messages = value.messages || [];
 
           for (const msg of messages) {
