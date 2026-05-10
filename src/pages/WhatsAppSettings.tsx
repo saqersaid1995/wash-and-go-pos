@@ -96,6 +96,7 @@ const WhatsAppSettings = () => {
           <TabsList className="flex flex-wrap h-auto justify-start mb-4">
             <TabsTrigger value="connection">Connection</TabsTrigger>
             <TabsTrigger value="credentials">Credentials</TabsTrigger>
+            <TabsTrigger value="countries">Country Codes</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="events">Event Mapping</TabsTrigger>
             <TabsTrigger value="invoice">Invoice PDF</TabsTrigger>
@@ -108,7 +109,10 @@ const WhatsAppSettings = () => {
             <ConnectionTab status={status} loading={loadingStatus} onRefresh={refreshStatus} />
           </TabsContent>
           <TabsContent value="credentials">
-            <CredentialsTab status={status} settings={settings} onSave={saveSettings} saving={saving} />
+            <CredentialsTab status={status} settings={settings} onSave={saveSettings} saving={saving} onRefreshStatus={refreshStatus} />
+          </TabsContent>
+          <TabsContent value="countries">
+            <CountryCodesTab />
           </TabsContent>
           <TabsContent value="templates">
             <TemplatesTab settings={settings} onSave={saveSettings} saving={saving} status={status} />
