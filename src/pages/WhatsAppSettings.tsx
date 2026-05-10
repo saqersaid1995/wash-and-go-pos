@@ -95,17 +95,20 @@ const WhatsAppSettings = () => {
       <AppHeader title="WhatsApp Settings" />
       <div className="max-w-6xl mx-auto p-4">
         <Tabs defaultValue="dashboard">
-          <TabsList className="flex flex-wrap h-auto justify-start mb-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="credentials">Credentials</TabsTrigger>
-            <TabsTrigger value="countries">Country Codes</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="events">Event Mapping</TabsTrigger>
-            <TabsTrigger value="invoice">Invoice PDF</TabsTrigger>
-            <TabsTrigger value="webhook">Webhook</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="inbox">Inbox</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 mb-4">
+            <TabsList className="inline-flex w-max h-auto justify-start gap-1 px-1">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsTrigger value="countries">Country Codes</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="events">Event Mapping</TabsTrigger>
+              <TabsTrigger value="invoice">Invoice PDF</TabsTrigger>
+              <TabsTrigger value="webhook">Webhook</TabsTrigger>
+              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="inbox">Inbox</TabsTrigger>
+              <TabsTrigger value="menubot">Menu Bot</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="dashboard">
             <DashboardTab />
@@ -133,6 +136,9 @@ const WhatsAppSettings = () => {
           </TabsContent>
           <TabsContent value="inbox">
             <InboxTab settings={settings} onSave={saveSettings} saving={saving} />
+          </TabsContent>
+          <TabsContent value="menubot">
+            <MenuBotTab />
           </TabsContent>
         </Tabs>
       </div>
