@@ -345,8 +345,14 @@ Deno.serve(async (req) => {
         channel: "whatsapp",
         recipient_phone: customer_phone,
         message_type,
+        direction: "outgoing",
+        template_name,
+        template_language,
+        template_category,
+        event_type,
         send_status: "skipped",
         error_message: "Invalid phone number format",
+        currency,
       } as any);
 
       return new Response(
