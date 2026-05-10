@@ -476,9 +476,9 @@ export async function addCustomerNote(customerId: string, text: string, createdB
 
 export async function updateCustomerRecord(
   id: string,
-  updates: { full_name?: string; phone_number?: string; customer_type?: string }
+  updates: { full_name?: string; phone_number?: string; customer_type?: string; country_code?: string; local_phone?: string; full_phone_e164?: string }
 ) {
-  const { error } = await supabase.from("customers").update(updates).eq("id", id);
+  const { error } = await supabase.from("customers").update(updates as any).eq("id", id);
   if (error) console.error("updateCustomerRecord error:", error);
   return !error;
 }
