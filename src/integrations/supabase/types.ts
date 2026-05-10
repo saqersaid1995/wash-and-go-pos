@@ -1600,6 +1600,66 @@ export type Database = {
           },
         ]
       }
+      whatsapp_settings: {
+        Row: {
+          auto_reply_enabled: boolean
+          business_logo_url: string
+          business_name: string
+          created_at: string
+          default_country_code: string
+          default_invoice_language: string
+          event_mapping: Json
+          graph_api_version: string
+          id: string
+          include_qr: boolean
+          incoming_enabled: boolean
+          invoice_footer_text: string
+          push_notifications_enabled: boolean
+          receipt_size: string
+          templates: Json
+          unread_badge_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          auto_reply_enabled?: boolean
+          business_logo_url?: string
+          business_name?: string
+          created_at?: string
+          default_country_code?: string
+          default_invoice_language?: string
+          event_mapping?: Json
+          graph_api_version?: string
+          id?: string
+          include_qr?: boolean
+          incoming_enabled?: boolean
+          invoice_footer_text?: string
+          push_notifications_enabled?: boolean
+          receipt_size?: string
+          templates?: Json
+          unread_badge_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          auto_reply_enabled?: boolean
+          business_logo_url?: string
+          business_name?: string
+          created_at?: string
+          default_country_code?: string
+          default_invoice_language?: string
+          event_mapping?: Json
+          graph_api_version?: string
+          id?: string
+          include_qr?: boolean
+          incoming_enabled?: boolean
+          invoice_footer_text?: string
+          push_notifications_enabled?: boolean
+          receipt_size?: string
+          templates?: Json
+          unread_badge_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_static_replies: {
         Row: {
           created_at: string
