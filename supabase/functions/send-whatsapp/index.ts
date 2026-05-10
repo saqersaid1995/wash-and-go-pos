@@ -300,6 +300,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Load cost rates from settings
+    const { data: settingsRow } = await supabase
+      .from("whatsapp_settings")
+      .select("cost_rates")
+      .limit(1)
+      .maybeSingle();
+    const costRates: any = settingsRow?.cost_rates || {};
+
     const body = await req.json();
     const {
       order_id,
@@ -312,8 +320,15 @@ Deno.serve(async (req) => {
       message_type = "ready_for_pickup",
       template_name = "order_ready_pdf_ar",
       template_language = "ar",
+      template_category = "utility",
+      event_type = null,
       is_test = false,
     } = body;
+
+    const estimatedCost = Number(
+      costRates[template_category] ?? costRates.default ?? 0
+    );
+    const currency = String(costRates.currency || "OMR");
 
     if (!customer_phone) {
       return new Response(
