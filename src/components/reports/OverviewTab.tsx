@@ -195,9 +195,9 @@ export function OverviewTab({ kpis, orders, expenses, revenueVsExpenses, expense
         <DonutCard
           title="Expense Breakdown"
           data={expensesByCategory}
-          centerValue={formatOMR(kpis.totalExpenses)}
+          centerValue={formatOMRCompact(kpis.totalExpenses)}
           centerLabel="Total Expenses"
-          formatValue={formatOMR}
+          formatValue={formatOMRCompact}
           emptyMessage="No expenses recorded"
           colors={PIE_COLORS}
         />
