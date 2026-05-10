@@ -113,34 +113,6 @@ export async function softDeleteOrder(orderId: string): Promise<boolean> {
   return true;
 }
 
-export async function bulkSoftDelete(filters: {
-  draftsOnly?: boolean;
-  beforeDate?: string;
-  unpaidOnly?: boolean;
-}): Promise<number> {
-  let query = supabase
-    .from("orders")
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-    .eq("is_deleted", false);
-
-  if (filters.draftsOnly) {
-    query = query.eq("is_draft", true);
-  }
-  if (filters.beforeDate) {
-    query = query.lte("order_date", filters.beforeDate);
-  }
-  if (filters.unpaidOnly) {
-    query = query.eq("payment_status", "unpaid");
-  }
-
-  const { data, error, count } = await query.select();
-  if (error) {
-    console.error("bulkSoftDelete error:", error);
-    return 0;
-  }
-  return data?.length || 0;
-}
-
 export async function fetchOrderById(orderId: string): Promise<WorkflowOrder | null> {
   const { data, error } = await supabase
     .from("orders")
