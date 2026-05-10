@@ -43,17 +43,17 @@ export function DonutCard({
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 pb-5">
         <h3 className="text-sm font-semibold mb-4">{title}</h3>
         {filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-12">{emptyMessage}</p>
         ) : (
-          <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-5">
             {/* Donut with center value */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 mx-auto md:mx-0">
               <ChartContainer
                 config={{ value: { label: title } }}
-                className="h-[180px] w-[180px] aspect-square"
+                className="h-[170px] w-[170px] aspect-square"
               >
                 <PieChart>
                   <Pie
@@ -62,8 +62,8 @@ export function DonutCard({
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={85}
-                    innerRadius={62}
+                    outerRadius={80}
+                    innerRadius={58}
                     paddingAngle={2}
                     stroke="none"
                   >
@@ -74,30 +74,35 @@ export function DonutCard({
                   <ChartTooltip content={<ChartTooltipContent />} />
                 </PieChart>
               </ChartContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-bold tracking-tight leading-none">{centerValue}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">{centerLabel}</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center">
+                <p className="text-base font-bold tracking-tight leading-tight break-words">{centerValue}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{centerLabel}</p>
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex-1 w-full space-y-2.5 min-w-0">
-              {filtered.map((d, i) => {
-                const pct = total > 0 ? (d.value / total) * 100 : 0;
-                return (
-                  <div key={d.name} className="flex items-center gap-3 text-sm">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: d.color || colors[i % colors.length] }}
-                    />
-                    <span className="flex-1 truncate text-foreground">{d.name}</span>
-                    <span className="font-semibold tabular-nums">{formatValue(d.value)}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums w-14 text-right">
-                      ({pct.toFixed(1)}%)
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Legend table */}
+            <div className="flex-1 w-full min-w-0">
+              <div className="space-y-1.5">
+                {filtered.map((d, i) => {
+                  const pct = total > 0 ? (d.value / total) * 100 : 0;
+                  return (
+                    <div
+                      key={d.name}
+                      className="grid grid-cols-[12px_minmax(0,1fr)_auto_48px] items-center gap-2 text-sm py-1"
+                    >
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: d.color || colors[i % colors.length] }}
+                      />
+                      <span className="truncate text-foreground" title={d.name}>{d.name}</span>
+                      <span className="font-semibold tabular-nums whitespace-nowrap">{formatValue(d.value)}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums text-right">
+                        {pct.toFixed(1)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
