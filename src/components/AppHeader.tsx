@@ -74,7 +74,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/inbox", label: "Inbox", roles: ["admin", "cashier"] },
       { to: "/whatsapp", label: "WhatsApp", roles: ["admin"] },
-      { to: "/support-lite", label: "Support", roles: ["admin", "cashier"] },
     ],
   },
   {
@@ -83,7 +82,6 @@ const NAV_SECTIONS: NavSection[] = [
     roles: ["admin"],
     items: [
       { to: "/staff", label: "Staff", roles: ["admin"] },
-      { to: "/wa-menu", label: "Menu Bot", roles: ["admin"] },
       { to: "/offline", label: "Offline", roles: ["admin", "cashier"] },
     ],
   },
