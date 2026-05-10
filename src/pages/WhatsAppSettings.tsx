@@ -22,6 +22,8 @@ import {
   TEMPLATE_KEYS, EVENT_KEYS,
   type WhatsAppSettingsRow, type WhatsAppTemplate,
 } from "@/lib/whatsapp-settings";
+import UpdateSecretsCard from "@/components/whatsapp-settings/UpdateSecretsCard";
+import CountryCodesTab from "@/components/whatsapp-settings/CountryCodesTab";
 
 type Status = {
   connected: boolean;
