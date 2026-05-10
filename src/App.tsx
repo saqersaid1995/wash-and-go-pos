@@ -28,7 +28,6 @@ import CashManagement from "./pages/CashManagement.tsx";
 import Accounting from "./pages/Accounting.tsx";
 import Loans from "./pages/Loans.tsx";
 import ScanLite from "./pages/ScanLite.tsx";
-import SupportLite from "./pages/SupportLite.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
