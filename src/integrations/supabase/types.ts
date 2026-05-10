@@ -882,44 +882,77 @@ export type Database = {
         Row: {
           channel: string
           created_at: string
+          currency: string
           customer_id: string | null
+          delivered_at: string | null
+          direction: string
+          error_code: string | null
           error_message: string | null
+          estimated_cost: number
+          event_type: string | null
+          failed_at: string | null
           id: string
           message_body: string | null
           message_type: string
           order_id: string
           provider_message_id: string | null
           provider_response: string | null
+          read_at: string | null
           recipient_phone: string
           send_status: string
+          template_category: string | null
+          template_language: string | null
+          template_name: string | null
         }
         Insert: {
           channel?: string
           created_at?: string
+          currency?: string
           customer_id?: string | null
+          delivered_at?: string | null
+          direction?: string
+          error_code?: string | null
           error_message?: string | null
+          estimated_cost?: number
+          event_type?: string | null
+          failed_at?: string | null
           id?: string
           message_body?: string | null
           message_type?: string
           order_id: string
           provider_message_id?: string | null
           provider_response?: string | null
+          read_at?: string | null
           recipient_phone: string
           send_status?: string
+          template_category?: string | null
+          template_language?: string | null
+          template_name?: string | null
         }
         Update: {
           channel?: string
           created_at?: string
+          currency?: string
           customer_id?: string | null
+          delivered_at?: string | null
+          direction?: string
+          error_code?: string | null
           error_message?: string | null
+          estimated_cost?: number
+          event_type?: string | null
+          failed_at?: string | null
           id?: string
           message_body?: string | null
           message_type?: string
           order_id?: string
           provider_message_id?: string | null
           provider_response?: string | null
+          read_at?: string | null
           recipient_phone?: string
           send_status?: string
+          template_category?: string | null
+          template_language?: string | null
+          template_name?: string | null
         }
         Relationships: [
           {
@@ -1647,6 +1680,7 @@ export type Database = {
           auto_reply_enabled: boolean
           business_logo_url: string
           business_name: string
+          cost_rates: Json
           created_at: string
           default_country_code: string
           default_invoice_language: string
@@ -1656,6 +1690,7 @@ export type Database = {
           include_qr: boolean
           incoming_enabled: boolean
           invoice_footer_text: string
+          outstanding_unpaid_cost: number
           push_notifications_enabled: boolean
           receipt_size: string
           templates: Json
@@ -1666,6 +1701,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           business_logo_url?: string
           business_name?: string
+          cost_rates?: Json
           created_at?: string
           default_country_code?: string
           default_invoice_language?: string
@@ -1675,6 +1711,7 @@ export type Database = {
           include_qr?: boolean
           incoming_enabled?: boolean
           invoice_footer_text?: string
+          outstanding_unpaid_cost?: number
           push_notifications_enabled?: boolean
           receipt_size?: string
           templates?: Json
@@ -1685,6 +1722,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           business_logo_url?: string
           business_name?: string
+          cost_rates?: Json
           created_at?: string
           default_country_code?: string
           default_invoice_language?: string
@@ -1694,6 +1732,7 @@ export type Database = {
           include_qr?: boolean
           incoming_enabled?: boolean
           invoice_footer_text?: string
+          outstanding_unpaid_cost?: number
           push_notifications_enabled?: boolean
           receipt_size?: string
           templates?: Json
