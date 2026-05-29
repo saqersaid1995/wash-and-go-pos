@@ -32,16 +32,9 @@ export default function DataExport() {
     setCurrentCount(0);
 
     try {
-      const { data: listData, error: listErr } = await supabase.functions.invoke("export-database", {
-        body: null,
-        method: "GET" as any,
-        // invoke does not support query params directly; use raw fetch instead
-      } as any).catch(() => ({ data: null, error: { message: "list failed" } as any }));
-
-      // Fallback: call directly with fetch since we need query params
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-database?action=list`;
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-database?action=list`;
       const listRes = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
