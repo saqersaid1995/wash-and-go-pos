@@ -82,6 +82,7 @@ const NAV_SECTIONS: NavSection[] = [
     roles: ["admin"],
     items: [
       { to: "/staff", label: "Staff", roles: ["admin"] },
+      { to: "/settings", label: "Settings", roles: ["admin"] },
       { to: "/offline", label: "Offline", roles: ["admin", "cashier"] },
     ],
   },
