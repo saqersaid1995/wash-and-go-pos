@@ -8,8 +8,6 @@ export default function Settings() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <DataExport />
       </main>
-
-      </main>
     </div>
   );
 }
